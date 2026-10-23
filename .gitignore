@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+
+# App
+.env
+instance/
+*.db
+*.sqlite3
+
+# IDE
+.idea/

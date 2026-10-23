@@ -1,0 +1,67 @@
+import re
+from pathlib import Path
+from string import Formatter
+
+import pytest
+
+from app.i18n import Translator, _flatten, load_texts, t
+
+APP_DIR = Path(__file__).parent.parent / "app"
+KEY_USAGE = re.compile(r"""\bt\(\s*["']([\w.]+)["']""")
+
+
+def test_t_resolves_nested_keys(app):
+    assert t("app.name") == "Spaßvogel-Ranking"
+
+
+def test_t_formats_parameters():
+    translate = Translator({"greet": "Hallo {name}"})
+    assert translate("greet", name="Noah") == "Hallo Noah"
+
+
+def test_escaped_braces_render_the_same_with_and_without_params():
+    translate = Translator({"text": "{{x}} {name}", "plain": "{{x}}"})
+    assert translate("plain") == "{x}"
+    assert translate("text", name="A") == "{x} A"
+
+
+def test_missing_key_raises_in_strict_mode():
+    with pytest.raises(KeyError):
+        Translator({}, strict=True)("nope")
+
+
+def test_missing_key_falls_back_to_key_otherwise():
+    assert Translator({})("nope") == "nope"
+
+
+def test_missing_param_raises_in_strict_mode():
+    with pytest.raises(KeyError):
+        Translator({"greet": "Hallo {name}"}, strict=True)("greet")
+
+
+def test_missing_param_stays_visible_otherwise():
+    assert Translator({"greet": "Hallo {name}"})("greet") == "Hallo {name}"
+
+
+def test_non_string_values_are_rejected():
+    with pytest.raises(TypeError, match="limit"):
+        _flatten({"limit": 140})
+
+
+def test_every_used_key_exists_in_german_texts():
+    known = set(load_texts("de"))
+    sources = [*APP_DIR.rglob("*.html"), *APP_DIR.rglob("*.py")]
+    used = {key for path in sources for key in KEY_USAGE.findall(path.read_text())}
+    assert used, "expected at least one t() usage"
+    assert used <= known, f"missing keys: {sorted(used - known)}"
+
+
+def test_german_texts_use_only_simple_named_placeholders():
+    # {user.name} or {0} would crash pages even in non-strict mode.
+    bad = {
+        key: field
+        for key, text in load_texts("de").items()
+        for _, field, _, _ in Formatter().parse(text)
+        if field is not None and not field.isidentifier()
+    }
+    assert not bad

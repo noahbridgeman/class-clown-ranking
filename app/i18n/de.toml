@@ -1,0 +1,18 @@
+[app]
+name = "Spaßvogel-Ranking"
+tagline = "Wer ist der Lustigste in eurer Runde?"
+
+[home]
+intro = "Bewertet euch gegenseitig per Up- und Downvote und verfolgt, wie sich euer Humor-Score entwickelt."
+coming_soon = "Login und Gruppen folgen in Kürze."
+
+[errors]
+back_home = "Zur Startseite"
+not_found_title = "Seite nicht gefunden"
+not_found_text = "Diese Seite gibt es nicht, oder du hast keinen Zugriff darauf."
+server_error_title = "Etwas ist schiefgelaufen"
+server_error_text = "Bitte versuche es gleich noch einmal."
+csrf_title = "Sitzung abgelaufen"
+csrf_text = "Bitte lade die Seite neu und versuche es noch einmal."
+generic_title = "Das hat nicht geklappt"
+generic_text = "Die Anfrage konnte nicht verarbeitet werden (Fehler {code})."
