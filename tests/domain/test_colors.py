@@ -4,63 +4,67 @@ import re
 
 import pytest
 
-from app.domain.colors import PALETTE, color_for
+from app.domain.colors import PALETTE, color_for, lab
 
 HEX = re.compile(r"^#[0-9A-F]{6}$")
+MAX_GROUP_SIZE = 30  # A8
 # CIE76 ΔE above ~20 reads as clearly different colours.
 MIN_DELTA_E = 20
+# ΔE between colour indexes beyond the palette and every earlier one.
+MIN_EXTRA_DELTA_E = 10
 # Lightness L* above this keeps lines bright on the dark theme.
 MIN_LIGHTNESS = 45
 
 
-def _lab(color: str) -> tuple[float, float, float]:
-    r, g, b = (int(color[i : i + 2], 16) / 255 for i in (1, 3, 5))
-
-    def linear(c: float) -> float:
-        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
-
-    r, g, b = linear(r), linear(g), linear(b)
-    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
-    y = 0.2126 * r + 0.7152 * g + 0.0722 * b
-    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
-
-    def f(t: float) -> float:
-        return t ** (1 / 3) if t > 0.008856 else 7.787 * t + 16 / 116
-
-    return 116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))
+def _closest(colors: list[str]) -> float:
+    return min(math.dist(lab(a), lab(b)) for a, b in itertools.combinations(colors, 2))
 
 
-def test_palette_has_twenty_distinct_colours():
-    assert len(PALETTE) == 20
-    assert len(set(PALETTE)) == 20
+def test_lab_reference_values():
+    assert lab("#FFFFFF") == pytest.approx((100.0, 0.0, 0.0), abs=0.05)
+    assert lab("#000000") == pytest.approx((0.0, 0.0, 0.0), abs=0.05)
+    assert lab("#FF0000") == pytest.approx((53.24, 80.09, 67.20), abs=0.05)
 
 
-def test_palette_colours_are_clearly_distinguishable():
-    labs = [_lab(c) for c in PALETTE]
-    closest = min(math.dist(a, b) for a, b in itertools.combinations(labs, 2))
+def test_palette_covers_a_full_group():
+    assert len(PALETTE) == MAX_GROUP_SIZE
+    assert len(set(PALETTE)) == MAX_GROUP_SIZE
 
-    assert closest > MIN_DELTA_E
+
+def test_full_group_colours_are_clearly_distinguishable():
+    assert _closest([color_for(i) for i in range(MAX_GROUP_SIZE)]) > MIN_DELTA_E
+
+
+def test_first_fifteen_colours_are_clearly_distinguishable():
+    """GRA-02 names 15 people explicitly."""
+    assert _closest([color_for(i) for i in range(15)]) > MIN_DELTA_E
 
 
 def test_palette_colours_are_bright():
-    assert all(_lab(c)[0] > MIN_LIGHTNESS for c in PALETTE)
+    assert all(lab(c)[0] > MIN_LIGHTNESS for c in PALETTE)
 
 
-@pytest.mark.parametrize("index", [0, 5, 19, 20, 21, 29, 100])
+@pytest.mark.parametrize("index", [0, 5, 29, 30, 31, 60])
 def test_color_for_returns_hex(index):
     assert HEX.match(color_for(index))
 
 
 def test_color_for_uses_palette_first():
-    assert [color_for(i) for i in range(20)] == list(PALETTE)
+    assert [color_for(i) for i in range(MAX_GROUP_SIZE)] == list(PALETTE)
 
 
-def test_extra_colours_are_stable_and_distinct():
-    extra = [color_for(i) for i in range(20, 50)]
+def test_extra_colours_stay_distinguishable_from_all_earlier_ones():
+    colors = [color_for(i) for i in range(60)]
 
-    assert extra == [color_for(i) for i in range(20, 50)]
-    assert len(set(extra)) == len(extra)
-    assert not set(extra) & set(PALETTE)
+    for index in range(MAX_GROUP_SIZE, len(colors)):
+        nearest = min(math.dist(lab(colors[index]), lab(c)) for c in colors[:index])
+        assert nearest > MIN_EXTRA_DELTA_E, index
+        assert lab(colors[index])[0] > MIN_LIGHTNESS
+
+
+def test_extra_colours_are_stable():
+    assert color_for(45) == color_for(45)
+    assert [color_for(i) for i in range(30, 40)] == [color_for(i) for i in range(30, 40)]
 
 
 def test_negative_index_is_rejected():
