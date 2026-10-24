@@ -262,6 +262,45 @@ class TestRememberSession:
         assert "Expires=" in cookie
         assert app.config["REMEMBER_COOKIE_DURATION"] == timedelta(days=30)
 
+    @staticmethod
+    def remember_cookies(response: TestResponse) -> list[str]:
+        return [
+            c for c in response.headers.getlist("Set-Cookie") if c.startswith("remember_token=")
+        ]
+
+    def test_every_visit_renews_the_remember_cookie(self, client, outbox):
+        make_user("anna@example.org", display_name="Anna")
+        log_in_via_mail(client, outbox, "anna@example.org")
+        for _ in range(2):
+            (cookie,) = self.remember_cookies(client.get("/"))
+            assert "Expires=" in cookie
+
+    def test_cookie_restored_session_keeps_sliding(self, client, outbox):
+        make_user("anna@example.org", display_name="Anna")
+        log_in_via_mail(client, outbox, "anna@example.org")
+        with client.session_transaction() as session:
+            session.clear()
+        assert self.remember_cookies(client.get("/"))
+        assert self.remember_cookies(client.get("/"))
+
+    def test_guests_get_no_remember_cookie(self, client):
+        for _ in range(3):
+            assert not self.remember_cookies(client.get("/"))
+
+    def test_logout_is_not_undone_by_the_refresh(self, client, outbox):
+        make_user("anna@example.org", display_name="Anna")
+        log_in_via_mail(client, outbox, "anna@example.org")
+        (cookie,) = self.remember_cookies(client.post("/logout"))
+        assert "Expires=Thu, 01 Jan 1970" in cookie
+        assert client.get_cookie("remember_token") is None
+        assert not self.remember_cookies(client.get("/"))
+
+    def test_confirm_page_explains_the_sliding_session(self, client, outbox):
+        make_user("anna@example.org")
+        client.post("/login", data={"email": "anna@example.org"})
+        html = client.get(link_path(outbox)).get_data(as_text=True)
+        assert "mindestens alle 30 Tage" in html
+
     def test_remember_cookie_restores_session(self, client, outbox):
         make_user("anna@example.org", display_name="Anna")
         log_in_via_mail(client, outbox, "anna@example.org")

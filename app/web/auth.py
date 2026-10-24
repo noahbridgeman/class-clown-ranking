@@ -43,6 +43,8 @@ class ConfirmForm(FlaskForm):
 def register(app: Flask) -> None:
     login_manager.init_app(app)
     app.before_request(_name_gate)
+    # Registered after Flask-Login, so it runs before Flask-Login writes the cookie.
+    app.after_request(_slide_remember_cookie)
     app.register_blueprint(bp)
 
 
@@ -68,6 +70,16 @@ def _protect_token_pages(response: Response) -> Response:
     if request.endpoint in TOKEN_ENDPOINTS:
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _slide_remember_cookie(response: Response) -> Response:
+    """Every visit renews the remember cookie, so only 30 days of absence end the session.
+
+    Flask-Login's REMEMBER_COOKIE_REFRESH_EACH_REQUEST would also touch guests' sessions.
+    """
+    if current_user.is_authenticated and "_user_id" in session and "_remember" not in session:
+        session["_remember"] = "set"
     return response
 
 
