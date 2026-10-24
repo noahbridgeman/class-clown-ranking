@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% set title = t("invitations.accept_title", group=invitation.group.name) %}
+{% block title %}{{ title }} – {{ t("app.name") }}{% endblock %}
+{% block content %}
+  <section class="card">
+    <h1>{{ title }}</h1>
+    <p>{{ t("invitations.accept_text", inviter=member_name(invitation.invited_by), group=invitation.group.name) }}</p>
+    {% if not current_user.is_authenticated %}<p class="muted">{{ t("invitations.accept_login_hint") }}</p>{% endif %}
+    <form method="post" class="form">
+      {{ form.csrf_token }}
+      <button type="submit" class="button">{{ t("invitations.accept_button") }}</button>
+    </form>
+  </section>
+{% endblock %}

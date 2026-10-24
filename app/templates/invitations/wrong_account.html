@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ t("invitations.wrong_account_title") }} – {{ t("app.name") }}{% endblock %}
+{% block content %}
+  <section class="card" role="alert">
+    <h1>{{ t("invitations.wrong_account_title") }}</h1>
+    <p>{{ t("invitations.wrong_account_text") }}</p>
+    <form method="post" action="{{ url_for('auth.logout') }}" class="form">
+      {{ form.csrf_token }}
+      {{ form.next() }}
+      <button type="submit" class="button">{{ t("invitations.wrong_account_logout") }}</button>
+    </form>
+  </section>
+{% endblock %}

@@ -32,6 +32,18 @@ class Config:
     LOGIN_TOKEN_LIFETIME = timedelta(minutes=15)  # AUTH-02
     LOGIN_MAILS_PER_HOUR = 5  # NFA-09
 
+    MAX_GROUP_SIZE = 30  # members plus open invitations (A8)
+    INVITATION_LIFETIME = timedelta(days=7)  # INV-04, counted from the last send
+    # NFA-09 (A16): new invitations per group, per inviter and per address within a day,
+    # resends per invitation, the minimum time between two sends of the same invitation,
+    # and new groups per user within a day.
+    INVITATIONS_PER_GROUP_PER_DAY = 30
+    INVITATIONS_PER_INVITER_PER_DAY = 30
+    INVITATIONS_PER_ADDRESS_PER_DAY = 5
+    INVITATION_MAX_SENDS = 5
+    INVITATION_RESEND_INTERVAL = timedelta(minutes=10)
+    GROUPS_PER_USER_PER_DAY = 3
+
     # smtp | console (prints mails) | memory (collects mails for tests)
     MAIL_BACKEND = "smtp"
     MAIL_HOST: str | None = None

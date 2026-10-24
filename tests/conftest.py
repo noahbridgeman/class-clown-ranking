@@ -26,7 +26,7 @@ class IsolatedClient(FlaskClient):
     request share a transaction. Commit test data before a request, since a rollback in
     the request would discard it. ``with client:`` does not work, because its contexts
     would be opened and closed in different contextvars contexts. Tests of real
-    concurrency (M4: parallel tick runs) need a file database with NullPool.
+    concurrency need a file database with NullPool, see tests/invariants/test_concurrency.py.
     """
 
     def open(self, *args: Any, **kwargs: Any) -> Any:
@@ -71,3 +71,20 @@ def login_as(client: FlaskClient) -> Callable[[User], FlaskClient]:
         return client
 
     return login
+
+
+@pytest.fixture
+def csrf_app() -> Iterator[Flask]:
+    """An app with CSRF protection on; TestConfig switches it off for the other tests."""
+
+    class WithCsrf(TestConfig):
+        WTF_CSRF_ENABLED = True
+
+    app = create_app(WithCsrf, clock=FrozenClock(datetime(2026, 10, 23, 12, tzinfo=UTC)))
+    app.test_client_class = IsolatedClient
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+        db.engine.dispose()

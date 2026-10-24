@@ -1,8 +1,12 @@
+import sqlite3
+from typing import Any
+
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase
 
 # Explicit constraint names keep Alembic migrations stable on SQLite and Postgres.
@@ -19,6 +23,15 @@ NAMING_CONVENTION = {
 
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
+
+
+@event.listens_for(Engine, "connect")
+def _enable_sqlite_foreign_keys(dbapi_connection: Any, _record: Any) -> None:
+    """SQLite ignores foreign keys, and with them ON DELETE CASCADE, unless asked per connection."""
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 db = SQLAlchemy(model_class=Base)

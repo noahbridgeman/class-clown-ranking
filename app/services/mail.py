@@ -1,5 +1,6 @@
 """Outgoing e-mail. Only used for login links and, from M3 on, invitations."""
 
+import logging
 import smtplib
 import ssl
 import sys
@@ -11,6 +12,8 @@ from email.utils import format_datetime, make_msgid, parseaddr
 from typing import Any, Protocol, TextIO
 
 from flask import Flask, current_app
+
+log = logging.getLogger(__name__)
 
 SMTP_TIMEOUT_SECONDS = 10
 IMPLICIT_TLS_PORT = 465
@@ -116,6 +119,16 @@ def backend_from_config(config: Mapping[str, Any], now: Callable[[], datetime]) 
 
 def send(mail: Mail) -> None:
     current_app.extensions["mail"].send(mail)
+
+
+def try_send(mail: Mail) -> bool:
+    """Sends a mail after the transaction has been committed; a failure is only logged."""
+    try:
+        send(mail)
+    except Exception:
+        log.exception("Could not send mail with subject %r", mail.subject)
+        return False
+    return True
 
 
 def _smtp_backend(config: Mapping[str, Any], now: Callable[[], datetime]) -> SmtpBackend:

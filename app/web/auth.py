@@ -10,34 +10,23 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
-from flask_wtf import FlaskForm
 from werkzeug.wrappers import Response as BaseResponse
-from wtforms import StringField
 
 from app.extensions import db, login_manager
 from app.models import User
 from app.models.user import DISPLAY_NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
 from app.services import auth
+from app.web.forms import ConfirmForm, EmailForm, LogoutForm, NameForm
 
 bp = Blueprint("auth", __name__)
 
-# Pages whose URL contains a login token.
-TOKEN_ENDPOINTS = {"auth.confirm", "auth.redeem"}
-# Reachable while the display name is still missing (AUTH-04). Login links stay usable
-# so a nameless account can switch to another one (and, from M3 on, accept invitations).
+# Pages whose URL contains a login or invitation token.
+TOKEN_ENDPOINTS = {"auth.confirm", "auth.redeem", "invitations.show", "invitations.accept"}
+# Reachable while the display name is still missing (AUTH-04). Token links stay usable,
+# so a nameless account can switch to another one or accept an invitation.
 NAME_GATE_EXEMPT = {"auth.name", "auth.logout", "static", *TOKEN_ENDPOINTS}
-
-
-class EmailForm(FlaskForm):
-    email = StringField()
-
-
-class NameForm(FlaskForm):
-    display_name = StringField()
-
-
-class ConfirmForm(FlaskForm):
-    pass
+# Where a logout may lead instead of the start page: back to an invitation (INV-02).
+LOGOUT_NEXT_PREFIX = "/invite/"
 
 
 def register(app: Flask) -> None:
@@ -45,6 +34,7 @@ def register(app: Flask) -> None:
     app.before_request(_name_gate)
     # Registered after Flask-Login, so it runs before Flask-Login writes the cookie.
     app.after_request(_slide_remember_cookie)
+    app.after_request(_protect_token_pages)
     app.register_blueprint(bp)
 
 
@@ -64,7 +54,6 @@ def _unauthorized() -> BaseResponse:
     return _redirect(url_for("auth.login"))
 
 
-@bp.after_request
 def _protect_token_pages(response: Response) -> Response:
     """Keeps the token out of Referer headers and caches, also on error pages."""
     if request.endpoint in TOKEN_ENDPOINTS:
@@ -137,7 +126,9 @@ def redeem(token: str) -> tuple[str, int] | BaseResponse:
 @bp.post("/logout")
 def logout() -> BaseResponse:
     logout_user()
-    return _redirect(url_for("main.index"))
+    target = LogoutForm().next.data or ""
+    safe = target.startswith(LOGOUT_NEXT_PREFIX) and "//" not in target and "\\" not in target
+    return _redirect(target if safe else url_for("main.index"))
 
 
 @bp.route("/account/name", methods=["GET", "POST"])

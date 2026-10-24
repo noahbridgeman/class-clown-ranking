@@ -69,4 +69,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M3 (Gruppen, Einladungen, Mitgliedschaft). M0 bis M2 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M4 (Voting und Periodenlauf). M0 bis M3 sind abgeschlossen. Details in `docs/plan.md`.

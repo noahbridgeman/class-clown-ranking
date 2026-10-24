@@ -31,6 +31,8 @@
     </nav>
   </header>
   <main class="container">
+    {# HTMX error responses are retargeted here, so the element that sent them stays usable. #}
+    <div id="messages" aria-live="polite">{% include "partials/flashes.html" %}</div>
     {% block content %}{% endblock %}
   </main>
 </body>

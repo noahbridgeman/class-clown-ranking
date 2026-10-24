@@ -65,3 +65,15 @@ def test_german_texts_use_only_simple_named_placeholders():
         if field is not None and not field.isidentifier()
     }
     assert not bad
+
+
+def test_local_date_uses_the_group_timezone():
+    from datetime import UTC, datetime
+
+    from app.i18n import local_date
+
+    # 23:30 UTC on 30 Oct is already 31 Oct in Berlin (UTC+1 after the switch on 25 Oct).
+    assert local_date(datetime(2026, 10, 30, 23, 30, tzinfo=UTC), "Europe/Berlin") == "31.10.2026"
+    assert (
+        local_date(datetime(2026, 10, 30, 23, 30, tzinfo=UTC), "America/New_York") == "30.10.2026"
+    )

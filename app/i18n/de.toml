@@ -6,7 +6,9 @@ tagline = "Wer ist der Lustigste in eurer Runde?"
 intro = "Bewertet euch gegenseitig per Up- und Downvote und verfolgt, wie sich euer Humor-Score entwickelt."
 login_cta = "Anmelden"
 greeting = "Hallo, {name}!"
-groups_coming_soon = "Gruppen folgen in Kürze."
+your_groups = "Deine Gruppen"
+no_groups = "Du bist noch in keiner Gruppe. Erstelle eine oder lass dich einladen."
+create_group = "Neue Gruppe erstellen"
 
 [nav]
 login = "Anmelden"
@@ -37,6 +39,8 @@ name_title = "Anzeigenamen ändern"
 name_intro = "Der Name gilt in allen deinen Gruppen."
 name_label = "Anzeigename"
 name_save = "Speichern"
+
+[validation]
 name_required = "Bitte gib einen Namen ein."
 name_too_long = "Der Name darf höchstens {max} Zeichen lang sein."
 name_invalid = "Der Name enthält ungültige Zeichen."
@@ -53,6 +57,26 @@ Der Link ist {minutes} Minuten gültig und funktioniert nur einmal.
 Wenn du ihn nicht angefordert hast, kannst du diese Mail einfach ignorieren.
 """
 
+admin_granted_subject = "Du bist jetzt Admin von „{group}“"
+admin_granted_body = """Hallo,
+
+du bist jetzt Admin der Gruppe „{group}“ im Spaßvogel-Ranking. Du kannst Leute einladen, Mitglieder entfernen und die Einstellungen der Gruppe ändern.
+
+{link}
+"""
+invitation_subject = "{inviter} lädt dich in „{group}“ ein"
+invitation_body = """Hallo,
+
+{inviter} lädt dich in die Gruppe „{group}“ im Spaßvogel-Ranking ein. Dort bewertet ihr euch gegenseitig und verfolgt, wer der Lustigste ist.
+
+Mit diesem Link nimmst du die Einladung an und meldest dich gleichzeitig an:
+
+{link}
+
+Der Link ist {days} Tage gültig und funktioniert nur einmal.
+Wenn du die Person nicht kennst, kannst du diese Mail einfach ignorieren.
+"""
+
 [cli]
 users_help = "Konten und Allowlist verwalten."
 allow_help = "Erlaubt einer Adresse, ein Konto ohne Einladung anzulegen."
@@ -60,7 +84,81 @@ allow_added = "{email} hinzugefügt."
 allow_exists = "{email} stand schon auf der Liste."
 email_invalid = "keine gültige E-Mail-Adresse"
 
+[groups]
+new_title = "Neue Gruppe"
+new_intro = "Du wirst Admin der Gruppe und kannst danach Leute einladen. Takt, Anonymität und Score-Parameter starten mit Standardwerten."
+name_label = "Gruppenname"
+create = "Gruppe erstellen"
+created = "Die Gruppe „{group}“ ist erstellt. Lade jetzt Leute ein."
+members = "Mitglieder ({count})"
+admin_badge = "Admin"
+you = "du"
+deleted_member = "Gelöschtes Mitglied"
+graph_coming_soon = "Graph und Rangliste folgen in Kürze."
+manage = "Verwalten"
+make_admin = "Zum Admin machen"
+make_admin_hint = "Du gibst die Admin-Rolle ab und bist danach einfaches Mitglied."
+remove = "Aus der Gruppe entfernen"
+remove_hint = "{name} kann nur mit einer neuen Einladung zurückkommen und behält dann den alten Score."
+removed = "{name} wurde aus der Gruppe entfernt."
+admin_transferred = "{name} ist jetzt Admin der Gruppe."
+rate_limited = "Du hast heute schon mehrere Gruppen erstellt. Versuch es morgen noch einmal."
+last_member = "Als letztes Mitglied kannst du nur austreten, indem du die Gruppe löschst."
+cannot_remove_self = "Dich selbst kannst du nicht entfernen. Verlasse die Gruppe stattdessen."
+already_admin = "Du bist schon Admin."
+invitations_link = "Einladungen"
+leave_link = "Gruppe verlassen"
+delete_link = "Gruppe löschen"
+leave_title = "Gruppe „{group}“ verlassen"
+leave_text = "Mit einer neuen Einladung kannst du zurückkommen, dein Score bleibt dann erhalten."
+leave_admin_successor = "Du bist Admin. Wenn du austrittst, geht die Rolle automatisch an {name}, weil {name} am längsten dabei ist. Du kannst sie vorher auch selbst übertragen."
+leave_last_member = "Du bist das letzte Mitglied. Wenn du austrittst, wird die Gruppe mit allen Daten gelöscht."
+leave_button = "Gruppe verlassen"
+left = "Du hast die Gruppe „{group}“ verlassen."
+delete_title = "Gruppe „{group}“ löschen"
+delete_text = "Alle Daten der Gruppe werden endgültig gelöscht, für alle Mitglieder. Das lässt sich nicht rückgängig machen."
+delete_button = "Gruppe endgültig löschen"
+confirm_label = "Tippe zur Bestätigung den Gruppennamen ein: {group}"
+confirmation_mismatch = "Der eingegebene Name stimmt nicht mit dem Gruppennamen überein."
+deleted = "Die Gruppe „{group}“ wurde gelöscht."
+cancel = "Abbrechen"
+
+[invitations]
+title = "Einladungen"
+intro = "Eingeladene bekommen einen Link per E-Mail. Er ist {days} Tage gültig und funktioniert nur für ihre Adresse."
+email_label = "E-Mail-Adresse"
+invite = "Einladen"
+sent = "Einladung an {email} verschickt."
+mail_failed = "Die Einladung an {email} ist angelegt, aber die Mail konnte nicht verschickt werden. Versuch es später mit „Neu senden“."
+already_member = "Diese Person ist schon Mitglied der Gruppe."
+already_invited = "An diese Adresse gibt es schon eine offene Einladung. Du kannst sie unten neu senden."
+group_full = "Die Gruppe ist voll: Mitglieder und offene Einladungen zusammen dürfen {max} nicht überschreiten."
+rate_limited = "Gerade können keine weiteren Einladungen verschickt werden. Versuch es später noch einmal."
+resend_too_soon = "Diese Einladung wurde gerade erst verschickt. Warte ein paar Minuten, bevor du sie neu sendest."
+not_pending = "Diese Einladung ist schon angenommen oder zurückgezogen."
+revoked = "Einladung zurückgezogen."
+empty = "Noch keine Einladungen."
+resend = "Neu senden"
+revoke = "Zurückziehen"
+status_open = "offen bis {date}"
+status_expired = "abgelaufen"
+status_accepted = "angenommen"
+status_revoked = "zurückgezogen"
+back = "Zurück zur Gruppe"
+accept_title = "Einladung in „{group}“"
+accept_text = "{inviter} lädt dich in die Gruppe „{group}“ ein. Dort bewertet ihr euch gegenseitig und verfolgt eure Humor-Scores."
+accept_login_hint = "Mit dem Annehmen meldest du dich gleichzeitig an."
+accept_button = "Einladung annehmen"
+joined = "Willkommen in der Gruppe „{group}“!"
+invalid_title = "Einladung ungültig"
+invalid_text = "Diese Einladung ist abgelaufen, wurde zurückgezogen oder schon angenommen. Bitte die Person, die dich eingeladen hat, um eine neue."
+wrong_account_title = "Falsches Konto"
+wrong_account_text = "Diese Einladung gilt für eine andere E-Mail-Adresse als die, mit der du gerade angemeldet bist. Melde dich ab, um sie anzunehmen."
+wrong_account_logout = "Abmelden und Einladung öffnen"
+
 [errors]
+forbidden_title = "Kein Zugriff"
+forbidden_text = "Das darf nur der Admin der Gruppe."
 back_home = "Zur Startseite"
 not_found_title = "Seite nicht gefunden"
 not_found_text = "Diese Seite gibt es nicht, oder du hast keinen Zugriff darauf."
