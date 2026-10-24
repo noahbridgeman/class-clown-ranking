@@ -4,6 +4,7 @@ from logging.config import fileConfig
 from flask import current_app
 
 from alembic import context
+from sqlalchemy.types import TypeDecorator
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -16,12 +17,8 @@ logger = logging.getLogger('alembic.env')
 
 
 def get_engine():
-    try:
-        # this works with Flask-SQLAlchemy<3 and Alchemical
-        return current_app.extensions['migrate'].db.get_engine()
-    except (TypeError, AttributeError):
-        # this works with Flask-SQLAlchemy>=3
-        return current_app.extensions['migrate'].db.engine
+    # Flask-SQLAlchemy >= 3; get_engine() is deprecated there.
+    return current_app.extensions['migrate'].db.engine
 
 
 def get_engine_url():
@@ -45,6 +42,17 @@ target_db = current_app.extensions['migrate'].db
 # ... etc.
 
 
+def render_item(type_, obj, autogen_context):
+    """Render app-specific column types as their plain SQLAlchemy base type.
+
+    Keeps migrations independent of app code that may change later.
+    """
+    if type_ == "type" and isinstance(obj, TypeDecorator):
+        autogen_context.imports.add("import sqlalchemy as sa")
+        return f"sa.{obj.impl!r}"
+    return False
+
+
 def get_metadata():
     if hasattr(target_db, 'metadatas'):
         return target_db.metadatas[None]
@@ -65,7 +73,8 @@ def run_migrations_offline():
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url, target_metadata=get_metadata(), literal_binds=True
+        url=url, target_metadata=get_metadata(), literal_binds=True,
+        render_item=render_item
     )
 
     with context.begin_transaction():
@@ -100,6 +109,7 @@ def run_migrations_online():
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
+            render_item=render_item,
             **conf_args
         )
 
