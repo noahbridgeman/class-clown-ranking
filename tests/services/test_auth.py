@@ -2,11 +2,12 @@ import re
 from datetime import timedelta
 
 import pytest
+from itsdangerous import URLSafeSerializer
 from sqlalchemy import func, select
 
 from app.extensions import db
 from app.models import AllowedEmail, LoginToken, User
-from app.services import auth
+from app.services import auth, tokens
 from app.services.mail import Mail
 from tests.factories import allow, make_user
 
@@ -75,21 +76,21 @@ class TestNormalizeDisplayName:
     @pytest.mark.parametrize(
         ("raw", "key"),
         [
-            ("", "account.name_required"),
-            (" \t ", "account.name_required"),
-            ("x" * 41, "account.name_too_long"),
-            ("Anna\x00", "account.name_invalid"),
-            ("An\x1bna", "account.name_invalid"),
-            ("\u200b", "account.name_invalid"),  # zero-width space
-            ("Anna\u202e", "account.name_invalid"),  # right-to-left override
-            ("Anna\u2066x", "account.name_invalid"),  # bidi isolate
-            ("An\u00adna", "account.name_invalid"),  # soft hyphen
-            ("Anna\ue000", "account.name_invalid"),  # private use
-            ("Anna\U000e0001", "account.name_invalid"),  # language tag
-            ("\u3164", "account.name_required"),  # Hangul filler
-            ("\u2800\u2800", "account.name_required"),  # braille blank
-            ("\u0301", "account.name_required"),  # lone combining mark
-            ("\u200d", "account.name_required"),  # lone joiner
+            ("", "validation.name_required"),
+            (" \t ", "validation.name_required"),
+            ("x" * 41, "validation.name_too_long"),
+            ("Anna\x00", "validation.name_invalid"),
+            ("An\x1bna", "validation.name_invalid"),
+            ("\u200b", "validation.name_invalid"),  # zero-width space
+            ("Anna\u202e", "validation.name_invalid"),  # right-to-left override
+            ("Anna\u2066x", "validation.name_invalid"),  # bidi isolate
+            ("An\u00adna", "validation.name_invalid"),  # soft hyphen
+            ("Anna\ue000", "validation.name_invalid"),  # private use
+            ("Anna\U000e0001", "validation.name_invalid"),  # language tag
+            ("\u3164", "validation.name_required"),  # Hangul filler
+            ("\u2800\u2800", "validation.name_required"),  # braille blank
+            ("\u0301", "validation.name_required"),  # lone combining mark
+            ("\u200d", "validation.name_required"),  # lone joiner
         ],
     )
     def test_rejects_invalid(self, app, raw, key):
@@ -162,7 +163,7 @@ class TestRequestLogin:
 
         monkeypatch.setattr(auth.mail, "send", fail)
         auth.request_login("anna@example.org")
-        assert "Could not send login mail" in caplog.text
+        assert "Could not send mail" in caplog.text
 
     def test_invalid_address_raises(self, app):
         with pytest.raises(auth.InvalidInput):
@@ -285,23 +286,26 @@ class TestRedeemLogin:
         assert auth.redeem_login(token)
 
     def test_rejects_token_signed_with_other_key(self, app, outbox):
-        from itsdangerous import URLSafeSerializer
-
         make_user("anna@example.org")
         auth.request_login("anna@example.org")
-        nonce = auth._load_nonce(link_token(outbox))
+        nonce = tokens.unsign(link_token(outbox), auth.TOKEN_SALT)
         forged = URLSafeSerializer("other-secret", salt="login-token").dumps(nonce)
         assert auth.redeem_login(forged) is None
 
     def test_rejects_signed_non_string_payload(self, app):
-        assert auth.redeem_login(auth._serializer().dumps(["not", "a", "nonce"])) is None
+        assert (
+            auth.redeem_login(
+                URLSafeSerializer("test-secret", salt=auth.TOKEN_SALT).dumps(["not", "a"])
+            )
+            is None
+        )
 
     def test_failed_redemption_leaves_pending_changes_alone(self, app):
         # From M3 on, invitation acceptance may run in the same transaction.
         allowed = AllowedEmail(email="pending@example.org", added_at=auth.get_clock().now())
         db.session.add(allowed)
         db.session.flush()
-        assert auth.redeem_login(auth._serializer().dumps("unknown-nonce")) is None
+        assert auth.redeem_login(tokens.sign("unknown-nonce", auth.TOKEN_SALT)) is None
         assert allowed in db.session
         db.session.commit()
         assert db.session.get(AllowedEmail, "pending@example.org")

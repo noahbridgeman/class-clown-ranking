@@ -1,14 +1,10 @@
 """Accounts and passwordless login (AUTH-01…05, NFA-09, E3)."""
 
-import hashlib
-import logging
 import re
-import secrets
 import unicodedata
 from datetime import datetime, timedelta
 
 from flask import current_app
-from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -17,33 +13,14 @@ from app.extensions import db
 from app.i18n import t
 from app.models import AllowedEmail, LoginToken, User
 from app.models.user import DISPLAY_NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
-from app.services import mail
-
-log = logging.getLogger(__name__)
+from app.services import mail, tokens
+from app.services.errors import InvalidInput
+from app.services.text import clean_name
 
 RATE_LIMIT_WINDOW = timedelta(hours=1)
 # Deliberately loose: the only real check is whether the login link arrives.
 _EMAIL_PATTERN = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
-_TOKEN_SALT = "login-token"
-# Invisible or layout-changing characters: controls, format characters such as bidi
-# overrides and zero-width spaces, surrogates, private use, unassigned, line separators.
-_FORBIDDEN_NAME_CATEGORIES = {"Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp"}
-# The zero-width joiner is a format character, but emoji sequences such as 👨‍👩‍👧 need it.
-_ALLOWED_FORMAT_CHARS = {"\u200d"}
-# Letters that render as blank space.
-_BLANK_LETTERS = {"\u115f", "\u1160", "\u3164", "\uffa0", "\u2800"}
-
-
-class InvalidInput(ValueError):
-    """Carries the translation key and parameters of the message to show."""
-
-    def __init__(self, message_key: str, **params: object) -> None:
-        super().__init__(message_key)
-        self.message_key = message_key
-        self.params = params
-
-    def message(self) -> str:
-        return t(self.message_key, **self.params)
+TOKEN_SALT = "login-token"
 
 
 def normalize_email(raw: str) -> str:
@@ -58,26 +35,7 @@ def normalize_email(raw: str) -> str:
 
 
 def normalize_display_name(raw: str) -> str:
-    name = " ".join(raw.split())
-    if not name:
-        raise InvalidInput("account.name_required")
-    if len(name) > DISPLAY_NAME_MAX_LENGTH:
-        raise InvalidInput("account.name_too_long", max=DISPLAY_NAME_MAX_LENGTH)
-    if any(_forbidden_in_name(char) for char in name):
-        raise InvalidInput("account.name_invalid")
-    if not any(_visible(char) for char in name):
-        raise InvalidInput("account.name_required")
-    return name
-
-
-def _forbidden_in_name(char: str) -> bool:
-    category = unicodedata.category(char)
-    return category in _FORBIDDEN_NAME_CATEGORIES and char not in _ALLOWED_FORMAT_CHARS
-
-
-def _visible(char: str) -> bool:
-    # Letters, numbers, punctuation, symbols; marks and spaces alone show nothing.
-    return unicodedata.category(char)[0] in "LNPS" and char not in _BLANK_LETTERS
+    return clean_name(raw, DISPLAY_NAME_MAX_LENGTH)
 
 
 def allow_email(raw: str) -> bool:
@@ -100,22 +58,22 @@ def request_login(raw_email: str) -> None:
     now = get_clock().now()
     if not _may_log_in(email) or _rate_limited(email, now):
         return
-    nonce = secrets.token_urlsafe(32)
+    nonce = tokens.new_nonce()
     db.session.add(
         LoginToken(
             email=email,
-            nonce_hash=_hash(nonce),
+            nonce_hash=tokens.hash_nonce(nonce),
             created_at=now,
             expires_at=now + current_app.config["LOGIN_TOKEN_LIFETIME"],
         )
     )
     db.session.commit()
-    _send_login_mail(email, _serializer().dumps(nonce))
+    _send_login_mail(email, tokens.sign(nonce, TOKEN_SALT))
 
 
 def redeem_login(link_token: str) -> User | None:
     """Uses up a login link and returns its account, creating it on first login."""
-    nonce = _load_nonce(link_token)
+    nonce = tokens.unsign(link_token, TOKEN_SALT)
     if nonce is None:
         return None
     now = get_clock().now()
@@ -123,8 +81,8 @@ def redeem_login(link_token: str) -> User | None:
     if email is None:
         return None
     user = _account_for(email, now)
-    if user is not None and user.email_verified_at is None:
-        user.email_verified_at = now  # AUTH-03
+    if user is not None:
+        mark_verified(user, now)
     # Commit even without a user, so the link stays used up.
     db.session.commit()
     return user
@@ -165,7 +123,7 @@ def _consume(nonce: str, now: datetime) -> str | None:
 
     Leaves the transaction to the caller.
     """
-    nonce_hash = _hash(nonce)
+    nonce_hash = tokens.hash_nonce(nonce)
     result = db.session.execute(
         update(LoginToken)
         .where(
@@ -181,10 +139,14 @@ def _consume(nonce: str, now: datetime) -> str | None:
     return db.session.scalar(select(LoginToken.email).where(LoginToken.nonce_hash == nonce_hash))
 
 
-def _account_for(email: str, now: datetime) -> User | None:
-    """The existing account, or a new one if the address is on the allowlist (E3)."""
+def account_with_email(email: str, now: datetime) -> User:
+    """The account of a verified address, created if needed. Does not commit.
+
+    Callers must have proven that the person controls the address, by a login link or an
+    invitation link (E3, INV-03).
+    """
     user = _active_user(email)
-    if user is not None or db.session.get(AllowedEmail, email) is None:
+    if user is not None:
         return user
     try:
         with db.session.begin_nested():
@@ -192,8 +154,22 @@ def _account_for(email: str, now: datetime) -> User | None:
             db.session.add(user)
     except IntegrityError:
         # A parallel login created the account first (AUTH-01: one account per address).
-        return _active_user(email)
+        user = _active_user(email)
+        if user is None:
+            raise
     return user
+
+
+def mark_verified(user: User, now: datetime) -> None:
+    if user.email_verified_at is None:
+        user.email_verified_at = now  # AUTH-03
+
+
+def _account_for(email: str, now: datetime) -> User | None:
+    """The existing account, or a new one if the address is on the allowlist (E3)."""
+    if _active_user(email) is None and db.session.get(AllowedEmail, email) is None:
+        return None
+    return account_with_email(email, now)
 
 
 def _send_login_mail(email: str, link_token: str) -> None:
@@ -202,24 +178,5 @@ def _send_login_mail(email: str, link_token: str) -> None:
         subject=t("mail.login_subject"),
         body=t("mail.login_body", link=login_link(link_token), minutes=token_minutes()),
     )
-    try:
-        mail.send(message)
-    except Exception:
-        # The response must look the same as for unknown addresses (E3).
-        log.exception("Could not send login mail")
-
-
-def _serializer() -> URLSafeSerializer:
-    return URLSafeSerializer(current_app.config["SECRET_KEY"], salt=_TOKEN_SALT)
-
-
-def _load_nonce(link_token: str) -> str | None:
-    try:
-        nonce = _serializer().loads(link_token)
-    except BadSignature:
-        return None
-    return nonce if isinstance(nonce, str) else None
-
-
-def _hash(nonce: str) -> str:
-    return hashlib.sha256(nonce.encode()).hexdigest()
+    # A failure is only logged: the response must look the same as for unknown addresses (E3).
+    mail.try_send(message)
