@@ -1,11 +1,24 @@
 {% extends "base.html" %}
 {% import "macros/ui.html" as ui %}
 {% block title %}{{ group.name }} – {{ t("app.name") }}{% endblock %}
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"
+          integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR"
+          crossorigin="anonymous" defer></script>
+  <script src="{{ url_for('static', filename='js/graph.js') }}" defer></script>
+{% endblock %}
 {% block content %}
   {% call ui.card() %}
     <h1>{{ group.name }}</h1>
-    <p class="muted">{{ t("groups.graph_coming_soon") }}</p>
     <p>{{ ui.button(t("groups.vote_link"), href=url_for('voting.index', group_id=group.id)) }}</p>
+  {% endcall %}
+
+  {% call ui.card() %}
+    {% include "groups/_ranking.html" %}
+  {% endcall %}
+
+  {% call ui.card() %}
+    {% include "groups/_graph.html" %}
   {% endcall %}
 
   {% call ui.card() %}

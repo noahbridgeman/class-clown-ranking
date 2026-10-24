@@ -1,0 +1,20 @@
+{# GRA-01…08. graph.js reads the data attributes and fetches graph.json. #}
+{% set texts = {
+  "score": t("graph.score"), "ups": t("graph.ups"), "downs": t("graph.downs"),
+  "empty": t("graph.empty"), "loadFailed": t("graph.load_failed"),
+  "former": t("graph.former", name="{name}"),
+  "decimalSeparator": decimal_separator,
+} %}
+<h2>{{ t("graph.title") }}</h2>
+<nav class="graph-ranges" aria-label="{{ t('graph.ranges_label') }}">
+  {% for r, label in ranges.items() %}
+    <a class="graph-range" href="{{ url_for('groups.home', group_id=group.id, range=r.value) }}" data-range="{{ r.value }}"{% if r == selected_range %} aria-current="true"{% endif %}>{{ t(label) }}</a>
+  {% endfor %}
+</nav>
+<div class="graph" id="graph"
+     data-url="{{ url_for('groups.graph_json', group_id=group.id) }}"
+     data-range="{{ selected_range.value }}"
+     data-texts='{{ texts|tojson }}'>
+  <noscript><p class="muted">{{ t("graph.no_script") }}</p></noscript>
+</div>
+<p class="graph-status muted" id="graph-status" aria-live="polite" hidden></p>

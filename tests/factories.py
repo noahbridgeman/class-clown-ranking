@@ -1,9 +1,9 @@
 """Small helpers to create rows directly, bypassing services."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from itertools import count
 
-from app.clock import get_clock
+from app.clock import FrozenClock, get_clock
 from app.domain.scoring import default_params
 from app.domain.types import Cadence
 from app.extensions import db
@@ -63,3 +63,9 @@ def tick() -> periods.TickReport:
 
 def vote(group: Group, voter: User, target: User, choice: str = "up") -> None:
     voting.set_vote(group, voter, target.id, voting.Choice(choice))
+
+
+def next_day(clock: FrozenClock) -> periods.TickReport:
+    """For daily groups (make_daily): closes the running window and opens the next one."""
+    clock.advance(timedelta(days=1))
+    return tick()

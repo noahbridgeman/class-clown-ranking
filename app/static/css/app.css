@@ -212,3 +212,95 @@ h2 { font-size: var(--font-size-heading); margin: 0 0 var(--space-md); }
   background: var(--color-danger);
   border-color: var(--color-danger);
 }
+
+.ranking { list-style: none; margin: 0; padding: 0; }
+
+.rank {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) 0;
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.rank:last-child { border-bottom: 0; }
+
+.rank-place {
+  min-width: var(--rank-place-width);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+.rank-me .rank-name { font-weight: var(--font-weight-semibold); }
+
+.rank-me .rank-place { color: var(--color-accent); font-weight: var(--font-weight-bold); }
+
+.rank-move { font-size: var(--font-size-small); color: var(--color-muted); }
+
+.rank-move-up { color: var(--color-success); }
+
+.rank-move-down { color: var(--color-danger); }
+
+.rank-score {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  min-width: var(--vote-button-width);
+  text-align: right;
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.delta-up { color: var(--color-success); }
+
+.delta-down { color: var(--color-danger); }
+
+.highlights {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  margin: 0 0 var(--space-md);
+  padding: 0;
+}
+
+.highlight-label { color: var(--color-muted); }
+
+.highlight-label::after { content: ":"; }
+
+.highlights .delta { min-width: 0; }
+
+.badge-new { color: var(--color-text); border-color: var(--color-success); }
+
+.graph-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0 0 var(--space-md);
+}
+
+.graph-range {
+  padding: var(--space-2xs) var(--space-md);
+  font-size: var(--font-size-small);
+  color: var(--color-muted);
+  text-decoration: none;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.graph-range[aria-current="true"] {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.graph { height: var(--graph-height); }
+
+.graph[hidden] { display: none; }
+
+.graph-status { margin: 0; }
