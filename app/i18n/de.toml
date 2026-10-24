@@ -4,7 +4,61 @@ tagline = "Wer ist der Lustigste in eurer Runde?"
 
 [home]
 intro = "Bewertet euch gegenseitig per Up- und Downvote und verfolgt, wie sich euer Humor-Score entwickelt."
-coming_soon = "Login und Gruppen folgen in Kürze."
+login_cta = "Anmelden"
+greeting = "Hallo, {name}!"
+groups_coming_soon = "Gruppen folgen in Kürze."
+
+[nav]
+login = "Anmelden"
+logout = "Abmelden"
+change_name = "Name ändern"
+
+[auth]
+login_title = "Anmelden"
+login_intro = "Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link, mit dem du dich ohne Passwort anmeldest."
+email_label = "E-Mail-Adresse"
+send_link = "Link schicken"
+email_invalid = "Bitte gib eine gültige E-Mail-Adresse ein."
+sent_title = "Schau in dein Postfach"
+sent_text = "Wenn zu dieser Adresse ein Konto gehört oder sie freigeschaltet ist, haben wir dir einen Login-Link geschickt. Er ist {minutes} Minuten gültig und funktioniert nur einmal."
+sent_hint = "Keine Mail bekommen? Prüfe den Spam-Ordner oder fordere in ein paar Minuten einen neuen Link an."
+sent_again = "Neuen Link anfordern"
+confirm_title = "Anmeldung bestätigen"
+confirm_text = "Tippe auf den Button, um dich anzumelden. Du bleibst {days} Tage angemeldet."
+confirm_button = "Jetzt anmelden"
+invalid_title = "Link ungültig"
+invalid_text = "Dieser Login-Link ist abgelaufen oder wurde schon benutzt."
+invalid_again = "Neuen Link anfordern"
+
+[account]
+name_title_first = "Wie sollen dich die anderen sehen?"
+name_intro_first = "Gib einen Anzeigenamen an. Er erscheint in allen deinen Gruppen."
+name_title = "Anzeigenamen ändern"
+name_intro = "Der Name gilt in allen deinen Gruppen."
+name_label = "Anzeigename"
+name_save = "Speichern"
+name_required = "Bitte gib einen Namen ein."
+name_too_long = "Der Name darf höchstens {max} Zeichen lang sein."
+name_invalid = "Der Name enthält ungültige Zeichen."
+
+[mail]
+login_subject = "Dein Login-Link für das Spaßvogel-Ranking"
+login_body = """Hallo,
+
+mit diesem Link meldest du dich an:
+
+{link}
+
+Der Link ist {minutes} Minuten gültig und funktioniert nur einmal.
+Wenn du ihn nicht angefordert hast, kannst du diese Mail einfach ignorieren.
+"""
+
+[cli]
+users_help = "Konten und Allowlist verwalten."
+allow_help = "Erlaubt einer Adresse, ein Konto ohne Einladung anzulegen."
+allow_added = "{email} hinzugefügt."
+allow_exists = "{email} stand schon auf der Liste."
+email_invalid = "keine gültige E-Mail-Adresse"
 
 [errors]
 back_home = "Zur Startseite"

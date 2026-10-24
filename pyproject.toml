@@ -33,7 +33,11 @@ app = ["templates/**/*", "static/**/*", "i18n/*.toml"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    # Flask-Login 0.6.3 sets the remember cookie's expiry with utcnow(); harmless, fixed upstream.
+    "ignore:datetime.datetime.utcnow:DeprecationWarning:flask_login.login_manager",
+]
 
 [tool.ruff]
 line-length = 100

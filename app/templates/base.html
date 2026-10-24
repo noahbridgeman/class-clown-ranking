@@ -16,6 +16,19 @@
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'>
   <header class="topbar">
     <a class="brand" href="{{ url_for('main.index') }}">{{ t("app.name") }}</a>
+    <nav class="nav">
+      {% if current_user.is_authenticated %}
+        {% if not current_user.needs_display_name %}
+          <a href="{{ url_for('auth.name') }}">{{ t("nav.change_name") }}</a>
+        {% endif %}
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="link-button">{{ t("nav.logout") }}</button>
+        </form>
+      {% elif request.endpoint != "auth.login" %}
+        <a href="{{ url_for('auth.login') }}">{{ t("nav.login") }}</a>
+      {% endif %}
+    </nav>
   </header>
   <main class="container">
     {% block content %}{% endblock %}

@@ -33,6 +33,7 @@ pytest                               # Tests
 ruff check . && ruff format --check . # Lint/Format
 flask --app app db upgrade           # Migrationen anwenden
 python scripts/simulate.py --k 0.5 --d 0.95  # Score-Verläufe für die Kalibrierung von K und d
+flask --app app users allow <email>  # Adresse für Kontoanlage ohne Einladung freischalten (E3)
 ```
 
 Neue Befehle (z. B. Periodenupdate) hier eintragen, sobald sie existieren.
@@ -68,4 +69,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M2 (Konto und Login). M0 und M1 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M3 (Gruppen, Einladungen, Mitgliedschaft). M0 bis M2 sind abgeschlossen. Details in `docs/plan.md`.
