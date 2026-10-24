@@ -7,12 +7,13 @@ from sqlalchemy import func, select
 from app.extensions import db
 from app.models import AllowedEmail, LoginToken, User
 from app.services import auth
+from app.services.mail import Mail
 from tests.factories import allow, make_user
 
 LINK = re.compile(r"http://localhost:5000/login/(\S+)")
 
 
-def link_token(outbox) -> str:
+def link_token(outbox: list[Mail]) -> str:
     return LINK.search(outbox[-1].body).group(1)
 
 
@@ -41,6 +42,9 @@ class TestNormalizeEmail:
             "a@b@example.org",
             "anna@example.org\r\nBcc: x@example.org",
             "a" * 250 + "@x.de",
+            "an\x00na@example.org",
+            "anna@exam\u200bple.org",
+            "anna\u202e@example.org",
         ],
     )
     def test_rejects_invalid(self, raw):
@@ -52,7 +56,18 @@ class TestNormalizeEmail:
 class TestNormalizeDisplayName:
     @pytest.mark.parametrize(
         ("raw", "expected"),
-        [("  Anna  ", "Anna"), ("Anna   Lena", "Anna Lena"), ("Ä" * 40, "Ä" * 40), ("🤡", "🤡")],
+        [
+            ("  Anna  ", "Anna"),
+            ("Anna   Lena", "Anna Lena"),
+            ("Ä" * 40, "Ä" * 40),
+            ("🤡", "🤡"),
+            ("👨\u200d👩\u200d👧", "👨\u200d👩\u200d👧"),  # emoji ZWJ sequence
+            ("José", "José"),  # combining accent
+            ("李明", "李明"),
+            ("O'Neill-Šimić", "O'Neill-Šimić"),
+            ("שרה", "שרה"),
+            ("A\u2028B", "A B"),  # line separators count as whitespace
+        ],
     )
     def test_accepts_and_cleans_up(self, raw, expected):
         assert auth.normalize_display_name(raw) == expected
@@ -65,6 +80,16 @@ class TestNormalizeDisplayName:
             ("x" * 41, "account.name_too_long"),
             ("Anna\x00", "account.name_invalid"),
             ("An\x1bna", "account.name_invalid"),
+            ("\u200b", "account.name_invalid"),  # zero-width space
+            ("Anna\u202e", "account.name_invalid"),  # right-to-left override
+            ("Anna\u2066x", "account.name_invalid"),  # bidi isolate
+            ("An\u00adna", "account.name_invalid"),  # soft hyphen
+            ("Anna\ue000", "account.name_invalid"),  # private use
+            ("Anna\U000e0001", "account.name_invalid"),  # language tag
+            ("\u3164", "account.name_required"),  # Hangul filler
+            ("\u2800\u2800", "account.name_required"),  # braille blank
+            ("\u0301", "account.name_required"),  # lone combining mark
+            ("\u200d", "account.name_required"),  # lone joiner
         ],
     )
     def test_rejects_invalid(self, app, raw, key):
@@ -153,6 +178,14 @@ class TestRateLimit:
         auth.request_login("anna@example.org")
         assert len(outbox) == 5
         assert token_count() == 5
+
+    def test_limit_holds_until_just_before_an_hour(self, app, outbox, clock):
+        make_user("anna@example.org")
+        for _ in range(5):
+            auth.request_login("anna@example.org")
+        clock.advance(timedelta(hours=1) - timedelta(microseconds=1))
+        auth.request_login("anna@example.org")
+        assert len(outbox) == 5
 
     def test_limit_frees_up_after_an_hour(self, app, outbox, clock):
         make_user("anna@example.org")
@@ -262,6 +295,16 @@ class TestRedeemLogin:
 
     def test_rejects_signed_non_string_payload(self, app):
         assert auth.redeem_login(auth._serializer().dumps(["not", "a", "nonce"])) is None
+
+    def test_failed_redemption_leaves_pending_changes_alone(self, app):
+        # From M3 on, invitation acceptance may run in the same transaction.
+        allowed = AllowedEmail(email="pending@example.org", added_at=auth.get_clock().now())
+        db.session.add(allowed)
+        db.session.flush()
+        assert auth.redeem_login(auth._serializer().dumps("unknown-nonce")) is None
+        assert allowed in db.session
+        db.session.commit()
+        assert db.session.get(AllowedEmail, "pending@example.org")
 
     def test_deleted_account_cannot_log_in(self, app, outbox, clock):
         user = make_user("anna@example.org")

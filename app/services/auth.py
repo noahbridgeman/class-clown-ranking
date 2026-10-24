@@ -25,6 +25,13 @@ RATE_LIMIT_WINDOW = timedelta(hours=1)
 # Deliberately loose: the only real check is whether the login link arrives.
 _EMAIL_PATTERN = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 _TOKEN_SALT = "login-token"
+# Invisible or layout-changing characters: controls, format characters such as bidi
+# overrides and zero-width spaces, surrogates, private use, unassigned, line separators.
+_FORBIDDEN_NAME_CATEGORIES = {"Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp"}
+# The zero-width joiner is a format character, but emoji sequences such as 👨‍👩‍👧 need it.
+_ALLOWED_FORMAT_CHARS = {"\u200d"}
+# Letters that render as blank space.
+_BLANK_LETTERS = {"\u115f", "\u1160", "\u3164", "\uffa0", "\u2800"}
 
 
 class InvalidInput(ValueError):
@@ -41,7 +48,11 @@ class InvalidInput(ValueError):
 
 def normalize_email(raw: str) -> str:
     email = raw.strip().lower()
-    if len(email) > EMAIL_MAX_LENGTH or not _EMAIL_PATTERN.fullmatch(email):
+    if (
+        len(email) > EMAIL_MAX_LENGTH
+        or not _EMAIL_PATTERN.fullmatch(email)
+        or any(unicodedata.category(char).startswith("C") for char in email)
+    ):
         raise InvalidInput("auth.email_invalid")
     return email
 
@@ -52,9 +63,21 @@ def normalize_display_name(raw: str) -> str:
         raise InvalidInput("account.name_required")
     if len(name) > DISPLAY_NAME_MAX_LENGTH:
         raise InvalidInput("account.name_too_long", max=DISPLAY_NAME_MAX_LENGTH)
-    if any(unicodedata.category(char) == "Cc" for char in name):
+    if any(_forbidden_in_name(char) for char in name):
         raise InvalidInput("account.name_invalid")
+    if not any(_visible(char) for char in name):
+        raise InvalidInput("account.name_required")
     return name
+
+
+def _forbidden_in_name(char: str) -> bool:
+    category = unicodedata.category(char)
+    return category in _FORBIDDEN_NAME_CATEGORIES and char not in _ALLOWED_FORMAT_CHARS
+
+
+def _visible(char: str) -> bool:
+    # Letters, numbers, punctuation, symbols; marks and spaces alone show nothing.
+    return unicodedata.category(char)[0] in "LNPS" and char not in _BLANK_LETTERS
 
 
 def allow_email(raw: str) -> bool:
@@ -138,7 +161,10 @@ def _rate_limited(email: str, now: datetime) -> bool:
 
 
 def _consume(nonce: str, now: datetime) -> str | None:
-    """Marks the token used. The conditional UPDATE lets only one of two racing requests win."""
+    """Marks the token used. The conditional UPDATE lets only one of two racing requests win.
+
+    Leaves the transaction to the caller.
+    """
     nonce_hash = _hash(nonce)
     result = db.session.execute(
         update(LoginToken)
@@ -151,7 +177,6 @@ def _consume(nonce: str, now: datetime) -> str | None:
         .execution_options(synchronize_session=False)
     )
     if result.rowcount != 1:
-        db.session.rollback()
         return None
     return db.session.scalar(select(LoginToken.email).where(LoginToken.nonce_hash == nonce_hash))
 
