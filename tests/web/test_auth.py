@@ -1,32 +1,63 @@
 import re
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from flask import url_for
+from flask import Flask, url_for
+from flask.testing import FlaskClient
+from werkzeug.test import TestResponse
 
 from app import create_app
 from app.clock import FrozenClock
 from app.config import TestConfig
 from app.extensions import db
 from app.models import User
+from app.services.mail import Mail
 from tests.conftest import IsolatedClient
 from tests.factories import allow, make_user
 
 LINK = re.compile(r"http://localhost:5000(/login/\S+)")
+CSRF_INPUT = re.compile(r'name="csrf_token" (?:type="hidden" )?value="([^"]+)"')
+# Everything a client can observe about a response, except the timestamp header.
+Observed = tuple[int, str | None, list[tuple[str, str]], bytes]
 
 
-def link_path(outbox) -> str:
+def link_path(outbox: list[Mail]) -> str:
     return LINK.search(outbox[-1].body).group(1)
 
 
-def log_in_via_mail(client, outbox, email: str):
+def log_in_via_mail(client: FlaskClient, outbox: list[Mail], email: str) -> TestResponse:
     client.post("/login", data={"email": email})
     return client.post(link_path(outbox))
 
 
-def current_user_id(client) -> str | None:
+def current_user_id(client: FlaskClient) -> str | None:
     with client.session_transaction() as session:
         return session.get("_user_id")
+
+
+def csrf_token(html: str) -> str:
+    return CSRF_INPUT.search(html).group(1)
+
+
+def observe(response: TestResponse) -> Observed:
+    headers = sorted((name, value) for name, value in response.headers if name != "Date")
+    return response.status_code, response.location, headers, response.get_data()
+
+
+@pytest.fixture
+def csrf_app() -> Iterator[Flask]:
+    class WithCsrf(TestConfig):
+        WTF_CSRF_ENABLED = True
+
+    app = create_app(WithCsrf, clock=FrozenClock(datetime(2026, 10, 23, 12, tzinfo=UTC)))
+    app.test_client_class = IsolatedClient
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+        db.engine.dispose()
 
 
 class TestLoginFlow:
@@ -44,7 +75,6 @@ class TestLoginFlow:
         confirm = client.get(link_path(outbox))
         assert confirm.status_code == 200
         assert "Jetzt anmelden" in confirm.get_data(as_text=True)
-        assert confirm.headers["Referrer-Policy"] == "no-referrer"
 
         response = client.post(link_path(outbox))
         assert response.status_code == 302
@@ -103,15 +133,62 @@ class TestLoginFlow:
             assert url_for("auth.confirm", token=token) == link_path(outbox)
 
 
+class TestTokenPages:
+    """The token is in the URL, so neither Referer headers nor caches may keep it."""
+
+    @staticmethod
+    def assert_protected(response: TestResponse) -> None:
+        assert response.headers["Referrer-Policy"] == "no-referrer"
+        assert response.headers["Cache-Control"] == "no-store"
+
+    def test_confirm_page(self, client, outbox):
+        make_user("anna@example.org")
+        client.post("/login", data={"email": "anna@example.org"})
+        self.assert_protected(client.get(link_path(outbox)))
+
+    def test_invalid_link_page(self, client):
+        self.assert_protected(client.post("/login/kaputt"))
+
+    def test_csrf_error_page(self, csrf_app):
+        client = csrf_app.test_client()
+        response = client.post("/login/kaputt")
+        assert response.status_code == 400
+        assert "Sitzung abgelaufen" in response.get_data(as_text=True)
+        self.assert_protected(response)
+
+    def test_other_pages_are_unaffected(self, client):
+        assert "Referrer-Policy" not in client.get("/login").headers
+
+
 class TestNoAccountEnumeration:
-    """E3: the response must not reveal whether an address has an account."""
+    """E3: the response must not reveal whether an address has an account.
 
-    def _respond(self, client, email):
-        response = client.post("/login", data={"email": email})
-        page = client.get(response.location)
-        return response.status_code, response.location, page.status_code, page.get_data()
+    Status, headers (including Set-Cookie) and body of the form POST and of the page it
+    redirects to must be identical. The client loads the form first, like a browser.
+    """
 
-    def test_known_and_unknown_addresses_look_the_same(self, client, outbox):
+    def _respond(self, client: FlaskClient, email: str) -> tuple[Observed, Observed]:
+        page = client.get("/login").get_data(as_text=True)
+        token = re.search(r'name="csrf-token" content="([^"]+)"', page).group(1)
+        data = {"email": email, "csrf_token": token}
+        response = client.post("/login", data=data)
+        return observe(response), observe(client.get(response.location))
+
+    @pytest.fixture(params=["csrf_off", "csrf_on"])
+    def setup(self, request: pytest.FixtureRequest) -> tuple[FlaskClient, list[Mail]]:
+        target = request.getfixturevalue("csrf_app" if request.param == "csrf_on" else "app")
+        return target.test_client(), target.extensions["mail"].outbox
+
+    @pytest.fixture
+    def client_and_outbox(
+        self, setup: tuple[FlaskClient, list[Mail]]
+    ) -> tuple[FlaskClient, list[Mail]]:
+        client, outbox = setup
+        client.get("/login")  # the session cookie is set once, on the first visit
+        return client, outbox
+
+    def test_known_and_unknown_addresses_look_the_same(self, client_and_outbox):
+        client, outbox = client_and_outbox
         make_user("anna@example.org")
         allow("neu@example.org")
         known = self._respond(client, "anna@example.org")
@@ -120,7 +197,14 @@ class TestNoAccountEnumeration:
         assert known == allowed == unknown
         assert [mail.to for mail in outbox] == ["anna@example.org", "neu@example.org"]
 
-    def test_rate_limited_address_looks_the_same(self, client, outbox):
+    def test_no_cookie_is_set_by_the_request(self, client_and_outbox):
+        client, _ = client_and_outbox
+        make_user("anna@example.org")
+        (post, page) = self._respond(client, "anna@example.org")
+        assert all(name != "Set-Cookie" for name, _ in post[2] + page[2])
+
+    def test_rate_limited_address_looks_the_same(self, client_and_outbox):
+        client, outbox = client_and_outbox
         make_user("anna@example.org")
         first = self._respond(client, "anna@example.org")
         for _ in range(5):
@@ -128,16 +212,44 @@ class TestNoAccountEnumeration:
         assert len(outbox) == 5
         assert limited == first == self._respond(client, "fremd@example.org")
 
-    def test_mail_failure_looks_the_same(self, client, outbox, monkeypatch):
+    def test_mail_failure_looks_the_same(self, client_and_outbox, monkeypatch):
         from app.services import auth
 
+        client, _ = client_and_outbox
         make_user("anna@example.org")
 
-        def fail(_mail):
+        def fail(_mail: Mail) -> None:
             raise OSError("SMTP down")
 
         monkeypatch.setattr(auth.mail, "send", fail)
         assert self._respond(client, "anna@example.org") == self._respond(client, "x@example.org")
+
+
+class TestAccountSwitch:
+    """A logged-in browser opens a login link that was requested on another device."""
+
+    @staticmethod
+    def request_link(app: Flask, outbox: list[Mail], email: str) -> str:
+        app.test_client().post("/login", data={"email": email})
+        return link_path(outbox)
+
+    def test_login_starts_a_fresh_session(self, app, login_as, outbox):
+        client = login_as(make_user("anna@example.org"))
+        with client.session_transaction() as session:
+            session["selected_group"] = 42
+        bo = make_user("bo@example.org")
+        client.post(self.request_link(app, outbox, "bo@example.org"))
+        with client.session_transaction() as session:
+            assert "selected_group" not in session
+            assert session["_user_id"] == bo.get_id()
+
+    def test_nameless_account_can_use_a_login_link(self, app, login_as, outbox):
+        client = login_as(make_user("neu@example.org", display_name=None))
+        bo = make_user("bo@example.org", display_name="Bo")
+        path = self.request_link(app, outbox, "bo@example.org")
+        assert client.get(path).status_code == 200
+        assert client.post(path).location == "/"
+        assert current_user_id(client) == bo.get_id()
 
 
 class TestRememberSession:
@@ -298,29 +410,16 @@ class TestChangeName:
     def test_requires_login(self, client):
         response = client.get("/account/name")
         assert response.status_code == 302
-        assert response.location.startswith("/login")
+        assert response.location == "/login"
+
+    def test_htmx_request_without_login_redirects_via_header(self, client):
+        response = client.get("/account/name", headers={"HX-Request": "true"})
+        assert response.status_code == 204
+        assert response.headers["HX-Redirect"] == "/login"
 
 
 class TestWithCsrf:
     """TestConfig disables CSRF, so the forms are exercised once with it switched on."""
-
-    @pytest.fixture
-    def csrf_app(self):
-        class WithCsrf(TestConfig):
-            WTF_CSRF_ENABLED = True
-
-        app = create_app(WithCsrf, clock=FrozenClock(datetime(2026, 10, 23, 12, tzinfo=UTC)))
-        app.test_client_class = IsolatedClient
-        with app.app_context():
-            db.create_all()
-            yield app
-            db.session.remove()
-            db.drop_all()
-            db.engine.dispose()
-
-    @staticmethod
-    def token(html: str) -> str:
-        return re.search(r'name="csrf_token" (?:type="hidden" )?value="([^"]+)"', html).group(1)
 
     def test_full_flow_with_csrf(self, csrf_app):
         client = csrf_app.test_client()
@@ -330,33 +429,33 @@ class TestWithCsrf:
         page = client.get("/login").get_data(as_text=True)
         assert client.post("/login", data={"email": "neu@example.org"}).status_code == 400
         response = client.post(
-            "/login", data={"email": "neu@example.org", "csrf_token": self.token(page)}
+            "/login", data={"email": "neu@example.org", "csrf_token": csrf_token(page)}
         )
         assert response.location == "/login/sent"
 
         path = link_path(outbox)
         confirm = client.get(path).get_data(as_text=True)
         assert client.post(path).status_code == 400
-        assert client.post(path, data={"csrf_token": self.token(confirm)}).status_code == 302
+        assert client.post(path, data={"csrf_token": csrf_token(confirm)}).status_code == 302
 
         form = client.get("/account/name").get_data(as_text=True)
         assert client.post("/account/name", data={"display_name": "Anna"}).status_code == 400
         response = client.post(
-            "/account/name", data={"display_name": "Anna", "csrf_token": self.token(form)}
+            "/account/name", data={"display_name": "Anna", "csrf_token": csrf_token(form)}
         )
         assert response.location == "/"
 
         home = client.get("/").get_data(as_text=True)
         assert client.post("/logout").status_code == 400
-        assert client.post("/logout", data={"csrf_token": self.token(home)}).location == "/"
+        assert client.post("/logout", data={"csrf_token": csrf_token(home)}).location == "/"
 
     def test_link_without_csrf_token_stays_usable(self, csrf_app):
         client = csrf_app.test_client()
         outbox = csrf_app.extensions["mail"].outbox
         make_user("anna@example.org")
         page = client.get("/login").get_data(as_text=True)
-        client.post("/login", data={"email": "anna@example.org", "csrf_token": self.token(page)})
+        client.post("/login", data={"email": "anna@example.org", "csrf_token": csrf_token(page)})
         path = link_path(outbox)
         client.post(path)  # rejected for the missing CSRF token
         confirm = client.get(path).get_data(as_text=True)
-        assert client.post(path, data={"csrf_token": self.token(confirm)}).status_code == 302
+        assert client.post(path, data={"csrf_token": csrf_token(confirm)}).status_code == 302

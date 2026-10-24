@@ -21,6 +21,12 @@ class IsolatedClient(FlaskClient):
     Flask reuses an already pushed app context for requests, so without this the test's
     context would leak g (and with it the cached current_user) and the db session
     from one request into the next.
+
+    Limits: the in-memory database uses one shared connection (StaticPool), so test and
+    request share a transaction. Commit test data before a request, since a rollback in
+    the request would discard it. ``with client:`` does not work, because its contexts
+    would be opened and closed in different contextvars contexts. Tests of real
+    concurrency (M4: parallel tick runs) need a file database with NullPool.
     """
 
     def open(self, *args: Any, **kwargs: Any) -> Any:

@@ -6,6 +6,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    session,
     url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
@@ -20,8 +21,11 @@ from app.services import auth
 
 bp = Blueprint("auth", __name__)
 
-# Reachable while the display name is still missing (AUTH-04).
-NAME_GATE_EXEMPT = {"auth.name", "auth.logout", "static"}
+# Pages whose URL contains a login token.
+TOKEN_ENDPOINTS = {"auth.confirm", "auth.redeem"}
+# Reachable while the display name is still missing (AUTH-04). Login links stay usable
+# so a nameless account can switch to another one (and, from M3 on, accept invitations).
+NAME_GATE_EXEMPT = {"auth.name", "auth.logout", "static", *TOKEN_ENDPOINTS}
 
 
 class EmailForm(FlaskForm):
@@ -51,6 +55,20 @@ def _load_user(session_id: str) -> User | None:
     except ValueError:
         return None
     return user if current and user.is_active else None
+
+
+@login_manager.unauthorized_handler
+def _unauthorized() -> BaseResponse:
+    return _redirect(url_for("auth.login"))
+
+
+@bp.after_request
+def _protect_token_pages(response: Response) -> Response:
+    """Keeps the token out of Referer headers and caches, also on error pages."""
+    if request.endpoint in TOKEN_ENDPOINTS:
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def _name_gate() -> BaseResponse | None:
@@ -85,12 +103,10 @@ def sent() -> str:
 
 
 @bp.get("/login/<token>")
-def confirm(token: str) -> Response:
+def confirm(token: str) -> str:
     # Mail scanners open links on their own, so only the POST below uses up the token.
     days = current_app.config["REMEMBER_COOKIE_DURATION"].days
-    response = Response(render_template("auth/confirm.html", form=ConfirmForm(), days=days))
-    response.headers["Referrer-Policy"] = "no-referrer"
-    return response
+    return render_template("auth/confirm.html", form=ConfirmForm(), days=days)
 
 
 @bp.post("/login/<token>")
@@ -100,6 +116,8 @@ def redeem(token: str) -> tuple[str, int] | BaseResponse:
     user = auth.redeem_login(token)
     if user is None:
         return render_template("auth/invalid.html"), 400
+    # Nothing from a previous account's session may carry over.
+    session.clear()
     login_user(user, remember=True)  # AUTH-06
     return redirect(url_for("main.index"))
 
