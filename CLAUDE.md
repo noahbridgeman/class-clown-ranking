@@ -35,7 +35,12 @@ flask --app app db upgrade           # Migrationen anwenden
 python scripts/simulate.py --k 0.5 --d 0.95  # Score-Verläufe für die Kalibrierung von K und d
 flask --app app users allow <email>  # Adresse für Kontoanlage ohne Einladung freischalten (E3)
 flask --app app tick                 # Periodenupdate: Perioden schließen, Scores berechnen, Fenster öffnen
+python scripts/screenshots.py capture <dir>          # alle Seiten fotografieren (390 und 1280 px, braucht Chrome)
+python scripts/screenshots.py compare <vorher> <nachher>  # Exit-Code 1, wenn sich ein Screenshot unterscheidet
 ```
+
+Bei reinen Frontend-Umbauten vorher und nachher `capture` laufen lassen und `compare` muss sauber sein.
+Neue Seiten oder Zustände in `render_pages()` in `scripts/screenshots.py` ergänzen.
 
 `tick` ist idempotent und läuft in Produktion minütlich über einen systemd-Timer
 (`OnCalendar=*-*-* *:*:00`, `Persistent=true`), damit verpasste Updates nach einem Neustart
