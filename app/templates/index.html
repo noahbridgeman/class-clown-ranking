@@ -1,13 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
-  <section class="card">
-    <h1>{{ t("app.tagline") }}</h1>
-    {% if current_user.is_authenticated %}
-      <p>{{ t("home.greeting", name=current_user.display_name) }}</p>
-      <p class="muted">{{ t("home.groups_coming_soon") }}</p>
-    {% else %}
+  {% if current_user.is_authenticated %}
+    <section class="card">
+      <h1>{{ t("home.greeting", name=current_user.display_name) }}</h1>
+      <h2>{{ t("home.your_groups") }}</h2>
+      {% if groups %}
+        <ul class="list">
+          {% for group in groups %}
+            <li><a href="{{ url_for('groups.home', group_id=group.id) }}">{{ group.name }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">{{ t("home.no_groups") }}</p>
+      {% endif %}
+      <p><a class="button" href="{{ url_for('groups.create') }}">{{ t("home.create_group") }}</a></p>
+    </section>
+  {% else %}
+    <section class="card">
+      <h1>{{ t("app.tagline") }}</h1>
       <p>{{ t("home.intro") }}</p>
       <p><a class="button" href="{{ url_for('auth.login') }}">{{ t("home.login_cta") }}</a></p>
-    {% endif %}
-  </section>
+    </section>
+  {% endif %}
 {% endblock %}

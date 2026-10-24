@@ -2,8 +2,10 @@
 
 import tomllib
 from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from flask import Flask, current_app
 
@@ -59,7 +61,13 @@ def init_app(app: Flask) -> None:
     )
     app.extensions["translator"] = translator
     app.jinja_env.globals["t"] = translator
+    app.jinja_env.filters["local_date"] = local_date
 
 
 def t(key: str, **params: Any) -> str:
     return current_app.extensions["translator"](key, **params)
+
+
+def local_date(value: datetime, timezone: str) -> str:
+    """A UTC timestamp as a German date in the group's timezone, e.g. 31.10.2026."""
+    return value.astimezone(ZoneInfo(timezone)).strftime("%d.%m.%Y")

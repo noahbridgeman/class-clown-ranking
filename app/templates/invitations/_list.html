@@ -1,0 +1,51 @@
+{# Swapped in by HTMX after every action; without JavaScript the forms reload the page. #}
+<div id="invitations">
+  {% include "partials/flashes.html" %}
+  <form method="post" action="{{ url_for('invitations.create', group_id=group.id) }}" class="form"
+        hx-post="{{ url_for('invitations.create', group_id=group.id) }}"
+        hx-target="#invitations" hx-swap="outerHTML">
+    {{ form.csrf_token }}
+    <label for="email">{{ t("invitations.email_label") }}</label>
+    <input id="email" name="email" type="email" required autocomplete="off" inputmode="email"
+           autocapitalize="off" spellcheck="false" maxlength="{{ max_length }}"
+           value="{{ form.email.data or '' }}"
+           {% if error %}aria-invalid="true" aria-describedby="invite-error"{% endif %}>
+    {% if error %}<p id="invite-error" class="error" role="alert">{{ error }}</p>{% endif %}
+    <button type="submit" class="button">{{ t("invitations.invite") }}</button>
+  </form>
+
+  {% if invitations %}
+    <ul class="invitations">
+      {% for invitation in invitations %}
+        {% set status = invitation.status(now).value %}
+        <li class="invitation invitation-{{ status }}">
+          <span class="invitation-email">{{ invitation.email }}</span>
+          <span class="badge badge-{{ status }}">
+            {%- if status == "open" -%}
+              {{ t("invitations.status_open", date=invitation.expires_at|local_date(group.timezone)) }}
+            {%- elif status == "expired" -%}
+              {{ t("invitations.status_expired") }}
+            {%- elif status == "accepted" -%}
+              {{ t("invitations.status_accepted") }}
+            {%- else -%}
+              {{ t("invitations.status_revoked") }}
+            {%- endif -%}
+          </span>
+          {% if status in ("open", "expired") %}
+            <span class="invitation-actions">
+              {% for endpoint, label in (("invitations.resend", t("invitations.resend")), ("invitations.revoke", t("invitations.revoke"))) %}
+                {% set url = url_for(endpoint, group_id=group.id, invitation_id=invitation.id) %}
+                <form method="post" action="{{ url }}" hx-post="{{ url }}" hx-target="#invitations" hx-swap="outerHTML">
+                  {{ action_form.csrf_token }}
+                  <button type="submit" class="link-button">{{ label }}</button>
+                </form>
+              {% endfor %}
+            </span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">{{ t("invitations.empty") }}</p>
+  {% endif %}
+</div>

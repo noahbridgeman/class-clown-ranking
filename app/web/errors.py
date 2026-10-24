@@ -1,17 +1,27 @@
 from flask import Flask, render_template, request
 from flask_wtf.csrf import CSRFError
+from werkzeug import exceptions
 from werkzeug.exceptions import HTTPException
 
 from app.i18n import t
+from app.services.errors import NotAllowed, NotFound
 
 Headers = list[tuple[str, str]]
 
 
 def register(app: Flask) -> None:
+    app.register_error_handler(403, _forbidden)
     app.register_error_handler(404, _not_found)
     app.register_error_handler(500, _server_error)
     app.register_error_handler(CSRFError, _csrf_error)
     app.register_error_handler(HTTPException, _http_error)
+    # Services raise these when a route's own checks missed something.
+    app.register_error_handler(NotFound, lambda _error: _not_found(exceptions.NotFound()))
+    app.register_error_handler(NotAllowed, lambda _error: _forbidden(exceptions.Forbidden()))
+
+
+def _forbidden(error: HTTPException) -> tuple[str, int, Headers]:
+    return _render(t("errors.forbidden_title"), t("errors.forbidden_text"), error)
 
 
 def _not_found(error: HTTPException) -> tuple[str, int, Headers]:

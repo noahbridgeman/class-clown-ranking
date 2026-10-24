@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }} – {{ t("app.name") }}{% endblock %}
+{% block content %}
+  <section class="card">
+    <h1>{{ group.name }}</h1>
+    <p class="muted">{{ t("groups.graph_coming_soon") }}</p>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("groups.members", count=members|length) }}</h2>
+    <ul class="members">
+      {% for member in members %}
+        {% set is_me = member.user_id == current_user.id %}
+        <li class="member{% if is_me %} member-me{% endif %}">
+          <svg class="dot" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="{{ member_color(member.color_index) }}"/></svg>
+          <span class="member-name">
+            {% with user=member.user %}{% include "partials/member_name.html" %}{% endwith %}
+            {% if is_me %}<span class="muted">({{ t("groups.you") }})</span>{% endif %}
+          </span>
+          {% if member.user_id == group.admin_user_id %}<span class="badge">{{ t("groups.admin_badge") }}</span>{% endif %}
+          {% if is_admin and not is_me %}
+            <details class="manage">
+              <summary>{{ t("groups.manage") }}</summary>
+              <form method="post" action="{{ url_for('groups.transfer_admin', group_id=group.id, user_id=member.user_id) }}">
+                {{ form.csrf_token }}
+                <p class="muted">{{ t("groups.make_admin_hint") }}</p>
+                <button type="submit" class="button button-secondary">{{ t("groups.make_admin") }}</button>
+              </form>
+              <form method="post" action="{{ url_for('groups.remove_member', group_id=group.id, user_id=member.user_id) }}">
+                {{ form.csrf_token }}
+                <p class="muted">{% with user=member.user %}{{ t("groups.remove_hint", name=(user.display_name or t("groups.deleted_member"))) }}{% endwith %}</p>
+                <button type="submit" class="button button-danger">{{ t("groups.remove") }}</button>
+              </form>
+            </details>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="actions">
+      {% if is_admin %}<a href="{{ url_for('invitations.index', group_id=group.id) }}">{{ t("groups.invitations_link") }}</a>{% endif %}
+      <a href="{{ url_for('groups.leave', group_id=group.id) }}">{{ t("groups.leave_link") }}</a>
+      {% if is_admin %}<a class="danger" href="{{ url_for('groups.delete', group_id=group.id) }}">{{ t("groups.delete_link") }}</a>{% endif %}
+    </p>
+  </section>
+{% endblock %}

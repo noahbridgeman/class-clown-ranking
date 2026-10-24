@@ -1,19 +1,14 @@
 import re
-from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from flask import Flask, url_for
 from flask.testing import FlaskClient
 from werkzeug.test import TestResponse
 
-from app import create_app
-from app.clock import FrozenClock
-from app.config import TestConfig
 from app.extensions import db
 from app.models import User
 from app.services.mail import Mail
-from tests.conftest import IsolatedClient
 from tests.factories import allow, make_user
 
 LINK = re.compile(r"http://localhost:5000(/login/\S+)")
@@ -40,24 +35,14 @@ def csrf_token(html: str) -> str:
     return CSRF_INPUT.search(html).group(1)
 
 
+# CSRF tokens carry a wall-clock timestamp, so two pages differ by them alone.
+CSRF_VALUE = re.compile(rb'(name="csrf[-_]token" (?:type="hidden" )?(?:content|value)=")[^"]+')
+
+
 def observe(response: TestResponse) -> Observed:
     headers = sorted((name, value) for name, value in response.headers if name != "Date")
-    return response.status_code, response.location, headers, response.get_data()
-
-
-@pytest.fixture
-def csrf_app() -> Iterator[Flask]:
-    class WithCsrf(TestConfig):
-        WTF_CSRF_ENABLED = True
-
-    app = create_app(WithCsrf, clock=FrozenClock(datetime(2026, 10, 23, 12, tzinfo=UTC)))
-    app.test_client_class = IsolatedClient
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.session.remove()
-        db.drop_all()
-        db.engine.dispose()
+    body = CSRF_VALUE.sub(rb"\1<token>", response.get_data())
+    return response.status_code, response.location, headers, body
 
 
 class TestLoginFlow:
