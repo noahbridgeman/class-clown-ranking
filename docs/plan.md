@@ -28,6 +28,8 @@ Annahmen (vom Plan getroffen, bei Bedarf korrigieren):
 | A8 | Maximale Gruppengröße: 30 (`MAX_GROUP_SIZE`). Mitglieder und offene Einladungen zusammen dürfen 30 nicht überschreiten. | NFA-11, offener Punkt 5 |
 | A9 | Löscht jemand sein Konto, verlässt er damit alle Gruppen, und für den Austritt gelten MEM-05 und ROL-03. Ein späteres neues Konto mit derselben Adresse ist eine neue Person, MEM-04 greift dann nicht. | NFA-05 |
 | A10 | Für Nicht-Mitglieder antworten Gruppen-URLs mit **404**, nicht mit 403. | Sonst verrät die Antwort, dass es die Gruppe gibt. |
+| A11 | Grenzen für K und d (SET-05), wöchentlich: K ∈ [0,05; 2,0], d ∈ [0,5; 1,0]. Die täglichen Grenzen sind deren Bild unter SCO-07: d ∈ [0,5^(1/7) ≈ 0,906; 1,0], K ∈ [0,05/7 ≈ 0,0071; ≈ 0,377]. Jeder gültige Wochenwert ergibt so einen gültigen Tageswert. Liegt ein umgerechneter Wert außerhalb der Zielgrenzen (nur täglich → wöchentlich am Rand möglich), wird er auf die Grenze gesetzt. | Die Anforderung nennt keine Zahlen. Die Werte sind vorläufig und werden mit der Kalibrierung in M9 überprüft. |
+| A12 | Hervorhebungen in der Rangliste (RNK-03): größter Anstieg und größter Absturz (nur echte Veränderungen, bei Gleichstand alle Betroffenen), neu auf Platz 1, und Platzänderungen gegenüber der Vorperiode. Veränderungen werden mit voller Genauigkeit berechnet. Wer neu ist, hat keine Veränderung. | RNK-03 nennt nur Beispiele. |
 
 Noch offen (blockiert erst den genannten Meilenstein):
 - Mindestgröße für den Anonym-Modus (offener Punkt 3) → vor M6 klären.
@@ -392,5 +394,6 @@ Jeder Meilenstein ist fertig, wenn `pytest` grün ist, `ruff` sauber ist, die ge
 ## 10 Aktueller Stand
 
 - [x] M0 Projektgerüst (2026-10-23). `login_manager` folgt mit M2, weil Flask-Login ohne `user_loader` nicht nutzbar ist.
-- [ ] M1 Domänenkern ← **aktuell**
-- [ ] M2 … M9
+- [x] M1 Domänenkern (2026-10-24). Simulationsskript: `scripts/simulate.py`. Grenzen und Hervorhebungen als A11/A12 festgelegt.
+- [ ] M2 Konto und Login ← **aktuell**
+- [ ] M3 … M9
