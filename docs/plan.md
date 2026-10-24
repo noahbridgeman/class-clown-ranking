@@ -28,8 +28,9 @@ Annahmen (vom Plan getroffen, bei Bedarf korrigieren):
 | A8 | Maximale Gruppengröße: 30 (`MAX_GROUP_SIZE`). Mitglieder und offene Einladungen zusammen dürfen 30 nicht überschreiten. | NFA-11, offener Punkt 5 |
 | A9 | Löscht jemand sein Konto, verlässt er damit alle Gruppen, und für den Austritt gelten MEM-05 und ROL-03. Ein späteres neues Konto mit derselben Adresse ist eine neue Person, MEM-04 greift dann nicht. | NFA-05 |
 | A10 | Für Nicht-Mitglieder antworten Gruppen-URLs mit **404**, nicht mit 403. | Sonst verrät die Antwort, dass es die Gruppe gibt. |
-| A11 | Grenzen für K und d (SET-05), wöchentlich: K ∈ [0,05; 2,0], d ∈ [0,5; 1,0]. Die täglichen Grenzen sind deren Bild unter SCO-07: d ∈ [0,5^(1/7) ≈ 0,906; 1,0], K ∈ [0,05/7 ≈ 0,0071; ≈ 0,377]. Jeder gültige Wochenwert ergibt so einen gültigen Tageswert. Liegt ein umgerechneter Wert außerhalb der Zielgrenzen (nur täglich → wöchentlich am Rand möglich), wird er auf die Grenze gesetzt. | Die Anforderung nennt keine Zahlen. Die Werte sind vorläufig und werden mit der Kalibrierung in M9 überprüft. |
-| A12 | Hervorhebungen in der Rangliste (RNK-03): größter Anstieg und größter Absturz (nur echte Veränderungen, bei Gleichstand alle Betroffenen), neu auf Platz 1, und Platzänderungen gegenüber der Vorperiode. Veränderungen werden mit voller Genauigkeit berechnet. Wer neu ist, hat keine Veränderung. | RNK-03 nennt nur Beispiele. |
+| A11 | Grenzen für K und d (SET-05), wöchentlich: K ∈ [0,05; 2,0], d ∈ [0,5; 0,99]. d = 1 ist ausgeschlossen, damit der Decay immer wirkt (SCO-05) und das Gleichgewicht K/(1−d) endlich bleibt (Rücksprache 2026-10-24). Tägliche Werte sind genau dann gültig, wenn ihr wöchentliches Gegenstück nach SCO-07 gültig ist: d ∈ [0,5^(1/7); 0,99^(1/7)], und die K-Grenzen hängen von d ab (K_woche-Grenzen geteilt durch 1 + d + … + d⁶). Damit ist die Umrechnung in beide Richtungen verlustfrei und braucht kein Kappen. | Die Anforderung nennt keine Zahlen. Die Werte sind vorläufig und werden mit der Kalibrierung in M9 überprüft. |
+| A12 | Hervorhebungen in der Rangliste (RNK-03): größter Anstieg und größter Absturz (nur echte Veränderungen, bei Gleichstand alle Betroffenen), neu auf Platz 1, und Platzänderungen gegenüber der Vorperiode. Verglichen wird nur unter den aktuell aktiven Mitgliedern: Ausgetretene zählen nicht, niemand rückt also allein durch einen Austritt auf. Neue haben keine Veränderung, zählen aber als „neu auf Platz 1“, wenn sie dort landen. Veränderungen werden mit voller Genauigkeit berechnet. | RNK-03 nennt nur Beispiele. |
+| A13 | Anzeige (SCO-04, RNK-02): eine Nachkommastelle, kaufmännisch gerundet (5,25 → 5,3), deutsches Komma. Eine Veränderung, die gerundet 0,0 ergibt, erscheint als „–“ statt als Pfeil. „−0,0“ gibt es nicht. Umgesetzt als reine Funktionen in `domain/formatting.py`; die Jinja-Filter in M5 rufen sie nur auf. | Rücksprache 2026-10-24. |
 
 Noch offen (blockiert erst den genannten Meilenstein):
 - Mindestgröße für den Anonym-Modus (offener Punkt 3) → vor M6 klären.
@@ -309,6 +310,7 @@ Jeder Meilenstein ist fertig, wenn `pytest` grün ist, `ruff` sauber ist, die ge
 - `scoring.py`, `schedule.py`, `ranking.py`, `colors.py` komplett, mit gründlichen Tabellentests: Formeln mit Referenzwerten, Decay ohne Votes, Gleichgewicht, Umrechnung mit Roundtrip und d = 1, Grenzen, Determinismus, DST, Fenstergrenzen.
 - Ein kleines Simulationsskript über `simulate()` für die spätere Kalibrierung.
 - IDs: SCO-01…05, SCO-07, SCO-09, NFA-14, VOT-01, PER-04, SET-05 (Grenzen), RNK-01…03 (Logik), GRA-02 (Palette).
+- Dazu `domain/formatting.py` (SCO-04, A13) und `scripts/simulate.py`.
 
 ### M2 – Konto und Login
 - Modelle `users`, `login_tokens`, `allowed_emails` plus Migration. Mail-Service mit Backends.
@@ -394,6 +396,6 @@ Jeder Meilenstein ist fertig, wenn `pytest` grün ist, `ruff` sauber ist, die ge
 ## 10 Aktueller Stand
 
 - [x] M0 Projektgerüst (2026-10-23). `login_manager` folgt mit M2, weil Flask-Login ohne `user_loader` nicht nutzbar ist.
-- [x] M1 Domänenkern (2026-10-24). Simulationsskript: `scripts/simulate.py`. Grenzen und Hervorhebungen als A11/A12 festgelegt.
+- [x] M1 Domänenkern (2026-10-24). Simulationsskript: `scripts/simulate.py`. Grenzen, Hervorhebungen und Anzeige als A11–A13 festgelegt. Palette mit 30 Farben (A8).
 - [ ] M2 Konto und Login ← **aktuell**
 - [ ] M3 … M9
