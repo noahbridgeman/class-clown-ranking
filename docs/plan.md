@@ -31,8 +31,11 @@ Annahmen (vom Plan getroffen, bei Bedarf korrigieren):
 | A11 | Grenzen für K und d (SET-05), wöchentlich: K ∈ [0,05; 2,0], d ∈ [0,5; 0,99]. d = 1 ist ausgeschlossen, damit der Decay immer wirkt (SCO-05) und das Gleichgewicht K/(1−d) endlich bleibt (Rücksprache 2026-10-24). Tägliche Werte sind genau dann gültig, wenn ihr wöchentliches Gegenstück nach SCO-07 gültig ist: d ∈ [0,5^(1/7); 0,99^(1/7)], und die K-Grenzen hängen von d ab (K_woche-Grenzen geteilt durch 1 + d + … + d⁶). Damit ist die Umrechnung in beide Richtungen verlustfrei und braucht kein Kappen. | Die Anforderung nennt keine Zahlen. Die Werte sind vorläufig und werden mit der Kalibrierung in M9 überprüft. |
 | A12 | Hervorhebungen in der Rangliste (RNK-03): größter Anstieg und größter Absturz (nur echte Veränderungen, bei Gleichstand alle Betroffenen), neu auf Platz 1, und Platzänderungen gegenüber der Vorperiode. Verglichen wird nur unter den aktuell aktiven Mitgliedern: Ausgetretene zählen nicht, niemand rückt also allein durch einen Austritt auf. Neue haben keine Veränderung, zählen aber als „neu auf Platz 1“, wenn sie dort landen. Veränderungen sind die Differenz der angezeigten, gerundeten Scores (A13), auch für den größten Anstieg und Absturz. | RNK-03 nennt nur Beispiele. |
 | A13 | Anzeige (SCO-04, RNK-02): eine Nachkommastelle, kaufmännisch gerundet (5,25 → 5,3), deutsches Komma. Die Veränderung ist die Differenz der beiden **angezeigten** Werte (5,249 → 5,251 erscheint als 5,2 → 5,3 und ▲ +0,1), sie passt also immer zu den sichtbaren Zahlen. Ergibt sie 0,0, erscheint „–“ statt eines Pfeils. „−0,0“ gibt es nicht. Plätze (A7) vergleichen weiter mit voller Genauigkeit. Umgesetzt als reine Funktionen in `domain/formatting.py` und `ranking.deltas`; die Jinja-Filter in M5 rufen sie nur auf. | Rücksprache 2026-10-24. |
+| A14 | Der Login-Link öffnet eine Bestätigungsseite mit einem Button. Erst das Absenden (POST) löst den Token ein. Alte Links bleiben gültig, wenn ein neuer angefordert wird, bis sie ablaufen oder benutzt sind. | Mail-Scanner (z. B. Outlook Safe Links) rufen Links automatisch per GET auf und würden einmalige Tokens sonst verbrauchen. AUTH-02 |
+| A15 | Anzeigenamen: Leerraum wird getrimmt und zusammengefasst, 1–40 Zeichen, keine Steuerzeichen. Doppelte Namen sind erlaubt. E-Mail-Adressen werden nur grob geprüft (`x@y.z`, ≤ 254 Zeichen), denn die echte Prüfung ist, ob der Link ankommt. | AUTH-04, AUTH-05 |
 
 Noch offen (blockiert erst den genannten Meilenstein):
+- Laufzeitunterschied bei E3: Für bekannte Adressen schreibt der Login einen Token und verschickt synchron per SMTP, für unbekannte nicht. Die Antwort ist gleich, die Antwortzeit nicht. Abhilfe wäre ein Versand außerhalb der Anfrage (z. B. Mail-Warteschlange, die `tick` abarbeitet) → spätestens vor Go-Live (M9) entscheiden.
 - Mindestgröße für den Anonym-Modus (offener Punkt 3) → vor M6 klären.
 - Kalibrierte Standardwerte für K und d (offener Punkt 4) → in M9, mit dem Simulationswerkzeug aus M1.
 - Produktions-WSGI-Server, z. B. gunicorn, ist eine neue Abhängigkeit → Rückfrage in M9.
@@ -73,9 +76,9 @@ Tabellennamen im Plural, PKs als Integer. `ts` = `DateTime(timezone=True)` in UT
 | nonce_hash | str(64), unique | SHA-256 eines Zufalls-Nonce. Der Link enthält ein mit itsdangerous signiertes `{nonce}` |
 | created_at, expires_at | ts | gültig 15 min |
 | used_at | ts, nullable | einmalig nutzbar: Einlösen setzt `used_at` per bedingtem UPDATE |
-| invitation_id | FK, nullable | nur wenn der Login über eine Einladung läuft |
+| invitation_id | FK, nullable | nur wenn der Login über eine Einladung läuft. Kommt mit M3 per Migration dazu |
 
-Rate-Limit: Gezählt werden `login_tokens` je E-Mail in der letzten Stunde (Grenze z. B. 5). IP-Adressen werden nicht gespeichert (NFA-04). Abgelaufene Tokens räumt `tick` auf.
+Rate-Limit: Gezählt werden `login_tokens` je E-Mail in der letzten Stunde (`LOGIN_MAILS_PER_HOUR` = 5, auch benutzte Tokens zählen). Darüber hinaus wird stillschweigend nichts verschickt, die Antwort bleibt gleich (E3). IP-Adressen werden nicht gespeichert (NFA-04). Abgelaufene Tokens räumt `tick` auf (ab M4, vorher bleiben sie liegen).
 
 ### groups
 | Spalte | Typ | Hinweise |
@@ -401,5 +404,6 @@ Jeder Meilenstein ist fertig, wenn `pytest` grün ist, `ruff` sauber ist, die ge
 
 - [x] M0 Projektgerüst (2026-10-23). `login_manager` folgt mit M2, weil Flask-Login ohne `user_loader` nicht nutzbar ist.
 - [x] M1 Domänenkern (2026-10-24). Simulationsskript: `scripts/simulate.py`. Grenzen, Hervorhebungen und Anzeige als A11–A13 festgelegt. Palette mit 30 Farben (A8).
-- [ ] M2 Konto und Login ← **aktuell**
-- [ ] M3 … M9
+- [x] M2 Konto und Login (2026-10-24). Mail-Backends `smtp`/`console`/`memory`, Login mit Bestätigungsseite (A14), Name-Gate, Allowlist-CLI `users allow`. Produktion verlangt `BASE_URL`, `MAIL_HOST` und `MAIL_FROM`. Zeitstempel über `UTCDateTime` (immer UTC, naive Werte werden abgelehnt). Tests: Jede Test-Client-Anfrage läuft in einem eigenen App-Kontext (`IsolatedClient`), damit `g` und die DB-Session nicht zwischen Anfragen durchsickern. Ein Migrationstest prüft, dass `db upgrade` genau das Modell-Schema erzeugt. `invitation_id` in `login_tokens` folgt mit M3.
+- [ ] M3 Gruppen, Einladungen, Mitgliedschaft ← **aktuell**
+- [ ] M4 … M9
