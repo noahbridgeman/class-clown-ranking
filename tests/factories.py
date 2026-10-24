@@ -4,7 +4,8 @@ from itertools import count
 
 from app.clock import get_clock
 from app.extensions import db
-from app.models import AllowedEmail, User
+from app.models import AllowedEmail, Group, User
+from app.services import groups, membership
 
 _numbers = count(1)
 
@@ -25,3 +26,15 @@ def make_user(email: str | None = None, display_name: str | None = "Testperson")
 def allow(email: str) -> None:
     db.session.add(AllowedEmail(email=email, added_at=get_clock().now()))
     db.session.commit()
+
+
+def make_group(admin: User | None = None, name: str = "Spaßvögel") -> Group:
+    return groups.create_group(admin or make_user(), name)
+
+
+def add_member(group: Group, user: User | None = None) -> User:
+    """Joins directly, as if an invitation had been accepted."""
+    user = user or make_user()
+    membership.join(group, user, get_clock().now())
+    db.session.commit()
+    return user
