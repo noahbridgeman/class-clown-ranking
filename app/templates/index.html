@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
 {% block content %}
   {% if current_user.is_authenticated %}
-    <section class="card">
+    {% call ui.card() %}
       <h1>{{ t("home.greeting", name=current_user.display_name) }}</h1>
       <h2>{{ t("home.your_groups") }}</h2>
       {% if groups %}
@@ -13,13 +14,13 @@
       {% else %}
         <p class="muted">{{ t("home.no_groups") }}</p>
       {% endif %}
-      <p><a class="button" href="{{ url_for('groups.create') }}">{{ t("home.create_group") }}</a></p>
-    </section>
+      <p>{{ ui.button(t("home.create_group"), href=url_for('groups.create')) }}</p>
+    {% endcall %}
   {% else %}
-    <section class="card">
+    {% call ui.card() %}
       <h1>{{ t("app.tagline") }}</h1>
       <p>{{ t("home.intro") }}</p>
-      <p><a class="button" href="{{ url_for('auth.login') }}">{{ t("home.login_cta") }}</a></p>
-    </section>
+      <p>{{ ui.button(t("home.login_cta"), href=url_for('auth.login')) }}</p>
+    {% endcall %}
   {% endif %}
 {% endblock %}

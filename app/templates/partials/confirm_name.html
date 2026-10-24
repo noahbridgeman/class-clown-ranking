@@ -1,6 +1,4 @@
 {# Typing the group name confirms destructive actions (GRP-04, A5). #}
-<label for="confirmation">{{ t("groups.confirm_label", group=group.name) }}</label>
-<input id="confirmation" name="confirmation" type="text" required autocomplete="off"
-       autocapitalize="off" spellcheck="false"
-       {% if error %}aria-invalid="true" aria-describedby="confirmation-error"{% endif %}>
-{% if error %}<p id="confirmation-error" class="error" role="alert">{{ error }}</p>{% endif %}
+{% import "macros/ui.html" as ui %}
+{{ ui.text_field("confirmation", t("groups.confirm_label", group=group.name), error=error,
+                 attrs={"required": true, "autocomplete": "off", "autocapitalize": "off", "spellcheck": "false"}) }}

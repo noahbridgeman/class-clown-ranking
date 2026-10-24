@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
 {% set title = t("groups.leave_title", group=group.name) %}
 {% block title %}{{ title }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  <section class="card">
+  {% call ui.card() %}
     <h1>{{ title }}</h1>
     {% if successor is none %}
       <p class="warning">{{ t("groups.leave_last_member") }}</p>
@@ -15,8 +16,8 @@
     <form method="post" action="{{ url_for('groups.leave', group_id=group.id) }}" class="form">
       {{ form.csrf_token }}
       {% if successor is none %}{% include "partials/confirm_name.html" %}{% endif %}
-      <button type="submit" class="button button-danger">{{ t("groups.leave_button") }}</button>
+      {{ ui.button(t("groups.leave_button"), "danger") }}
       <a href="{{ url_for('groups.home', group_id=group.id) }}">{{ t("groups.cancel") }}</a>
     </form>
-  </section>
+  {% endcall %}
 {% endblock %}

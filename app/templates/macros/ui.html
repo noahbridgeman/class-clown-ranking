@@ -1,0 +1,43 @@
+{# Recurring UI elements. A redesign changes their markup here, not on every page.
+   Import with {% import "macros/ui.html" as ui %}. #}
+
+{% macro card(role=none) -%}
+<section class="card"{% if role %} role="{{ role }}"{% endif %}>
+  {{ caller() }}
+</section>
+{%- endmacro %}
+
+{# kind: primary, secondary or danger. With href it is a link styled as a button. #}
+{% macro button(label, kind="primary", href=none) -%}
+{%- set classes = "button" if kind == "primary" else "button button-" ~ kind -%}
+{%- if href -%}
+<a class="{{ classes }}" href="{{ href }}">{{ label }}</a>
+{%- else -%}
+<button type="submit" class="{{ classes }}">{{ label }}</button>
+{%- endif -%}
+{%- endmacro %}
+
+{# A submit button that looks like a link, for small actions inside lists. #}
+{% macro link_button(label) -%}
+<button type="submit" class="link-button">{{ label }}</button>
+{%- endmacro %}
+
+{% macro badge(text, kind=none) -%}
+<span class="badge{% if kind %} badge-{{ kind }}{% endif %}">{{ text }}</span>
+{%- endmacro %}
+
+{# The member's color (GRA-02). An SVG attribute, so no inline style is needed. #}
+{% macro color_dot(index) -%}
+<svg class="dot" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="{{ member_color(index) }}"/></svg>
+{%- endmacro %}
+
+{# Label, input and error message. attrs: further input attributes; true renders a bare
+   attribute such as autofocus, none or false leaves it out. #}
+{% macro text_field(name, label, value=none, error=none, type="text", attrs={}) -%}
+<label for="{{ name }}">{{ label }}</label>
+<input id="{{ name }}" name="{{ name }}" type="{{ type }}"
+       {%- for key, attr in attrs.items() if attr is not none and attr is not false %} {{ key }}{% if attr is not true %}="{{ attr }}"{% endif %}{% endfor %}
+       {%- if value is not none %} value="{{ value }}"{% endif %}
+       {%- if error %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+{% if error %}<p id="{{ name }}-error" class="error" role="alert">{{ error }}</p>{% endif %}
+{%- endmacro %}

@@ -1,17 +1,15 @@
 {% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
 {% block title %}{{ t("groups.new_title") }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  <section class="card">
+  {% call ui.card() %}
     <h1>{{ t("groups.new_title") }}</h1>
     <p>{{ t("groups.new_intro") }}</p>
     <form method="post" action="{{ url_for('groups.create') }}" class="form">
       {{ form.csrf_token }}
-      <label for="name">{{ t("groups.name_label") }}</label>
-      <input id="name" name="name" type="text" required maxlength="{{ max_length }}"
-             value="{{ form.name.data or '' }}" autocomplete="off"
-             {% if error %}aria-invalid="true" aria-describedby="name-error"{% endif %} autofocus>
-      {% if error %}<p id="name-error" class="error" role="alert">{{ error }}</p>{% endif %}
-      <button type="submit" class="button">{{ t("groups.create") }}</button>
+      {{ ui.text_field("name", t("groups.name_label"), form.name.data or "", error,
+                       attrs={"required": true, "maxlength": max_length, "autocomplete": "off", "autofocus": true}) }}
+      {{ ui.button(t("groups.create")) }}
     </form>
-  </section>
+  {% endcall %}
 {% endblock %}
