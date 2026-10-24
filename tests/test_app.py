@@ -235,10 +235,10 @@ class TestConfigSelection:
         env(**{**PROD_ENV, "BASE_URL": "https://ranking.example.org/"})
         assert create_app().config["BASE_URL"] == "https://ranking.example.org"
 
-    def test_development_uses_localhost_base_url_and_console_mail(self, env):
+    def test_development_uses_loopback_base_url_and_console_mail(self, env):
         env(APP_ENV="development", DATABASE_URL="sqlite://")
         config = create_app().config
-        assert config["BASE_URL"] == "http://localhost:5000"
+        assert config["BASE_URL"] == "http://127.0.0.1:5000"
         assert config["MAIL_BACKEND"] == "console"
 
     @pytest.mark.parametrize("missing", ["MAIL_HOST", "MAIL_FROM"])

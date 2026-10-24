@@ -44,7 +44,9 @@ class Config:
 
 class DevConfig(Config):
     SECRET_KEY = "dev-insecure-key"
-    BASE_URL = "http://localhost:5000"
+    # Not localhost: on macOS it resolves to ::1 first, where the AirPlay receiver
+    # holds port 5000, while the dev server only listens on 127.0.0.1.
+    BASE_URL = "http://127.0.0.1:5000"
     REQUIRE_HTTPS_BASE_URL = False
     ALLOW_SQLITE_FALLBACK = True
     MIN_SECRET_KEY_LENGTH = 0
