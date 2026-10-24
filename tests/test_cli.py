@@ -2,6 +2,8 @@ from sqlalchemy import select
 
 from app.extensions import db
 from app.models import AllowedEmail
+from app.services import periods
+from tests.factories import IN_WEEK_WINDOW, make_group
 
 
 def test_users_allow_adds_normalized_address(app):
@@ -24,3 +26,20 @@ def test_users_allow_rejects_invalid_address(app):
     assert result.exit_code != 0
     assert "keine gültige E-Mail-Adresse" in result.output
     assert db.session.scalars(select(AllowedEmail)).all() == []
+
+
+def test_tick_reports_what_it_did(app, clock):
+    make_group()
+    clock.set(IN_WEEK_WINDOW)
+    result = app.test_cli_runner().invoke(args=["tick"])
+    assert result.exit_code == 0
+    assert "1 geöffnet, 0 berechnet, 0 übersprungen" in result.output
+
+
+def test_tick_fails_loudly_when_a_group_fails(app, clock, monkeypatch):
+    group = make_group()
+    clock.set(IN_WEEK_WINDOW)
+    monkeypatch.setattr(periods, "_open_current", lambda *_: 1 / 0)
+    result = app.test_cli_runner().invoke(args=["tick"])
+    assert result.exit_code != 0
+    assert f"Fehler bei den Gruppen {group.id}" in result.output

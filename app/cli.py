@@ -3,7 +3,7 @@ from flask import Flask
 from flask.cli import AppGroup
 
 from app.i18n import t
-from app.services import auth
+from app.services import auth, periods
 
 
 def register(app: Flask) -> None:
@@ -16,6 +16,7 @@ def register(app: Flask) -> None:
         _allow
     )
     app.cli.add_command(users)
+    app.cli.command("tick", help=translate("cli.tick_help"))(_tick)
 
 
 def _allow(email: str) -> None:
@@ -26,3 +27,20 @@ def _allow(email: str) -> None:
         raise click.BadParameter(t("cli.email_invalid"), param_hint="EMAIL") from invalid
     key = "cli.allow_added" if added else "cli.allow_exists"
     click.echo(t(key, email=auth.normalize_email(email)))
+
+
+def _tick() -> None:
+    """Closes and opens periods (PER-01…03). Run every minute by a systemd timer."""
+    report = periods.tick()
+    click.echo(
+        t(
+            "cli.tick_done",
+            opened=report.opened,
+            closed=report.closed,
+            skipped=report.skipped,
+            tokens=report.tokens_removed,
+        )
+    )
+    if report.failed:
+        failed = ", ".join(map(str, report.failed))
+        raise click.ClickException(t("cli.tick_failed", groups=failed))

@@ -1,12 +1,12 @@
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import Enum, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.types import Cadence
 from app.extensions import db
-from app.models.types import UTCDateTime
+from app.models.types import UTCDateTime, text_enum
 from app.models.user import EMAIL_MAX_LENGTH, User
 
 GROUP_NAME_MAX_LENGTH = 60
@@ -14,18 +14,6 @@ TIMEZONE_MAX_LENGTH = 64
 
 # Deleting a group removes everything that belongs to it (GRP-04).
 GROUP_FK = {"ondelete": "CASCADE"}
-
-
-def _enum(enum: type[StrEnum], name: str) -> Enum:
-    """Stores the enum's values as text, guarded by a CHECK constraint."""
-    return Enum(
-        enum,
-        name=name,
-        native_enum=False,
-        create_constraint=True,
-        length=max(len(member.value) for member in enum),
-        values_callable=lambda members: [member.value for member in members],
-    )
 
 
 class Group(db.Model):
@@ -39,7 +27,7 @@ class Group(db.Model):
     admin_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     # Never changes, unlike the admin; limits new groups per person (A16).
     created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    cadence: Mapped[Cadence] = mapped_column(_enum(Cadence, "cadence"))
+    cadence: Mapped[Cadence] = mapped_column(text_enum(Cadence, "cadence"))
     is_anonymous: Mapped[bool]
     timezone: Mapped[str] = mapped_column(String(TIMEZONE_MAX_LENGTH))
     k: Mapped[float]
@@ -92,7 +80,7 @@ class MembershipEvent(db.Model):
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.id", **GROUP_FK))
     # The member who joined or left, or the new admin.
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    kind: Mapped[MembershipEventKind] = mapped_column(_enum(MembershipEventKind, "kind"))
+    kind: Mapped[MembershipEventKind] = mapped_column(text_enum(MembershipEventKind, "kind"))
     occurred_at: Mapped[datetime] = mapped_column(UTCDateTime)
     # NULL for automatic changes such as ROL-03.
     actor_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))

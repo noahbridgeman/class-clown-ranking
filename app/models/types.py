@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
+from enum import StrEnum
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, Enum
 from sqlalchemy.engine import Dialect
 from sqlalchemy.types import TypeDecorator
 
@@ -28,3 +29,15 @@ class UTCDateTime(TypeDecorator[datetime]):
         if value.tzinfo is None:
             return value.replace(tzinfo=UTC)
         return value.astimezone(UTC)
+
+
+def text_enum(enum: type[StrEnum], name: str) -> Enum:
+    """Stores the enum's values as text, guarded by a CHECK constraint."""
+    return Enum(
+        enum,
+        name=name,
+        native_enum=False,
+        create_constraint=True,
+        length=max(len(member.value) for member in enum),
+        values_callable=lambda members: [member.value for member in members],
+    )

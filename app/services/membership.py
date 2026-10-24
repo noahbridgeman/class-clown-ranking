@@ -1,4 +1,4 @@
-"""Joining, leaving and removing members (MEM-01, MEM-02, MEM-04, ROL-03, A5)."""
+"""Joining, leaving and removing members (MEM-01, MEM-02, MEM-04, MEM-05, ROL-03, A5)."""
 
 from datetime import datetime
 
@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 from app.clock import get_clock
 from app.extensions import db
 from app.models import Group, Membership, MembershipEvent, MembershipEventKind, User
-from app.services import notifications
+from app.services import notifications, voting
 from app.services.errors import InvalidInput, NotAllowed, NotFound
 from app.services.locks import lock_group
 
@@ -80,6 +80,7 @@ def leave(group: Group, user: User) -> None:
         raise InvalidInput("groups.last_member")
     now = get_clock().now()
     membership.left_at = now
+    voting.discard_open_votes(group.id, user.id)
     _record(group, user.id, MembershipEventKind.LEFT, now, actor_id=user.id)
     new_admin = None
     if group.admin_user_id == user.id:
@@ -99,6 +100,7 @@ def remove(group: Group, actor: User, user_id: int) -> None:
     membership = _active_or_not_found(group.id, user_id)
     now = get_clock().now()
     membership.left_at = now
+    voting.discard_open_votes(group.id, user_id)
     _record(group, user_id, MembershipEventKind.REMOVED, now, actor_id=actor.id)
     db.session.commit()
 

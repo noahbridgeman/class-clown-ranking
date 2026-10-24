@@ -256,3 +256,43 @@ def test_detector_allows_clock_and_time_values(source):
 def test_domain_import_rules(source, allowed):
     modules = _imported_modules(ast.parse(source), "app.domain")
     assert all(map(_is_allowed_in_domain, modules)) is allowed
+
+
+# Principle 3 in docs/plan.md: only these modules may touch Vote, so anonymous votes
+# cannot reach a page through another path (NFA-06).
+VOTE_MODULES = {
+    "app.models",
+    "app.models.period",
+    "app.services.voting",
+    "app.services.periods",
+    "app.services.vote_queries",
+}
+
+
+def _imports_vote(tree: ast.AST, package: str) -> bool:
+    return any(
+        name.endswith(".Vote") or name == "Vote" for name in _aliases(tree, package).values()
+    ) or any(isinstance(node, ast.Attribute) and node.attr == "Vote" for node in ast.walk(tree))
+
+
+def test_only_the_vote_modules_use_vote():
+    users = {
+        _module_name(path)
+        for path in _python_files(APP_DIR)
+        if _imports_vote(ast.parse(path.read_text()), _package(path))
+    }
+    assert users <= VOTE_MODULES
+    assert "app.services.vote_queries" in users
+
+
+@pytest.mark.parametrize(
+    ("source", "found"),
+    [
+        ("from app.models import Vote", True),
+        ("from app.models.period import Vote as V", True),
+        ("from app import models\nmodels.Vote", True),
+        ("from app.models import Period", False),
+    ],
+)
+def test_vote_detector(source, found):
+    assert _imports_vote(ast.parse(source), "app.web") is found
