@@ -34,7 +34,12 @@ ruff check . && ruff format --check . # Lint/Format
 flask --app app db upgrade           # Migrationen anwenden
 python scripts/simulate.py --k 0.5 --d 0.95  # Score-Verläufe für die Kalibrierung von K und d
 flask --app app users allow <email>  # Adresse für Kontoanlage ohne Einladung freischalten (E3)
+flask --app app tick                 # Periodenupdate: Perioden schließen, Scores berechnen, Fenster öffnen
 ```
+
+`tick` ist idempotent und läuft in Produktion minütlich über einen systemd-Timer
+(`OnCalendar=*-*-* *:*:00`, `Persistent=true`), damit verpasste Updates nach einem Neustart
+nachgeholt werden (PER-03). Die Units folgen in M9 unter `deploy/`.
 
 Neue Befehle (z. B. Periodenupdate) hier eintragen, sobald sie existieren.
 
@@ -69,4 +74,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M4 (Voting und Periodenlauf). M0 bis M3 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M5 (Graph und Rangliste). M0 bis M4 sind abgeschlossen. Details in `docs/plan.md`.
