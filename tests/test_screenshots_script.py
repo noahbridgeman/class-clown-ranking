@@ -64,3 +64,25 @@ def test_compare(script, tmp_path, capsys):
     assert script.main(["compare", str(before), str(after)]) == 1
     assert "1 von 3 Screenshots gleich." in capsys.readouterr().out
     assert script.main(["compare", str(before), str(before)]) == 0
+
+
+def test_design_check_renders_every_reference():
+    """The design check seeds its own data and maps each page to a reference screen."""
+    path = ROOT / "scripts" / "design_check.py"
+    spec = importlib.util.spec_from_file_location("design_check", path)
+    design_check = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(design_check)
+    pages = design_check.render()
+    names = {page.name for page in pages}
+    assert names == {
+        "ranking",
+        "ranking-neue-gruppe",
+        "voting",
+        "voting-geschlossen",
+        "einstellungen",
+    }
+    for page in pages:
+        assert (design_check.SCREENS / page.reference).exists()
+        assert "<html" in page.html
+    ranking = next(page for page in pages if page.name == "ranking")
+    assert set(ranking.graph) == set(design_check.RANGES)
