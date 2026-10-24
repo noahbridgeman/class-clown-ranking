@@ -2,7 +2,7 @@
 
 import tomllib
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -62,6 +62,8 @@ def init_app(app: Flask) -> None:
     app.extensions["translator"] = translator
     app.jinja_env.globals["t"] = translator
     app.jinja_env.filters["local_date"] = local_date
+    app.jinja_env.filters["local_datetime"] = local_datetime
+    app.jinja_env.filters["duration"] = duration
 
 
 def t(key: str, **params: Any) -> str:
@@ -71,3 +73,27 @@ def t(key: str, **params: Any) -> str:
 def local_date(value: datetime, timezone: str) -> str:
     """A UTC timestamp as a German date in the group's timezone, e.g. 31.10.2026."""
     return value.astimezone(ZoneInfo(timezone)).strftime("%d.%m.%Y")
+
+
+def local_datetime(value: datetime, timezone: str) -> str:
+    """A UTC timestamp in the group's timezone, e.g. "So. 25.10.2026 um 13:00 Uhr"."""
+    local = value.astimezone(ZoneInfo(timezone))
+    weekday = t("time.weekdays").split(",")[local.weekday()]
+    return t(
+        "time.datetime",
+        weekday=weekday,
+        date=local.strftime("%d.%m.%Y"),
+        time=local.strftime("%H:%M"),
+    )
+
+
+def duration(value: timedelta) -> str:
+    """Remaining time, rounded up to whole minutes: "1 T. 3 Std.", "2 Std. 5 Min.", "4 Min."."""
+    minutes = max(0, -(-int(value.total_seconds()) // 60))
+    days, minutes = divmod(minutes, 24 * 60)
+    hours, minutes = divmod(minutes, 60)
+    if days:
+        return t("time.days_hours", days=days, hours=hours)
+    if hours:
+        return t("time.hours_minutes", hours=hours, minutes=minutes)
+    return t("time.minutes", minutes=minutes)

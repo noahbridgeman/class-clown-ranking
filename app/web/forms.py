@@ -26,3 +26,7 @@ class ConfirmForm(FlaskForm):
 
 class LogoutForm(FlaskForm):
     next = HiddenField()
+
+
+class VoteForm(FlaskForm):
+    choice = StringField()  # one of voting.Choice, checked by the route
