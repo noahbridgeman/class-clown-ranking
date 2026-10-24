@@ -7,6 +7,7 @@ Values are stored as text: floats with repr() so they read back exactly.
 """
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass, fields, replace
 from datetime import datetime
 from functools import cache
@@ -206,6 +207,81 @@ def applied_changes(
         for at, batch in batches.items()
         if any(old != new for old, new in batch.values())
     ]
+
+
+@dataclass(frozen=True)
+class Preview:
+    """SET-05: an example history for given parameters."""
+
+    weeks: list[float]  # x: weeks since the start
+    scores: list[float]
+    best: float  # score after endless ups, the equilibrium K / (1 − d)
+    worst: float
+    half_life_weeks: float  # how long a rating takes to lose half its distance from 5
+
+
+# Six weeks of only ups, six without votes, six of only downs.
+PREVIEW_PHASES = ((1.0, 6), (0.0, 6), (-1.0, 6))
+
+
+def preview(params: scoring.ScoreParams, cadence: Cadence) -> Preview:
+    per_week = scoring.DAYS_PER_WEEK if cadence == Cadence.DAILY else 1
+    nets = [net for net, weeks in PREVIEW_PHASES for _ in range(weeks * per_week)]
+    equilibrium = params.k / (1 - params.d)
+    return Preview(
+        weeks=[(i + 1) / per_week for i in range(len(nets))],
+        scores=scoring.simulate(params, nets),
+        best=scoring.score(equilibrium),
+        worst=scoring.score(-equilibrium),
+        half_life_weeks=math.log(0.5) / math.log(params.d) / per_week,
+    )
+
+
+def from_form(form: Mapping[str, str], current: GroupSettings) -> GroupSettings:
+    """The settings a submitted form asks for. Raises InvalidSettings.
+
+    `params_cadence` names the cadence K and d were entered for. If the cadence changed
+    since, they are converted (SET-04, SCO-07); with JavaScript the form does this before.
+    """
+    errors: dict[SettingField, InvalidInput] = {}
+    cadence = _cadence(form.get("cadence"))
+    if cadence is None:
+        errors[SettingField.CADENCE] = InvalidInput("settings.invalid_choice")
+        cadence = current.cadence
+    params_cadence = _cadence(form.get("params_cadence")) or cadence
+    anonymity = form.get("is_anonymous")
+    if anonymity not in ("true", "false"):
+        errors[SettingField.IS_ANONYMOUS] = InvalidInput("settings.invalid_choice")
+    params = convert(
+        scoring.ScoreParams(k=parse_number(form.get("k")), d=parse_number(form.get("d"))),
+        params_cadence,
+        cadence,
+    )
+    if errors:
+        raise InvalidSettings(errors)
+    return GroupSettings(
+        name=form.get("name", ""),
+        cadence=cadence,
+        is_anonymous=anonymity == "true",
+        timezone=form.get("timezone", "").strip(),
+        k=params.k,
+        d=params.d,
+    )
+
+
+def convert(params: scoring.ScoreParams, src: Cadence, dst: Cadence) -> scoring.ScoreParams:
+    """SET-04; values that cannot be converted are left for validate() to reject."""
+    try:
+        return scoring.convert_params(params, src, dst)
+    except ValueError:
+        return params
+
+
+def _cadence(raw: str | None) -> Cadence | None:
+    try:
+        return Cadence(raw)
+    except ValueError:
+        return None
 
 
 @cache

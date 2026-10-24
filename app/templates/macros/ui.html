@@ -41,3 +41,16 @@
        {%- if error %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
 {% if error %}<p id="{{ name }}-error" class="error" role="alert">{{ error }}</p>{% endif %}
 {%- endmacro %}
+
+{# A select. options: value → label, in display order. #}
+{% macro select_field(name, label, options, selected, error=none, attrs={}) -%}
+<label for="{{ name }}">{{ label }}</label>
+<select id="{{ name }}" name="{{ name }}"
+        {%- for key, attr in attrs.items() if attr is not none and attr is not false %} {{ key }}{% if attr is not true %}="{{ attr }}"{% endif %}{% endfor %}
+        {%- if error %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+  {% for value, text in options.items() %}
+    <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
+  {% endfor %}
+</select>
+{% if error %}<p id="{{ name }}-error" class="error" role="alert">{{ error }}</p>{% endif %}
+{%- endmacro %}

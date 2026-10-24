@@ -1,0 +1,28 @@
+{# K and d for the chosen cadence with bounds and preview (SET-04, SET-05).
+   HTMX swaps this block when the cadence, K or d changes. #}
+{% import "macros/ui.html" as ui %}
+<div id="params" class="params"
+     hx-get="{{ url_for('settings.params', group_id=group.id) }}"
+     hx-trigger="change from:#cadence, input changed delay:500ms from:#k, input changed delay:500ms from:#d"
+     hx-include="closest form" hx-swap="outerHTML">
+  {# The cadence K and d below belong to; a different cadence on submit converts them. #}
+  <input type="hidden" name="params_cadence" value="{{ values.cadence.value }}">
+  {{ ui.text_field("k", t("settings.field_k"), values.k|param(input_decimals), errors.get("k"),
+       attrs={"inputmode": "decimal", "autocomplete": "off"}) }}
+  <p class="muted hint">{{ t("settings.k_hint", min=bounds.k_min|param, max=bounds.k_max|param) }}</p>
+  {{ ui.text_field("d", t("settings.field_d"), values.d|param(input_decimals), errors.get("d"),
+       attrs={"inputmode": "decimal", "autocomplete": "off"}) }}
+  <p class="muted hint">{{ t("settings.d_hint", min=bounds.d_min|param, max=bounds.d_max|param) }}</p>
+  {% if preview %}
+    <div class="preview">
+      <p class="preview-title">{{ t("settings.preview_title") }}</p>
+      <div id="preview-chart" class="preview-chart" data-preview='{{ preview_data|tojson }}'
+           data-texts='{{ {"weeks": t("settings.preview_axis")}|tojson }}'></div>
+      <ul class="list muted">
+        <li>{{ t("settings.preview_best", score=preview.best|score) }}</li>
+        <li>{{ t("settings.preview_worst", score=preview.worst|score) }}</li>
+        <li>{{ t("settings.preview_half_life", weeks=preview.half_life_weeks|param(1)) }}</li>
+      </ul>
+    </div>
+  {% endif %}
+</div>

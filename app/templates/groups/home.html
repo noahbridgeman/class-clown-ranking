@@ -53,6 +53,7 @@
     </ul>
     <p class="actions">
       {% if is_admin %}<a href="{{ url_for('invitations.index', group_id=group.id) }}">{{ t("groups.invitations_link") }}</a>{% endif %}
+      <a href="{{ url_for('settings.index', group_id=group.id) }}">{{ t("settings.link") }}</a>
       <a href="{{ url_for('groups.leave', group_id=group.id) }}">{{ t("groups.leave_link") }}</a>
       {% if is_admin %}<a class="danger" href="{{ url_for('groups.delete', group_id=group.id) }}">{{ t("groups.delete_link") }}</a>{% endif %}
     </p>

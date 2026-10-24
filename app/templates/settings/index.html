@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
+{% block title %}{{ t("settings.title") }} – {{ group.name }}{% endblock %}
+{% block scripts %}
+  {% if is_admin %}
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"
+            integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR"
+            crossorigin="anonymous" defer></script>
+    <script src="{{ url_for('static', filename='js/preview.js') }}" defer></script>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {% call ui.card() %}
+    <h1>{{ t("settings.title") }}</h1>
+    <p class="muted">{{ t("settings.intro") }}</p>
+    {% if pending %}
+      <div class="pending" role="status">
+        <p><strong>{{ t("settings.pending_from", at=pending_from|local_datetime(group.timezone)) }}</strong></p>
+        <ul class="list">
+          {% for field, value in pending.items() %}
+            <li>{{ t(setting_labels[field]) }}: {{ setting_value(field, value) }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if is_admin %}
+      <form class="form" method="post" action="{{ url_for('settings.save', group_id=group.id) }}" novalidate>
+        {{ form.csrf_token }}
+        {{ ui.text_field("name", t("settings.field_name"), values.name, errors.get("name"),
+             attrs={"maxlength": name_max_length, "required": true}) }}
+        {{ ui.select_field("cadence", t("settings.field_cadence"),
+             {"weekly": t(cadences["weekly"]), "daily": t(cadences["daily"])}, values.cadence.value, errors.get("cadence")) }}
+        <p class="muted hint">{{ t("settings.cadence_hint") }}</p>
+        {{ ui.select_field("is_anonymous", t("settings.field_anonymity"),
+             {"true": t("settings.anonymous"), "false": t("settings.open")},
+             "true" if values.is_anonymous else "false", errors.get("is_anonymous")) }}
+        <p class="muted hint">{{ t("settings.anonymity_hint") }}</p>
+        {{ ui.select_field("timezone", t("settings.field_timezone"), timezones, values.timezone, errors.get("timezone")) }}
+        {% include "settings/_params.html" %}
+        <p>{{ ui.button(t("settings.save")) }}</p>
+      </form>
+    {% else %}
+      <dl class="settings">
+        {% for field in fields %}
+          <dt>{{ t(setting_labels[field]) }}</dt>
+          <dd>{{ setting_value(field, effective.value(field)) }}</dd>
+        {% endfor %}
+      </dl>
+      <p class="muted">{{ t("settings.admin_only") }}</p>
+    {% endif %}
+  {% endcall %}
+
+  {% call ui.card() %}
+    <h2>{{ t("settings.log_title") }}</h2>
+    {% if log %}
+      <ul class="settings-log">
+        {% for change in log %}
+          <li class="settings-change">
+            <span class="muted">{{ change.changed_at|local_datetime(group.timezone) }} · {{ member_name(change.changed_by) }}</span>
+            <span>{{ t(setting_labels[change.field]) }}: {{ setting_value(change.field, change.old_value) }} → {{ setting_value(change.field, change.new_value) }}</span>
+            {% if change.applied_at %}
+              {{ ui.badge(t("settings.applied", date=change.applied_at|local_date(group.timezone))) }}
+            {% else %}
+              {{ ui.badge(t("settings.pending"), "open") }}
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">{{ t("settings.log_empty") }}</p>
+    {% endif %}
+    <p class="actions"><a href="{{ url_for('groups.home', group_id=group.id) }}">{{ t("settings.back") }}</a></p>
+  {% endcall %}
+{% endblock %}

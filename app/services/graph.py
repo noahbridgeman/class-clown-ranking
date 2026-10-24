@@ -26,7 +26,9 @@ from app.models import (
     Period,
     PeriodResult,
     PeriodStatus,
+    SettingField,
 )
+from app.services import settings
 from app.services.text import member_name
 
 
@@ -117,7 +119,12 @@ def graph_data(group: Group, viewer_id: int, range_: Range, now: datetime) -> di
             for m in members
             if m.user_id in values
         ],
-        "markers": _member_markers(group, members, since) + _mode_markers(group, since),
+        "markers": sorted(
+            _member_markers(group, members, since)
+            + _mode_markers(group, since)
+            + _settings_markers(group, since),
+            key=lambda marker: marker["t"],
+        ),
     }
 
 
@@ -215,6 +222,27 @@ def _mode_markers(group: Group, since: datetime | None) -> list[dict[str, Any]]:
         )
         for opens_at, anonymous in db.session.execute(query.order_by(periods.c.opens_at))
     ]
+
+
+# The switch between anonymous and open has its own marker (_mode_markers).
+SETTINGS_IN_MARKERS = {
+    SettingField.NAME: "settings.field_name",
+    SettingField.CADENCE: "settings.field_cadence",
+    SettingField.TIMEZONE: "settings.field_timezone",
+    SettingField.K: "settings.field_k",
+    SettingField.D: "settings.field_d",
+}
+
+
+def _settings_markers(group: Group, since: datetime | None) -> list[dict[str, Any]]:
+    """GRA-07, SET-03: where a window took over changed settings."""
+    markers = []
+    for at, changed in settings.applied_changes(group.id, since):
+        names = [t(key) for field, key in SETTINGS_IN_MARKERS.items() if field in changed]
+        if names:
+            text = t("graph.marker_settings", fields=", ".join(names))
+            markers.append(_marker(at, group, "settings", text, None))
+    return markers
 
 
 def _marker(at: datetime, group: Group, kind: str, text: str, color: str | None) -> dict[str, Any]:
