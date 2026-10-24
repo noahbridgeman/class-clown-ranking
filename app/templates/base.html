@@ -1,4 +1,5 @@
 <!doctype html>
+{% import "macros/ui.html" as ui %}
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -8,6 +9,7 @@
   {# Unlike the htmx default, also swap 4xx/5xx responses so error messages become visible. #}
   <meta name="htmx-config" content='{"responseHandling": [{"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": true, "error": true}]}'>
   <title>{% block title %}{{ t("app.name") }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"
           integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
@@ -23,7 +25,7 @@
         {% endif %}
         <form method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="link-button">{{ t("nav.logout") }}</button>
+          {{ ui.link_button(t("nav.logout")) }}
         </form>
       {% elif request.endpoint != "auth.login" %}
         <a href="{{ url_for('auth.login') }}">{{ t("nav.login") }}</a>

@@ -1,0 +1,57 @@
+/* Design tokens: the only place for colors, fonts, spacing and sizes.
+   A redesign changes this file; app.css only refers to these variables. */
+:root {
+  color-scheme: dark;
+
+  /* Colors (dark theme, GRA-06) */
+  --color-bg: #0d0f17;
+  --color-surface: #161a26;
+  --color-border: #262b3d;
+  --color-text: #e8eaf2;
+  --color-muted: #8a90a6;
+  --color-accent: #7c5cff;
+  --color-danger: #ff6b81;
+  --color-success: #3ddc97;
+  /* Text on filled backgrounds of the color with the same name */
+  --color-on-accent: #fff;
+  --color-on-danger: #1a0007;
+  --color-on-success: #062417;
+
+  /* Fonts */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-size-title: 1.4rem;
+  --font-size-heading: 1.1rem;
+  --font-size-small: 0.8rem;
+  --font-size-input: 16px; /* at least 16px, or iOS Safari zooms on focus */
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-body: 1.5;
+
+  /* Spacing */
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 10px;
+  --space-md: 12px;
+  --space-lg: 14px;
+  --space-xl: 16px;
+  --space-2xl: 20px;
+  --gutter: var(--space-xl);
+
+  /* Shapes and sizes */
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --focus-ring-width: 2px;
+  --container-width: 720px;
+  --dot-size: 12px;
+  --touch-target: 44px;
+  --vote-button-width: 72px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --font-size-title: 1.75rem;
+  }
+}

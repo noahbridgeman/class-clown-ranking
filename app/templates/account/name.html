@@ -1,18 +1,16 @@
 {% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
 {% set title = t("account.name_title_first") if first_time else t("account.name_title") %}
 {% block title %}{{ title }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  <section class="card">
+  {% call ui.card() %}
     <h1>{{ title }}</h1>
     <p>{{ t("account.name_intro_first") if first_time else t("account.name_intro") }}</p>
     <form method="post" action="{{ url_for('auth.name') }}" class="form">
       {{ form.csrf_token }}
-      <label for="display_name">{{ t("account.name_label") }}</label>
-      <input id="display_name" name="display_name" type="text" required autocomplete="nickname"
-             maxlength="{{ max_length }}" value="{{ form.display_name.data or '' }}"
-             {% if error %}aria-invalid="true" aria-describedby="name-error"{% endif %} autofocus>
-      {% if error %}<p id="name-error" class="error" role="alert">{{ error }}</p>{% endif %}
-      <button type="submit" class="button">{{ t("account.name_save") }}</button>
+      {{ ui.text_field("display_name", t("account.name_label"), form.display_name.data or "", error,
+                       attrs={"required": true, "autocomplete": "nickname", "maxlength": max_length, "autofocus": true}) }}
+      {{ ui.button(t("account.name_save")) }}
     </form>
-  </section>
+  {% endcall %}
 {% endblock %}

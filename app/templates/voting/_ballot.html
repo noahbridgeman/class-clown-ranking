@@ -1,4 +1,5 @@
 {# Swapped in by HTMX after every vote and refreshed every minute; without JavaScript the forms reload the page. #}
+{% import "macros/ui.html" as ui %}
 {% set vote_url = url_for('voting.index', group_id=group.id) %}
 <div id="ballot" hx-get="{{ vote_url }}" hx-trigger="every 60s" hx-swap="outerHTML">
   {# A full page shows flashes at the top already; HTMX swaps only this block. #}
@@ -20,7 +21,7 @@
           {% set current = ballot.own.get(member.user_id) %}
           {% set url = url_for('voting.cast', group_id=group.id, user_id=member.user_id) %}
           <li class="member">
-            <svg class="dot" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="{{ member_color(member.color_index) }}"/></svg>
+            {{ ui.color_dot(member.color_index) }}
             <span class="member-name">{{ name }}</span>
             <form class="vote-buttons" method="post" action="{{ url }}" hx-post="{{ url }}" hx-target="#ballot" hx-swap="outerHTML">
               {{ form.csrf_token }}

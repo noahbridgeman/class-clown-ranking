@@ -1,15 +1,16 @@
 {% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
 {% set title = t("groups.delete_title", group=group.name) %}
 {% block title %}{{ title }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  <section class="card">
+  {% call ui.card() %}
     <h1>{{ title }}</h1>
     <p class="warning">{{ t("groups.delete_text") }}</p>
     <form method="post" action="{{ url_for('groups.delete', group_id=group.id) }}" class="form">
       {{ form.csrf_token }}
       {% include "partials/confirm_name.html" %}
-      <button type="submit" class="button button-danger">{{ t("groups.delete_button") }}</button>
+      {{ ui.button(t("groups.delete_button"), "danger") }}
       <a href="{{ url_for('groups.home', group_id=group.id) }}">{{ t("groups.cancel") }}</a>
     </form>
-  </section>
+  {% endcall %}
 {% endblock %}
