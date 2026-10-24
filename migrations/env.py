@@ -4,6 +4,7 @@ from logging.config import fileConfig
 from flask import current_app
 
 from alembic import context
+from alembic.autogenerate.api import AutogenContext
 from sqlalchemy.types import TypeDecorator
 
 # this is the Alembic Config object, which provides
@@ -42,13 +43,13 @@ target_db = current_app.extensions['migrate'].db
 # ... etc.
 
 
-def render_item(type_, obj, autogen_context):
+def render_item(type_: str, obj: object, autogen_context: AutogenContext) -> str | bool:
     """Render app-specific column types as their plain SQLAlchemy base type.
 
-    Keeps migrations independent of app code that may change later.
+    Keeps migrations independent of app code that may change later. The script
+    template already imports sqlalchemy as sa.
     """
     if type_ == "type" and isinstance(obj, TypeDecorator):
-        autogen_context.imports.add("import sqlalchemy as sa")
         return f"sa.{obj.impl!r}"
     return False
 

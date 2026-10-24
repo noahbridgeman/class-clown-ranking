@@ -54,6 +54,8 @@ Wenn du ihn nicht angefordert hast, kannst du diese Mail einfach ignorieren.
 """
 
 [cli]
+users_help = "Konten und Allowlist verwalten."
+allow_help = "Erlaubt einer Adresse, ein Konto ohne Einladung anzulegen."
 allow_added = "{email} hinzugefügt."
 allow_exists = "{email} stand schon auf der Liste."
 email_invalid = "keine gültige E-Mail-Adresse"
