@@ -107,6 +107,11 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        if connection.dialect.name == "sqlite":
+            # Batch mode recreates tables; with foreign keys on, dropping the old
+            # table would cascade-delete rows in other tables.
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            connection.commit()
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
