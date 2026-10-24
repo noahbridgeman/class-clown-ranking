@@ -1,12 +1,15 @@
 """Leaderboard logic (RNK-01…03) and overtakes for notifications (M8).
 
-Scores are compared at full precision; equal scores share a place (A7).
+Places compare scores at full precision; equal scores share a place (A7).
+Changes are the difference of the displayed, rounded scores (A12, A13), so a
+change always matches the two numbers people see.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass
 from itertools import combinations
 
+from app.domain.formatting import round_half_up
 from app.domain.types import UserId
 
 
@@ -45,11 +48,15 @@ def rank(scores: Mapping[UserId, float]) -> list[RankEntry]:
 def deltas(
     prev: Mapping[UserId, float], curr: Mapping[UserId, float]
 ) -> dict[UserId, float | None]:
-    """RNK-02: score change per member; None for members without a previous score."""
+    """RNK-02: change of the displayed score; None for members without a previous score."""
     return {
-        user_id: (value - prev[user_id]) if user_id in prev else None
+        user_id: _displayed_change(prev[user_id], value) if user_id in prev else None
         for user_id, value in curr.items()
     }
+
+
+def _displayed_change(before: float, after: float) -> float:
+    return float(round_half_up(after) - round_half_up(before))
 
 
 def highlights(prev: Mapping[UserId, float], curr: Mapping[UserId, float]) -> Highlights:

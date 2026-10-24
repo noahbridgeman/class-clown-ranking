@@ -34,7 +34,26 @@ def test_rank_empty():
 def test_deltas():
     result = deltas({A: 5.0, B: 6.0, C: 4.0}, {A: 5.4, B: 5.5, D: 5.0})
 
-    assert result == {A: pytest.approx(0.4), B: pytest.approx(-0.5), D: None}
+    assert result == {A: 0.4, B: -0.5, D: None}
+
+
+@pytest.mark.parametrize(
+    ("before", "after", "expected"),
+    [
+        pytest.param(5.249, 5.251, 0.1, id="displayed 5,2 → 5,3"),
+        pytest.param(5.151, 5.249, 0.0, id="displayed 5,2 → 5,2"),
+        pytest.param(5.25, 5.149, -0.2, id="displayed 5,3 → 5,1"),
+    ],
+)
+def test_deltas_match_displayed_scores(before, after, expected):
+    assert deltas({A: before}, {A: after}) == {A: expected}
+
+
+def test_biggest_gain_uses_displayed_change():
+    """A rises 0,302 but shows 5,2 → 5,6; B rises 0,33 but shows 5,2 → 5,5."""
+    result = highlights({A: 5.249, B: 5.15}, {A: 5.551, B: 5.48})
+
+    assert result.biggest_gain == Movement((A,), pytest.approx(0.4))
 
 
 def test_highlights():
@@ -43,8 +62,8 @@ def test_highlights():
 
     result = highlights(prev, curr)
 
-    assert result.biggest_gain == Movement((B,), pytest.approx(1.2))
-    assert result.biggest_drop == Movement((A,), pytest.approx(-0.5))
+    assert result.biggest_gain == Movement((B,), 1.2)
+    assert result.biggest_drop == Movement((A,), -0.5)
     assert result.new_leaders == (B,)
     # Places before: A 1, B 2, C 3. After: B 1, A 2, D 3, C 4.
     assert result.place_changes == {A: -1, B: 1, C: -1}
@@ -97,7 +116,7 @@ def test_highlights_ignore_departed_members():
 
     assert result.place_changes == {}
     assert result.new_leaders == ()
-    assert result.biggest_gain == Movement((B,), pytest.approx(0.1))
+    assert result.biggest_gain == Movement((B,), 0.1)
 
 
 def test_newcomer_on_place_one_is_a_new_leader_without_change():
