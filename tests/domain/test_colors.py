@@ -4,7 +4,8 @@ import re
 
 import pytest
 
-from app.domain.colors import PALETTE, color_for, lab
+from app.domain import colors as colors_module
+from app.domain.colors import MIN_LIGHTNESS, PALETTE, color_for, lab
 
 HEX = re.compile(r"^#[0-9A-F]{6}$")
 MAX_GROUP_SIZE = 30  # A8
@@ -12,8 +13,6 @@ MAX_GROUP_SIZE = 30  # A8
 MIN_DELTA_E = 20
 # ΔE between colour indexes beyond the palette and every earlier one.
 MIN_EXTRA_DELTA_E = 10
-# Lightness L* above this keeps lines bright on the dark theme.
-MIN_LIGHTNESS = 45
 
 
 def _closest(colors: list[str]) -> float:
@@ -70,3 +69,15 @@ def test_extra_colours_are_stable():
 def test_negative_index_is_rejected():
     with pytest.raises(ValueError):
         color_for(-1)
+
+
+def test_large_indexes_work_without_warm_cache():
+    colors_module._extras.cache_clear()
+    assert HEX.match(color_for(1100))
+
+
+def test_extra_colours_repeat_once_all_candidates_are_used():
+    pool = len(colors_module._candidates())
+
+    assert color_for(len(PALETTE) + pool) == color_for(len(PALETTE))
+    assert color_for(len(PALETTE) + pool + 5) == color_for(len(PALETTE) + 5)

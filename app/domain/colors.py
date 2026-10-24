@@ -23,7 +23,7 @@ PALETTE = (
     "#E599F7",
     "#96F2D7",
     "#FFEC99",
-    "#C2410C",
+    "#C75723",
     "#3B82F6",
     "#D9A066",
     "#D0BFFF",
@@ -41,9 +41,11 @@ PALETTE = (
 
 # Colour indexes are never reused (MEM-04), so indexes beyond the palette can occur.
 # Those pick the candidate farthest (CIE76 ΔE) from every colour handed out before.
+# Once all candidates are used, the extra colours repeat in the same order.
 EXTRA_HUE_STEP = 4  # degrees
 EXTRA_LIGHTNESS = (0.5, 0.6, 0.7, 0.8, 0.88)
 EXTRA_SATURATION = (0.55, 0.75, 0.95)
+EXTRA_CHUNK = 64  # extra colours are computed and cached in blocks of this size
 MIN_LIGHTNESS = 48  # L*, keeps lines bright on the dark theme
 
 
@@ -51,18 +53,25 @@ def color_for(index: int) -> str:
     """Hex colour for a membership's colour index."""
     if index < 0:
         raise ValueError("colour index must not be negative")
-    return _colors(index + 1)[index]
+    if index < len(PALETTE):
+        return PALETTE[index]
+    n = (index - len(PALETTE)) % len(_candidates())
+    return _extras(n // EXTRA_CHUNK + 1)[n]
 
 
 @cache
-def _colors(count: int) -> tuple[str, ...]:
-    if count <= len(PALETTE):
-        return PALETTE[:count]
-    previous = _colors(count - 1)
-    used = [lab(c) for c in previous]
-    remaining = [c for c in _candidates() if c not in previous]
-    best = max(remaining, key=lambda c: min(math.dist(lab(c), u) for u in used))
-    return (*previous, best)
+def _extras(chunks: int) -> tuple[str, ...]:
+    """The first chunks · EXTRA_CHUNK extra colours, chosen greedily."""
+    # Distance from each unused candidate to the nearest colour handed out so far.
+    nearest = {c: min(math.dist(lab(c), lab(p)) for p in PALETTE) for c in _candidates()}
+    chosen: list[str] = []
+    while nearest and len(chosen) < chunks * EXTRA_CHUNK:
+        best = max(nearest, key=nearest.__getitem__)
+        del nearest[best]
+        chosen.append(best)
+        for c in nearest:
+            nearest[c] = min(nearest[c], math.dist(lab(c), lab(best)))
+    return tuple(chosen)
 
 
 @cache
@@ -73,9 +82,9 @@ def _candidates() -> tuple[str, ...]:
             for saturation in EXTRA_SATURATION:
                 r, g, b = colorsys.hls_to_rgb(hue / 360, lightness, saturation)
                 color = f"#{round(r * 255):02X}{round(g * 255):02X}{round(b * 255):02X}"
-                if lab(color)[0] > MIN_LIGHTNESS:
+                if lab(color)[0] > MIN_LIGHTNESS and color not in PALETTE:
                     colors.append(color)
-    return tuple(colors)
+    return tuple(dict.fromkeys(colors))
 
 
 @cache
