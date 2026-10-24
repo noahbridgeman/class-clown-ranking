@@ -49,7 +49,10 @@ def reason(group_id: int, user_id: int) -> Page:
     """VOT-08: saves the reason on the own vote for this member."""
     form = ReasonForm()
     status = 200
-    if form.validate_on_submit():
+    if not form.validate_on_submit():
+        flash(t("errors.csrf_text"), "error")
+        status = 400
+    else:
         try:
             voting.set_reason(
                 g.group, current_user._get_current_object(), user_id, form.reason.data

@@ -79,7 +79,7 @@ a { color: var(--color-accent); }
 
 .form input:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-accent);
-  outline-offset: 1px;
+  outline-offset: var(--focus-ring-offset);
 }
 
 .form input[aria-invalid="true"] { border-color: var(--color-danger); }
@@ -198,7 +198,7 @@ h2 { font-size: var(--font-size-heading); margin: 0 0 var(--space-md); }
 
 .vote:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-accent);
-  outline-offset: 1px;
+  outline-offset: var(--focus-ring-offset);
 }
 
 .vote-up[aria-pressed="true"] {
@@ -318,7 +318,7 @@ h2 { font-size: var(--font-size-heading); margin: 0 0 var(--space-md); }
 
 .form select:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-accent);
-  outline-offset: 1px;
+  outline-offset: var(--focus-ring-offset);
 }
 
 .form select[aria-invalid="true"] { border-color: var(--color-danger); }
@@ -391,7 +391,7 @@ h2 { font-size: var(--font-size-heading); margin: 0 0 var(--space-md); }
 
 .reason input:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-accent);
-  outline-offset: 1px;
+  outline-offset: var(--focus-ring-offset);
 }
 
 .visually-hidden {

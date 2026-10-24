@@ -59,6 +59,9 @@ def test_open_window_shows_nothing_of_others_votes(app, clock, login_as, anonymo
     after = snapshot(client, urls)
 
     assert after == before
+    # Neither does the rated person see a reason given to them (VOT-07, VOT-08).
+    rated = snapshot(login_as(b), urls)
+    assert not any("Ente" in html for html in rated.values())
 
 
 def test_the_count_is_the_only_difference(app, clock, login_as):

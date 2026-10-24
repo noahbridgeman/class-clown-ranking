@@ -10,6 +10,7 @@ import math
 from collections.abc import Mapping
 from dataclasses import dataclass, fields, replace
 from datetime import datetime
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from functools import cache
 from zoneinfo import available_timezones
 
@@ -184,22 +185,21 @@ def log(group_id: int) -> list[SettingsChange]:
 def applied_changes(
     group_id: int, since: datetime | None
 ) -> list[tuple[datetime, set[SettingField]]]:
-    """Per window that took over changes: when, and which fields really changed (GRA-07).
-
-    A field changed back and forth before the window opened did not change.
+    """Per period that took over changes: its start, and which fields really changed
+    (GRA-07). The start, not the update's time, so the marker sits where the mode marker
+    of the same period sits. A field changed back and forth before did not change.
     """
     query = (
-        select(SettingsChange)
-        .where(SettingsChange.group_id == group_id, SettingsChange.applied_at.is_not(None))
-        .order_by(SettingsChange.applied_at, SettingsChange.id)
+        select(Period.opens_at, SettingsChange)
+        .join(Period, Period.id == SettingsChange.applied_in_period_id)
+        .where(SettingsChange.group_id == group_id)
+        .order_by(Period.opens_at, SettingsChange.id)
     )
     if since is not None:
-        query = query.where(SettingsChange.applied_at > since)
+        query = query.where(Period.opens_at > since)
     batches: dict[datetime, dict[SettingField, tuple[str, str]]] = {}
-    for change in db.session.scalars(query):
-        if change.applied_at is None:
-            continue
-        batch = batches.setdefault(change.applied_at, {})
+    for opens_at, change in db.session.execute(query):
+        batch = batches.setdefault(opens_at, {})
         first_old = batch[change.field][0] if change.field in batch else change.old_value
         batch[change.field] = (first_old, change.new_value)
     return [
@@ -237,11 +237,19 @@ def preview(params: scoring.ScoreParams, cadence: Cadence) -> Preview:
     )
 
 
-def from_form(form: Mapping[str, str], current: GroupSettings) -> GroupSettings:
-    """The settings a submitted form asks for. Raises InvalidSettings.
+@dataclass(frozen=True)
+class FormInput:
+    """A submitted settings form: invalid choices replaced by the current value."""
 
-    `params_cadence` names the cadence K and d were entered for. If the cadence changed
+    values: GroupSettings
+    errors: dict[SettingField, InvalidInput]
+    converted: bool  # K and d were entered for another cadence and converted
+
+
+def read_form(form: Mapping[str, str], current: GroupSettings) -> FormInput:
+    """`params_cadence` names the cadence K and d were entered for. If the cadence changed
     since, they are converted (SET-04, SCO-07); with JavaScript the form does this before.
+    Only cadence and anonymity are checked here, everything else by validate().
     """
     errors: dict[SettingField, InvalidInput] = {}
     cadence = _cadence(form.get("cadence"))
@@ -252,21 +260,27 @@ def from_form(form: Mapping[str, str], current: GroupSettings) -> GroupSettings:
     anonymity = form.get("is_anonymous")
     if anonymity not in ("true", "false"):
         errors[SettingField.IS_ANONYMOUS] = InvalidInput("settings.invalid_choice")
-    params = convert(
-        scoring.ScoreParams(k=parse_number(form.get("k")), d=parse_number(form.get("d"))),
-        params_cadence,
-        cadence,
-    )
-    if errors:
-        raise InvalidSettings(errors)
-    return GroupSettings(
+    entered = scoring.ScoreParams(k=parse_number(form.get("k")), d=parse_number(form.get("d")))
+    params = convert(entered, params_cadence, cadence)
+    values = GroupSettings(
         name=form.get("name", ""),
         cadence=cadence,
-        is_anonymous=anonymity == "true",
+        is_anonymous=anonymity == "true"
+        if anonymity in ("true", "false")
+        else current.is_anonymous,
         timezone=form.get("timezone", "").strip(),
         k=params.k,
         d=params.d,
     )
+    return FormInput(values=values, errors=errors, converted=params != entered)
+
+
+def from_form(form: Mapping[str, str], current: GroupSettings) -> GroupSettings:
+    """The settings a submitted form asks for. Raises InvalidSettings."""
+    read = read_form(form, current)
+    if read.errors:
+        raise InvalidSettings(read.errors)
+    return read.values
 
 
 def convert(params: scoring.ScoreParams, src: Cadence, dst: Cadence) -> scoring.ScoreParams:
@@ -319,8 +333,19 @@ def parse_number(text: str | None) -> float:
 def format_param(value: float, decimals: int = 6, decimal_separator: str = ",") -> str:
     """Six decimals for reading. Form inputs use INPUT_DECIMALS, so that a converted value
     at a bound reads back within the tolerance of scoring.validate (A11)."""
+    if not math.isfinite(value):
+        return ""
     text = f"{value:.{decimals}f}".rstrip("0").rstrip(".")
     return text.replace(".", decimal_separator)
+
+
+def format_bounds(low: float, high: float, decimals: int = 6) -> tuple[str, str]:
+    """Bounds rounded inwards, so the numbers shown are themselves allowed."""
+    step = Decimal(1).scaleb(-decimals)
+    # repr() is the shortest exact form, so 0.05 stays 0.05 instead of 0.050001.
+    rounded_low = Decimal(repr(low)).quantize(step, rounding=ROUND_CEILING)
+    rounded_high = Decimal(repr(high)).quantize(step, rounding=ROUND_FLOOR)
+    return format_param(float(rounded_low), decimals), format_param(float(rounded_high), decimals)
 
 
 INPUT_DECIMALS = 10

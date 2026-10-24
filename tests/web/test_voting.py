@@ -207,3 +207,21 @@ class TestReasons:
         vote(group, a, b, "up")
         response = login_as(a).post(f"/g/{group.id}/vote/{b.id}/reason", data={"reason": "Ente"})
         assert response.location == f"/g/{group.id}/vote"
+
+
+def test_reason_without_csrf_token_is_refused_with_a_message(csrf_app):
+    csrf_app.extensions["clock"].set(IN_WEEK_WINDOW)
+    admin = make_user()
+    group = make_group(admin)
+    group.is_anonymous = False
+    other = add_member(group)
+    tick()
+    vote(group, admin, other, "up")
+    client = csrf_app.test_client()
+    with client.session_transaction() as session:
+        session["_user_id"] = admin.get_id()
+    response = client.post(
+        f"/g/{group.id}/vote/{other.id}/reason", data={"reason": "x"}, headers=HTMX
+    )
+    assert response.status_code == 400
+    assert "Bitte lade die Seite neu" in response.get_data(as_text=True)

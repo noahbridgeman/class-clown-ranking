@@ -66,7 +66,8 @@ def save(group_id: int) -> Page:
         wanted = settings.from_form(request.form, current)
         changes = settings.change(g.group, current_user._get_current_object(), wanted)
     except InvalidSettings as invalid:
-        return _render(_form_values(current), invalid.errors), 400
+        read = settings.read_form(request.form, current)
+        return _render(read.values, invalid.errors, _param_texts(read)), 400
     flash(t("settings.saved" if changes else "settings.unchanged"), "success")
     return redirect(url_for("settings.index", group_id=group_id))
 
@@ -74,29 +75,40 @@ def save(group_id: int) -> Page:
 @bp.get("/g/<int:group_id>/settings/params")
 @admin_required
 def params(group_id: int) -> str:
-    """HTMX: K and d for the chosen cadence, their bounds and the preview (SET-04, SET-05)."""
-    values = _form_values(settings.upcoming(g.group))
+    """HTMX: K and d for the chosen cadence, their bounds and the preview (SET-04, SET-05).
+
+    On a cadence change the whole block is swapped, so K and d show the converted values.
+    While typing only #params-info is taken (hx-select), so the inputs stay as typed.
+    """
+    read = settings.read_form(request.args, settings.upcoming(g.group))
     errors = {}
     try:
-        settings.validate(values)
+        settings.validate(read.values)
     except InvalidSettings as invalid:
         errors = {f: e for f, e in invalid.errors.items() if f in (SettingField.K, SettingField.D)}
     return render_template(
-        "settings/_params.html", group=g.group, **_params_context(values, errors)
+        "settings/_params.html",
+        group=g.group,
+        live=True,
+        **_params_context(read.values, errors, _param_texts(read)),
     )
 
 
-def _form_values(current: GroupSettings) -> GroupSettings:
-    """What the form asked for, invalid fields replaced by their current value."""
-    try:
-        return settings.from_form(request.form or request.args, current)
-    except InvalidSettings:
-        return current
+def _param_texts(read: settings.FormInput) -> dict[str, str]:
+    """What the K and d inputs show: the typed text, unless the values were converted."""
+    texts = {}
+    for name in ("k", "d"):
+        typed = request.values.get(name)
+        if typed is not None and not read.converted:
+            texts[name] = typed
+    return texts
 
 
-def _render(values: GroupSettings, errors: dict | None = None) -> str:
+def _render(values: GroupSettings, errors: dict | None = None, texts: dict | None = None) -> str:
     group = g.group
     pending = settings.pending_fields(group)
+    zones = sorted(settings.timezones() | {values.timezone})  # keeps an invalid entry visible
+    upcoming = settings.upcoming(group)
     return render_template(
         "settings/index.html",
         group=group,
@@ -104,25 +116,31 @@ def _render(values: GroupSettings, errors: dict | None = None) -> str:
         effective=settings.effective(group),
         pending=pending,
         pending_from=settings.takes_effect_at(group, get_clock().now()) if pending else None,
+        pending_timezone=upcoming.timezone,
+        now=get_clock().now(),
         log=settings.log(group.id),
         fields=settings.FIELDS,
-        timezones={zone: zone for zone in sorted(settings.timezones())},
+        timezones={zone: zone for zone in zones},
         cadences=CADENCE_LABELS,
         name_max_length=GROUP_NAME_MAX_LENGTH,
         form=ConfirmForm(),
-        **_params_context(values, errors or {}),
+        live=False,
+        **_params_context(values, errors or {}, texts or {}),
     )
 
 
-def _params_context(values: GroupSettings, errors: dict) -> dict:
+def _params_context(values: GroupSettings, errors: dict, texts: dict[str, str]) -> dict:
     bounds = scoring.bounds(values.cadence, values.d)
     valid = not scoring.validate(values.params, values.cadence)
     preview = settings.preview(values.params, values.cadence) if valid else None
+    decimals = settings.INPUT_DECIMALS
     return {
         "values": values,
         "errors": {field.value: error.message() for field, error in errors.items()},
-        "bounds": bounds,
+        "k_text": texts.get("k", settings.format_param(values.k, decimals)),
+        "d_text": texts.get("d", settings.format_param(values.d, decimals)),
+        "k_bounds": settings.format_bounds(bounds.k_min, bounds.k_max),
+        "d_bounds": settings.format_bounds(bounds.d_min, bounds.d_max),
         "preview": preview,
         "preview_data": asdict(preview) if preview else None,
-        "input_decimals": settings.INPUT_DECIMALS,
     }

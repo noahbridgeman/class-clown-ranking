@@ -111,6 +111,16 @@ class TestSaving:
         assert message in response.get_data(as_text=True)
         assert changes() == []
 
+    def test_invalid_input_keeps_the_rest(self, world, login_as):
+        group, admin, _member = world
+        response = login_as(admin).post(
+            f"/g/{group.id}/settings", data=form(name="Neu", timezone="Mars/Olympus", k="abc")
+        )
+        html = response.get_data(as_text=True)
+        assert 'value="Neu"' in html and 'value="abc"' in html
+        assert '<option value="Mars/Olympus" selected>' in html
+        assert 'value="nan"' not in html
+
     def test_cadence_change_converts_k_and_d_without_javascript(self, world, login_as):
         """SET-04 / SCO-07: K and d were entered for weekly and are converted."""
         group, admin, _member = world
@@ -121,6 +131,24 @@ class TestSaving:
         )
         assert upcoming.cadence == Cadence.DAILY
         assert upcoming.params == expected
+
+
+class TestPendingNotice:
+    def test_window_that_opens_any_moment(self, world, clock, login_as):
+        """Between a window's start and the next update the change takes effect at once."""
+        group, admin, member = world
+        clock.set(WEEK_OPENS)
+        login_as(admin).post(f"/g/{group.id}/settings", data=form(name="Neu"))
+        html = login_as(member).get(f"/g/{group.id}/settings").get_data(as_text=True)
+        assert "in Kürze öffnet" in html
+
+    def test_timezone_change_names_the_new_zone(self, world, login_as):
+        group, admin, member = world
+        login_as(admin).post(f"/g/{group.id}/settings", data=form(timezone="America/New_York"))
+        html = login_as(member).get(f"/g/{group.id}/settings").get_data(as_text=True)
+        assert "Ausstehend ab So. 25.10.2026 um 00:00 Uhr (America/New_York)" in html
+        vote_page = login_as(member).get(f"/g/{group.id}/vote").get_data(as_text=True)
+        assert "So. 25.10.2026 um 00:00 Uhr (America/New_York)" in vote_page
 
 
 class TestParams:
@@ -136,23 +164,53 @@ class TestParams:
         assert 'name="params_cadence" value="daily"' in html
         assert "Höchster erreichbarer Score" in html
 
-    def test_converted_bound_values_stay_valid(self, world, login_as):
-        """A11: a weekly d at its bound is valid as daily too, after the round trip
-        through the form."""
+    @pytest.mark.parametrize(("k", "d"), [(0.05, 0.5), (2.0, 0.5), (0.05, 0.99), (2.0, 0.99)])
+    @pytest.mark.parametrize(
+        ("src", "dst"), [(Cadence.WEEKLY, Cadence.DAILY), (Cadence.DAILY, Cadence.WEEKLY)]
+    )
+    def test_converted_bound_values_stay_valid(self, world, login_as, k, d, src, dst):
+        """A11: every corner of the bounds stays valid after conversion and the round trip
+        through the form's text, in both directions."""
         group, admin, _member = world
-        url = f"/g/{group.id}/settings/params"
-        html = (
-            login_as(admin)
-            .get(url, query_string=form(cadence="daily", d="0,5", k="0,05"))
-            .get_data(as_text=True)
+        corner = scoring.convert_params(scoring.ScoreParams(k, d), Cadence.WEEKLY, src)
+        entered = form(
+            cadence=dst.value,
+            params_cadence=src.value,
+            k=settings.format_param(corner.k, settings.INPUT_DECIMALS),
+            d=settings.format_param(corner.d, settings.INPUT_DECIMALS),
+        )
+        client = login_as(admin)
+        html = client.get(f"/g/{group.id}/settings/params", query_string=entered).get_data(
+            as_text=True
         )
         assert 'class="error"' not in html
-        k = re.search(r'name="k"[^>]*value="([^"]+)"', html).group(1)
-        d = re.search(r'name="d"[^>]*value="([^"]+)"', html).group(1)
-        login_as(admin).post(
-            f"/g/{group.id}/settings", data=form(cadence="daily", params_cadence="daily", k=k, d=d)
+        k_text = re.search(r'name="k"[^>]*value="([^"]+)"', html).group(1)
+        d_text = re.search(r'name="d"[^>]*value="([^"]+)"', html).group(1)
+        saved = form(cadence=dst.value, params_cadence=dst.value, k=k_text, d=d_text)
+        assert client.post(f"/g/{group.id}/settings", data=saved).status_code == 302
+
+    def test_typing_keeps_the_text(self, world, login_as):
+        """While typing, the inputs show what was typed, never a reformatted or "nan" value."""
+        group, admin, _member = world
+        url = f"/g/{group.id}/settings/params"
+        html = login_as(admin).get(url, query_string=form(k="0,", d="abc")).get_data(as_text=True)
+        assert 'value="0,"' in html and 'value="abc"' in html
+        assert "nan" not in html
+        assert 'id="params-info"' in html and 'hx-select="#params-info"' in html
+
+    def test_bounds_are_rounded_inwards(self, world, login_as):
+        """The numbers shown as bounds are themselves allowed."""
+        group, admin, _member = world
+        d = 0.5 ** (1 / 7)
+        query = form(cadence="daily", params_cadence="daily", k="9", d=settings.format_param(d, 10))
+        html = (
+            login_as(admin)
+            .get(f"/g/{group.id}/settings/params", query_string=query)
+            .get_data(as_text=True)
         )
-        assert settings.upcoming(group).cadence == Cadence.DAILY
+        low, high = re.search(r"K muss zwischen ([\d,]+) und ([\d,]+) liegen", html).groups()
+        params = [scoring.ScoreParams(settings.parse_number(v), d) for v in (low, high)]
+        assert all(not scoring.validate(p, Cadence.DAILY) for p in params)
 
     def test_invalid_values_show_the_bounds_and_no_preview(self, world, login_as):
         group, admin, _member = world

@@ -95,7 +95,7 @@ class SettingField(StrEnum):
     D = "d"
 
 
-SETTING_VALUE_MAX_LENGTH = 64  # the longest is a timezone name
+SETTING_VALUE_MAX_LENGTH = 64  # the group name (60) and every timezone name fit
 
 
 class SettingsChange(db.Model):

@@ -15,7 +15,16 @@
     <p class="muted">{{ t("settings.intro") }}</p>
     {% if pending %}
       <div class="pending" role="status">
-        <p><strong>{{ t("settings.pending_from", at=pending_from|local_datetime(group.timezone)) }}</strong></p>
+        <p><strong>
+          {% if pending_from <= now %}
+            {{ t("settings.pending_soon") }}
+          {% elif pending_timezone != group.timezone %}
+            {# A timezone change: the new window is defined in the new zone. #}
+            {{ t("settings.pending_from_zone", at=pending_from|local_datetime(pending_timezone), timezone=pending_timezone) }}
+          {% else %}
+            {{ t("settings.pending_from", at=pending_from|local_datetime(group.timezone)) }}
+          {% endif %}
+        </strong></p>
         <ul class="list">
           {% for field, value in pending.items() %}
             <li>{{ t(setting_labels[field]) }}: {{ setting_value(field, value) }}</li>
