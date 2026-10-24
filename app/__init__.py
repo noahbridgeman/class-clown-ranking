@@ -3,10 +3,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask
 
-from app import i18n
+from app import cli, i18n
 from app.clock import Clock, SystemClock
 from app.config import Config, config_from_env, env_overrides
 from app.extensions import csrf, db, migrate
+from app.services import mail
 
 
 def create_app(config: type[Config] | None = None, clock: Clock | None = None) -> Flask:
@@ -19,6 +20,7 @@ def create_app(config: type[Config] | None = None, clock: Clock | None = None) -
     else:
         app.config.from_object(config)
     _require_secret_key(app)
+    _require_base_url(app)
     _ensure_database_uri(app)
 
     app.extensions["clock"] = clock or SystemClock()
@@ -27,10 +29,13 @@ def create_app(config: type[Config] | None = None, clock: Clock | None = None) -
     migrate.init_app(app, db)
     csrf.init_app(app)
     i18n.init_app(app)
+    mail.init_app(app)
+    cli.register(app)
 
     from app import models  # noqa: F401  (registers models for migrations)
-    from app.web import errors, main
+    from app.web import auth, errors, main
 
+    auth.register(app)
     app.register_blueprint(main.bp)
     errors.register(app)
 
@@ -45,6 +50,16 @@ def _require_secret_key(app: Flask) -> None:
         raise RuntimeError(
             f"SECRET_KEY must have at least {app.config['MIN_SECRET_KEY_LENGTH']} characters"
         )
+
+
+def _require_base_url(app: Flask) -> None:
+    """Login links point here, so a wrong value sends everyone to localhost."""
+    base_url = (app.config["BASE_URL"] or "").strip()
+    if not base_url:
+        raise RuntimeError("BASE_URL must be set (see .env.example)")
+    if not base_url.startswith(("https://", "http://")):
+        raise RuntimeError("BASE_URL must start with https:// or http://")
+    app.config["BASE_URL"] = base_url.rstrip("/")
 
 
 def _ensure_database_uri(app: Flask) -> None:

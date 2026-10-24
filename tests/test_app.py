@@ -8,14 +8,30 @@ from app import create_app
 from app.config import TestConfig
 
 STRONG_KEY = "k" * 32
-PROD_ENV = {"APP_ENV": "production", "SECRET_KEY": STRONG_KEY, "DATABASE_URL": "sqlite://"}
+MAIL_ENV = {"MAIL_HOST": "smtp.example.org", "MAIL_FROM": "ranking@example.org"}
+BASE_ENV = {"BASE_URL": "https://ranking.example.org", **MAIL_ENV}
+PROD_ENV = {
+    "APP_ENV": "production",
+    "SECRET_KEY": STRONG_KEY,
+    "DATABASE_URL": "sqlite://",
+    **BASE_ENV,
+}
+ENV_VARS = (
+    "APP_ENV",
+    "SECRET_KEY",
+    "DATABASE_URL",
+    "BASE_URL",
+    "FLASK_DEBUG",
+    *(f"MAIL_{name}" for name in ("BACKEND", "HOST", "PORT", "USERNAME", "PASSWORD", "STARTTLS")),
+    "MAIL_FROM",
+)
 
 
 @pytest.fixture
 def env(monkeypatch):
     """Isolates create_app() from the developer's shell and .env file."""
     monkeypatch.setattr("app.load_dotenv", lambda: None)
-    for var in ("APP_ENV", "SECRET_KEY", "DATABASE_URL", "BASE_URL", "FLASK_DEBUG"):
+    for var in ENV_VARS:
         monkeypatch.delenv(var, raising=False)
 
     def set_env(**values: str) -> None:
@@ -126,21 +142,21 @@ class TestCsrf:
 
 class TestConfigSelection:
     def test_defaults_to_production(self, env):
-        env(SECRET_KEY=STRONG_KEY, DATABASE_URL="sqlite://")
+        env(SECRET_KEY=STRONG_KEY, DATABASE_URL="sqlite://", **BASE_ENV)
         assert create_app().config["SESSION_COOKIE_SECURE"] is True
 
     def test_production_requires_secret_key(self, env):
-        env(APP_ENV="production", DATABASE_URL="sqlite://")
+        env(APP_ENV="production", DATABASE_URL="sqlite://", **BASE_ENV)
         with pytest.raises(RuntimeError, match="SECRET_KEY"):
             create_app()
 
     def test_flask_debug_does_not_weaken_production(self, env):
-        env(APP_ENV="production", DATABASE_URL="sqlite://", FLASK_DEBUG="1")
+        env(APP_ENV="production", DATABASE_URL="sqlite://", FLASK_DEBUG="1", **BASE_ENV)
         with pytest.raises(RuntimeError, match="SECRET_KEY"):
             create_app()
 
     def test_production_requires_database_url(self, env):
-        env(APP_ENV="production", SECRET_KEY=STRONG_KEY)
+        env(APP_ENV="production", SECRET_KEY=STRONG_KEY, **BASE_ENV)
         with pytest.raises(RuntimeError, match="DATABASE_URL"):
             create_app()
 
@@ -150,9 +166,12 @@ class TestConfigSelection:
         assert config["SESSION_COOKIE_SECURE"] is True
         assert config["SESSION_COOKIE_HTTPONLY"] is True
         assert config["SESSION_COOKIE_SAMESITE"] == "Lax"
+        assert config["REMEMBER_COOKIE_SECURE"] is True
+        assert config["REMEMBER_COOKIE_HTTPONLY"] is True
+        assert config["REMEMBER_COOKIE_SAMESITE"] == "Lax"
 
     def test_environment_overrides_config(self, env):
-        env(**PROD_ENV, BASE_URL="https://example.org")
+        env(**{**PROD_ENV, "BASE_URL": "https://example.org"})
         config = create_app().config
         assert config["SECRET_KEY"] == STRONG_KEY
         assert config["SQLALCHEMY_DATABASE_URI"] == "sqlite://"
@@ -160,13 +179,13 @@ class TestConfigSelection:
 
     @pytest.mark.parametrize("key", ["", "   "])
     def test_production_rejects_empty_secret_key(self, env, key):
-        env(APP_ENV="production", SECRET_KEY=key, DATABASE_URL="sqlite://")
+        env(APP_ENV="production", SECRET_KEY=key, DATABASE_URL="sqlite://", **BASE_ENV)
         with pytest.raises(RuntimeError, match="SECRET_KEY must be set"):
             create_app()
 
     @pytest.mark.parametrize("key", ["dev-insecure-key", "k" * 31])
     def test_production_rejects_short_secret_key(self, env, key):
-        env(APP_ENV="production", SECRET_KEY=key, DATABASE_URL="sqlite://")
+        env(APP_ENV="production", SECRET_KEY=key, DATABASE_URL="sqlite://", **BASE_ENV)
         with pytest.raises(RuntimeError, match="at least 32"):
             create_app()
 
@@ -188,3 +207,51 @@ class TestConfigSelection:
         env(DATABASE_URL="postgresql://real/db")
         app = create_app(TestConfig)
         assert app.config["SQLALCHEMY_DATABASE_URI"] == "sqlite:///:memory:"
+
+    @pytest.mark.parametrize("value", ["", "   "])
+    def test_production_requires_base_url(self, env, value):
+        env(**{**PROD_ENV, "BASE_URL": value})
+        with pytest.raises(RuntimeError, match="BASE_URL must be set"):
+            create_app()
+
+    def test_production_has_no_base_url_default(self, env):
+        env(**{k: v for k, v in PROD_ENV.items() if k != "BASE_URL"})
+        with pytest.raises(RuntimeError, match="BASE_URL must be set"):
+            create_app()
+
+    def test_base_url_needs_a_scheme(self, env):
+        env(**{**PROD_ENV, "BASE_URL": "ranking.example.org"})
+        with pytest.raises(RuntimeError, match="https://"):
+            create_app()
+
+    def test_base_url_loses_trailing_slash(self, env):
+        env(**{**PROD_ENV, "BASE_URL": "https://ranking.example.org/"})
+        assert create_app().config["BASE_URL"] == "https://ranking.example.org"
+
+    def test_development_uses_localhost_base_url_and_console_mail(self, env):
+        env(APP_ENV="development", DATABASE_URL="sqlite://")
+        config = create_app().config
+        assert config["BASE_URL"] == "http://localhost:5000"
+        assert config["MAIL_BACKEND"] == "console"
+
+    @pytest.mark.parametrize("missing", ["MAIL_HOST", "MAIL_FROM"])
+    def test_production_smtp_requires_host_and_sender(self, env, missing):
+        env(**{k: v for k, v in PROD_ENV.items() if k != missing})
+        with pytest.raises(RuntimeError, match=missing):
+            create_app()
+
+    def test_unknown_mail_backend_fails(self, env):
+        env(**PROD_ENV, MAIL_BACKEND="carrier-pigeon")
+        with pytest.raises(RuntimeError, match="MAIL_BACKEND"):
+            create_app()
+
+    def test_mail_port_and_starttls_are_converted(self, env):
+        env(**PROD_ENV, MAIL_PORT="465", MAIL_STARTTLS="false")
+        config = create_app().config
+        assert config["MAIL_PORT"] == 465
+        assert config["MAIL_STARTTLS"] is False
+
+    def test_invalid_boolean_fails(self, env):
+        env(**PROD_ENV, MAIL_STARTTLS="vielleicht")
+        with pytest.raises(RuntimeError, match="boolean"):
+            create_app()

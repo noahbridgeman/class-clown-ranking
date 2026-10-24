@@ -2,7 +2,12 @@
 {% block content %}
   <section class="card">
     <h1>{{ t("app.tagline") }}</h1>
-    <p>{{ t("home.intro") }}</p>
-    <p class="muted">{{ t("home.coming_soon") }}</p>
+    {% if current_user.is_authenticated %}
+      <p>{{ t("home.greeting", name=current_user.display_name) }}</p>
+      <p class="muted">{{ t("home.groups_coming_soon") }}</p>
+    {% else %}
+      <p>{{ t("home.intro") }}</p>
+      <p><a class="button" href="{{ url_for('auth.login') }}">{{ t("home.login_cta") }}</a></p>
+    {% endif %}
   </section>
 {% endblock %}

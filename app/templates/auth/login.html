@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ t("auth.login_title") }} – {{ t("app.name") }}{% endblock %}
+{% block content %}
+  <section class="card">
+    <h1>{{ t("auth.login_title") }}</h1>
+    <p>{{ t("auth.login_intro") }}</p>
+    <form method="post" action="{{ url_for('auth.login') }}" class="form">
+      {{ form.csrf_token }}
+      <label for="email">{{ t("auth.email_label") }}</label>
+      <input id="email" name="email" type="email" required autocomplete="email"
+             inputmode="email" autocapitalize="off" spellcheck="false"
+             maxlength="{{ max_length }}" value="{{ form.email.data or '' }}"
+             {% if error %}aria-invalid="true" aria-describedby="email-error"{% endif %} autofocus>
+      {% if error %}<p id="email-error" class="error" role="alert">{{ error }}</p>{% endif %}
+      <button type="submit" class="button">{{ t("auth.send_link") }}</button>
+    </form>
+  </section>
+{% endblock %}

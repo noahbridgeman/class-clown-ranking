@@ -1,3 +1,4 @@
+from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
@@ -24,3 +25,7 @@ db = SQLAlchemy(model_class=Base)
 # Batch mode lets Alembic alter tables on SQLite.
 migrate = Migrate(render_as_batch=True)
 csrf = CSRFProtect()
+login_manager = LoginManager()
+login_manager.login_view = "auth.login"
+# Flask-Login's default message is English; the login page explains itself.
+login_manager.login_message = None
