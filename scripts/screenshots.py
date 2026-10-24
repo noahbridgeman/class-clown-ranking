@@ -304,7 +304,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         import design_check  # next to this script, loaded only for this command
 
         only = set(args.pages.split(",")) if args.pages else None
-        index = design_check.run(args.out, find_chrome(args.chrome), _shoot, localize, only)
+        index = design_check.run(args.out, find_chrome(args.chrome), localize, only)
         print(f"Design-Check: {index}")
         return 0
     return compare(args.before, args.after)

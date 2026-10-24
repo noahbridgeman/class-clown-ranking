@@ -1,14 +1,17 @@
 <!doctype html>
 {% import "macros/ui.html" as ui %}
+{% set group_page = g.get("group") is not none %}
 <html lang="de">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0d0f17">
+  <meta name="theme-color" content="#f5f4ef">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   {# Unlike the htmx default, also swap 4xx/5xx responses so error messages become visible. #}
   <meta name="htmx-config" content='{"responseHandling": [{"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": true, "error": true}]}'>
   <title>{% block title %}{{ t("app.name") }}{% endblock %}</title>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/archivo-narrow-latin-700.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/ibm-plex-mono-latin-600.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"
@@ -17,26 +20,31 @@
   {% block scripts %}{% endblock %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'>
-  <header class="topbar">
-    <a class="brand" href="{{ url_for('main.index') }}">{{ t("app.name") }}</a>
-    <nav class="nav">
-      {% if current_user.is_authenticated %}
-        {% if not current_user.needs_display_name %}
-          <a href="{{ url_for('auth.name') }}">{{ t("nav.change_name") }}</a>
+  {% if group_page %}
+    {{ ui.ticker(ticker_data(), t("ticker.average"), t("ticker.new"), self.ticker_prefix()|trim or none) }}
+  {% endif %}
+  <header class="masthead{% block masthead_class %}{% endblock %}">
+    <div class="masthead-lead">
+      {% block masthead_lead %}
+        {% if group_page %}
+          {{ ui.text_link(t("nav.ranking"), url_for('groups.home', group_id=g.group.id), back=true) }}
+        {% else %}
+          <a class="brand" href="{{ url_for('main.index') }}">{{ t("app.name") }}</a>
         {% endif %}
-        <form method="post" action="{{ url_for('auth.logout') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          {{ ui.link_button(t("nav.logout")) }}
-        </form>
-      {% elif request.endpoint != "auth.login" %}
-        <a href="{{ url_for('auth.login') }}">{{ t("nav.login") }}</a>
-      {% endif %}
-    </nav>
+      {% endblock %}
+    </div>
+    {% if current_user.is_authenticated and not current_user.needs_display_name %}
+      {{ ui.profile_button(current_user, url_for('auth.name'), t("nav.account")) }}
+    {% elif not current_user.is_authenticated and request.endpoint != "auth.login" %}
+      {{ ui.text_link(t("nav.login"), url_for('auth.login')) }}
+    {% endif %}
   </header>
-  <main class="container">
+  <main class="page">
     {# HTMX error responses are retargeted here, so the element that sent them stays usable. #}
     <div id="messages" aria-live="polite">{% include "partials/flashes.html" %}</div>
     {% block content %}{% endblock %}
   </main>
 </body>
 </html>
+{# Text in front of the ticker, e.g. VOTING OFFEN. Defined here, rendered only in the ticker. #}
+{% if false %}{% block ticker_prefix %}{% endblock %}{% endif %}

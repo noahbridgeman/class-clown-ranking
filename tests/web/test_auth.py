@@ -350,10 +350,16 @@ class TestLogout:
         assert response.status_code == 204
         assert response.headers["HX-Redirect"] == "/"
 
-    def test_nav_shows_logout_when_logged_in(self, login_as):
-        html = login_as(make_user()).get("/").get_data(as_text=True)
+    def test_profile_button_leads_to_the_account_with_logout(self, login_as):
+        client = login_as(make_user(display_name="Jonas"))
+        html = client.get("/").get_data(as_text=True)
+        profile = '<a class="profile" href="/account/name" aria-label="Dein Konto">J</a>'
+        assert profile in html
+        assert 'action="/logout"' in client.get("/account/name").get_data(as_text=True)
+
+    def test_nameless_accounts_can_still_log_out(self, login_as):
+        html = login_as(make_user(display_name=None)).get("/account/name").get_data(as_text=True)
         assert 'action="/logout"' in html
-        assert "Name ändern" in html
 
     def test_nav_shows_login_when_logged_out(self, client):
         html = client.get("/").get_data(as_text=True)
@@ -469,9 +475,9 @@ class TestWithCsrf:
         )
         assert response.location == "/"
 
-        home = client.get("/").get_data(as_text=True)
+        account = client.get("/account/name").get_data(as_text=True)
         assert client.post("/logout").status_code == 400
-        assert client.post("/logout", data={"csrf_token": csrf_token(home)}).location == "/"
+        assert client.post("/logout", data={"csrf_token": csrf_token(account)}).location == "/"
 
     def test_link_without_csrf_token_stays_usable(self, csrf_app):
         client = csrf_app.test_client()

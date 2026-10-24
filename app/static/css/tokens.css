@@ -1,74 +1,200 @@
-/* Design tokens: the only place for colors, fonts, spacing and sizes.
-   A redesign changes this file; app.css only refers to these variables. */
-:root {
-  color-scheme: dark;
+/* Design tokens "Kursblatt" (docs/design.md, section 2): the only place for colors,
+   fonts, spacing and sizes. A redesign changes this file; app.css only refers to these. */
 
-  /* Colors (dark theme, GRA-06) */
-  --color-bg: #0d0f17;
-  --color-surface: #161a26;
-  --color-border: #262b3d;
-  --color-text: #e8eaf2;
-  --color-muted: #8a90a6;
-  --color-accent: #7c5cff;
-  --color-danger: #ff6b81;
-  --color-success: #3ddc97;
-  /* Text on filled backgrounds of the color with the same name */
-  --color-on-accent: #fff;
-  --color-on-danger: #1a0007;
-  --color-on-success: #062417;
+/* Self-hosted (CSP, GDPR), SIL Open Font License, see ../fonts/OFL-*.txt. */
+@font-face {
+  font-family: "Archivo Narrow";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/archivo-narrow-latin-500.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo Narrow";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/archivo-narrow-latin-ext-500.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Archivo Narrow";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/archivo-narrow-latin-700.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo Narrow";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/archivo-narrow-latin-ext-700.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-latin-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-latin-ext-400.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-latin-500.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-latin-ext-500.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-latin-600.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-latin-ext-600.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  color-scheme: light;
+
+  /* Colors. Green and red only mean rise/fall and up/down; on paper use the -text
+     variants, on green or red areas text is always ink. */
+  --color-bg: #f5f4ef;
+  --color-ink: #111111;
+  --color-muted: #55554f;
+  --color-faint: #6b6b64;
+  --color-line: #deddd5;
+  --color-series: #c2c1b9;
+  --color-on-dark: #f5f4ef;
+  --color-on-dark-muted: #b9b9b1;
+  --color-on-dark-line: #3a3a36;
+  --color-surface: #ffffff;
+  --color-up: #12d37a;
+  --color-up-text: #0b7a5c;
+  --color-up-tint: #eaf7ef;
+  --color-down: #ff4a1c;
+  --color-down-text: #b32d0b;
 
   /* Fonts */
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-size-title: 1.4rem;
-  --font-size-heading: 1.1rem;
-  --font-size-small: 0.8rem;
-  --font-size-input: 16px; /* at least 16px, or iOS Safari zooms on focus */
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
+  --font-ui: "Archivo Narrow", "Arial Narrow", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --font-size-title: 44px;
+  --font-size-countdown: 44px;
+  --font-size-cell: 22px;
+  --font-size-name: 20px;
+  --font-size-status: 19px;
+  --font-size-score: 18px;
+  --font-size-body-large: 17px;
+  --font-size-body: 16px;
+  --font-size-initial: 15px;
+  --font-size-button-large: 13px;
+  --font-size-button: 12px;
+  --font-size-meta: 12px;
+  --font-size-kicker: 11px;
+  --font-size-label: 10px;
+  --font-size-tag: 9px;
+  --font-size-input: 17px; /* at least 16px, or iOS Safari zooms on focus */
+  --line-height-title: 1;
+  --line-height-tight: 1.1;
   --line-height-body: 1.5;
+  --tracking-title: -0.01em;
+  --tracking-label: 0.08em;
+  --tracking-button: 0.06em;
+  --tracking-vote: 0.04em;
 
   /* Spacing */
   --space-3xs: 2px;
   --space-2xs: 4px;
-  --space-xs: 8px;
-  --space-sm: 10px;
-  --space-md: 12px;
-  --space-lg: 14px;
-  --space-xl: 16px;
-  --space-2xl: 20px;
-  --gutter: var(--space-xl);
+  --space-xs: 6px;
+  --space-sm: 8px;
+  --space-md: 10px;
+  --space-lg: 12px;
+  --space-xl: 14px;
+  --space-2xl: 18px;
+  --space-3xl: 24px;
+  --space-4xl: 32px;
+  --gutter: 24px;
+  --header-gutter: 12px;
+  --header-gutter-end: 16px;
 
-  /* Shapes and sizes */
-  --radius-card: 14px;
-  --radius-control: 10px;
-  --radius-pill: 999px;
-  --border-width: 1px;
+  /* Lines and sizes. No rounded corners except the profile button (a circle). */
+  --rule: 1px;
+  --rule-strong: 2px;
+  --rule-control: 1.5px;
   --focus-ring-width: 2px;
-  --focus-ring-offset: 1px;
-  --container-width: 720px;
-  --dot-size: 12px;
+  --focus-ring-offset: 2px;
+  --radius-circle: 50%;
+  --container-width: 560px;
   --touch-target: 44px;
-  --vote-button-width: 72px;
-  --rank-place-width: 2.5em;
-  --graph-height: 320px;
-  --preview-height: 180px;
+  --ticker-height: 32px;
+  --ticker-gap: 26px;
+  --ticker-duration: 26s;
+  --status-height: 52px;
+  --status-dot: 8px;
+  --vote-button-width: 88px;
+  --input-height: 44px;
+  --input-height-small: 40px;
+  --rank-place-width: 18px;
+  --rank-score-width: 34px;
+  --rank-delta-width: 48px;
+  --sparkline-width: 44px;
+  --sparkline-height: 18px;
+  --sparkline-stroke: 1.5px;
+  --sparkline-stroke-strong: 2px;
+  --progress-height: 6px;
+  --progress-gap: 3px;
+  --tab-height: 32px;
+  --graph-height: 200px;
+  --preview-height: 132px;
 
-  /* Graph (GRA-06). graph.js reads these as plain numbers (pixels, milliseconds). */
-  --graph-font-size: 12;
-  --graph-legend-space: 40;
-  --graph-marker-width: 1.5;
-  --graph-line-width: 2;
+  /* Graph (docs/design.md section 4). graph.js reads these as plain numbers (px, ms). */
+  --graph-font-size: 9;
+  --graph-line-width: 1.5;
+  --graph-line-width-role: 2.5;
   --graph-line-width-me: 3.5;
-  --graph-line-width-emphasis: 4;
-  --graph-glow: 12;
-  --graph-symbol-size: 6;
-  --graph-blur-opacity: 0.12;
-  --graph-animation-ms: 700;
+  --graph-end-dot: 9;
+  --graph-end-dot-border: 1.5;
+  --graph-blur-opacity: 0.25;
+  --graph-marker-height: 6;
+  --graph-label-gap: 11;
+  --graph-animation-ms: 400;
 }
 
 @media (min-width: 640px) {
   :root {
-    --font-size-title: 1.75rem;
-    --graph-height: 400px;
+    --graph-height: 260px;
   }
 }

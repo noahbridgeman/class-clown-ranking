@@ -14,11 +14,10 @@ from flask_login import current_user, login_required
 from werkzeug.wrappers import Response as BaseResponse
 
 from app.clock import get_clock
-from app.domain.colors import color_for
 from app.domain.formatting import DECIMAL_SEPARATOR, format_delta, format_score
 from app.i18n import t
 from app.models.group import GROUP_NAME_MAX_LENGTH
-from app.services import graph, groups, leaderboard, membership
+from app.services import graph, groups, leaderboard, membership, ticker
 from app.services.errors import InvalidInput
 from app.services.text import member_name
 from app.web.access import admin_required, member_required
@@ -30,13 +29,24 @@ Page = tuple[str, int] | BaseResponse
 
 
 def register(app: Flask) -> None:
-    app.add_template_global(color_for, "member_color")
     app.add_template_global(member_name)
+    app.add_template_global(ticker_data)
     # Display rounding lives in domain.formatting only (A13).
     app.add_template_filter(format_score, "score")
     app.add_template_filter(format_delta, "delta")
     app.add_template_global(DECIMAL_SEPARATOR, "decimal_separator")
     app.register_blueprint(bp)
+
+
+def current_board() -> leaderboard.Leaderboard:
+    """The leaderboard of g.group, computed once per request for page and ticker."""
+    if "board" not in g:
+        g.board = leaderboard.leaderboard(g.group.id)
+    return g.board
+
+
+def ticker_data() -> ticker.Ticker:
+    return ticker.ticker(current_board())
 
 
 @bp.route("/groups/new", methods=["GET", "POST"])
@@ -66,7 +76,7 @@ def home(group_id: int) -> str:
     return render_template(
         "groups/home.html",
         group=g.group,
-        board=leaderboard.leaderboard(group_id, members),
+        board=current_board(),
         ranges=graph.RANGE_LABELS,
         selected_range=selected_range,
         members=members,

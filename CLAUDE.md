@@ -38,6 +38,7 @@ flask --app app users allow <email>  # Adresse für Kontoanlage ohne Einladung f
 flask --app app tick                 # Periodenupdate: Perioden schließen, Scores berechnen, Fenster öffnen
 python scripts/screenshots.py capture <dir>          # alle Seiten fotografieren (390 und 1280 px, braucht Chrome)
 python scripts/screenshots.py compare <vorher> <nachher>  # Exit-Code 1, wenn sich ein Screenshot unterscheidet
+python scripts/screenshots.py design-check design-check/<nr>-<name>  # Referenz-Screens und App bei 390 px nebeneinander
 ```
 
 Bei reinen Frontend-Umbauten vorher und nachher `capture` laufen lassen und `compare` muss sauber sein.
@@ -86,4 +87,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M7 (Voting-Übersicht). M0 bis M6 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M6b (Redesign „Kursblatt“, docs/design.md). M0 bis M6 sind abgeschlossen. Details in `docs/plan.md`.

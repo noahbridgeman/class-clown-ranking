@@ -13,4 +13,9 @@
       {{ ui.button(t("account.name_save")) }}
     </form>
   {% endcall %}
+  {# Logging out lives here, behind the profile button (docs/design.md, section 3). #}
+  <form class="actions" method="post" action="{{ url_for('auth.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {{ ui.button(t("nav.logout"), "secondary") }}
+  </form>
 {% endblock %}

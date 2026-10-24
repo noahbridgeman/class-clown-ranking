@@ -12,7 +12,6 @@ import hashlib
 import html as html_lib
 import json
 import random
-import shutil
 import subprocess
 import urllib.request
 from dataclasses import dataclass, field, replace
@@ -205,17 +204,44 @@ def write_index(out: Path, pages: list[Page]) -> Path:
     return index
 
 
-def crop(png: Path, height: int) -> None:
-    """Chrome shoots at least 600 px wide; keep the 390 px of the page (macOS sips)."""
-    if shutil.which("sips"):
-        subprocess.run(
-            ["sips", "-c", str(height), str(WIDTH), "--cropOffset", "0", "0", str(png)],
-            check=True,
-            capture_output=True,
-        )
+def shoot(chrome: str, source: Path, png: Path, height: int) -> None:
+    """A 390 px wide shot of a page with the layout of a 390 px viewport.
+
+    Headless Chrome keeps the layout viewport at least 500 px wide, so the page goes into
+    an iframe of 390 px. The iframe sits 1 px from the corner because sips reads the
+    crop offset 0 0 as "centered"; the crop then starts at 1 1.
+    """
+    frame = png.with_suffix(".frame.html")
+    frame.write_text(
+        f'<body style="margin:1px 0 0 1px"><iframe src="{source.name}" '
+        f'style="border:0;width:{WIDTH}px;height:{height}px"></iframe></body>'
+    )
+    subprocess.run(
+        [
+            chrome,
+            "--headless=new",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--force-device-scale-factor=1",
+            "--force-prefers-reduced-motion",
+            "--virtual-time-budget=5000",
+            f"--window-size=600,{height + 2}",
+            f"--screenshot={png}",
+            "--allow-file-access-from-files",
+            frame.as_uri(),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=60,
+    )
+    subprocess.run(
+        ["sips", "-c", str(height), str(WIDTH), "--cropOffset", "1", "1", str(png)],
+        check=True,
+        capture_output=True,
+    )
 
 
-def run(out: Path, chrome: str, shoot: Any, localize: Any, only: set[str] | None) -> Path:
+def run(out: Path, chrome: str, localize: Any, only: set[str] | None) -> Path:
     pages = [p for p in render() if not only or p.name in only]
     out = out.resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -224,11 +250,9 @@ def run(out: Path, chrome: str, shoot: Any, localize: Any, only: set[str] | None
         folder.mkdir(exist_ok=True)
         source = folder / "ist.html"
         source.write_text(localize_with_graph(page, localize))
-        shoot(chrome, source, folder / "ist.png", WIDTH, page.height)
-        crop(folder / "ist.png", page.height)
+        shoot(chrome, source, folder / "ist.png", page.height)
         if page.reference:
             reference = folder / "referenz.html"
             reference.write_text((SCREENS / page.reference).read_text())
-            shoot(chrome, reference, folder / "referenz.png", WIDTH, page.height)
-            crop(folder / "referenz.png", page.height)
+            shoot(chrome, reference, folder / "referenz.png", page.height)
     return write_index(out, pages)

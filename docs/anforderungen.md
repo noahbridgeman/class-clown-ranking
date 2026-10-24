@@ -79,16 +79,17 @@ Alle Einstellungen gelten für die ganze Gruppe und können nur vom Admin geänd
 | Gruppenname | Freitext | bei Erstellung angegeben |
 | Takt | täglich, wöchentlich | wöchentlich |
 | Anonymität | anonym, offen | anonym |
-| Zeitzone | IANA-Zeitzone | Europe/Berlin |
+| Zeitzone | IANA-Zeitzone | Europe/Berlin (wird in der Oberfläche nicht angeboten, siehe SET-07) |
 | Lernrate K | > 0 | wird beim Testen kalibriert (Startwert z. B. 0,5 pro Woche) |
 | Decay d | 0 < d ≤ 1 | wird beim Testen kalibriert (Startwert z. B. 0,95 pro Woche) |
 
 - **SET-01:** Eine Änderung gilt nie für die laufende Periode, sondern erst ab der nächsten. Bis dahin zeigt die App sie als „ausstehend ab \<Datum>“ an.
 - **SET-02:** Alle Mitglieder können die aktuellen Einstellungen sehen, auch die Score-Parameter.
-- **SET-03:** Jede Änderung wird mit Zeitpunkt und altem und neuem Wert protokolliert. Das Protokoll ist für alle Mitglieder sichtbar, und im Graph erscheint an der Stelle ein Marker (GRA-07).
+- **SET-03:** Jede Änderung wird mit Zeitpunkt und altem und neuem Wert protokolliert. Das Protokoll wird nicht angezeigt; im Graph erscheint an der Stelle ein Marker (GRA-07).
 - **SET-04:** Wechselt der Takt, rechnet das System K und d automatisch so um, dass gleichbleibendes Voting über eine Woche etwa gleich stark wirkt (SCO-07). Danach kann der Admin die Werte noch von Hand anpassen.
-- **SET-05:** Für K und d gibt es Ober- und Untergrenzen, damit der Score nicht unbrauchbar wird. Eine Vorschau zeigt, wie sich die gewählten Werte auf einen Beispielverlauf auswirken.
+- **SET-05:** Für K und d gibt es Ober- und Untergrenzen, damit der Score nicht unbrauchbar wird. Eine Vorschau zeigt, wie sich die gewählten Werte auf einen Beispielverlauf auswirken. Ein Button „Standard wiederherstellen“ setzt K und d auf die Standardwerte des gewählten Takts ins Formular; gespeichert wird erst mit „Speichern“.
 - **SET-06:** Wechselt die Gruppe von anonym zu offen oder umgekehrt, bleibt der Status bereits vergangener Perioden unverändert (VOT-09).
+- **SET-07:** Die Zeitzone wird in der Oberfläche nicht angeboten und bleibt Europe/Berlin. Das Feld bleibt in der Datenbank, damit sie später wählbar werden kann.
 
 ## 6 Voting
 
@@ -162,11 +163,11 @@ Die Startseite einer Gruppe ist ein gemeinsamer Liniengraph mit allen Mitglieder
 **Graph**
 
 - **GRA-01:** Die x-Achse zeigt die Zeit, die y-Achse den Score von 0 bis 10. Jeder Punkt ist das Ergebnis einer Periode.
-- **GRA-02:** Jedes Mitglied hat eine eigene Farbe, die in allen Ansichten der Gruppe gleich bleibt. Die Farben sind gut unterscheidbar, auch bei 15 oder mehr Personen.
+- **GRA-02:** Die Linien sind nach Rolle gefärbt, nicht pro Person: alle in einem hellen Grau, Platz 1 in Schwarz, der größte Anstieg der letzten Periode in Grün, der größte Absturz in Rot. Die eigene Linie ist dicker und hat einen Endpunkt (docs/design.md, Abschnitt 4).
 - **GRA-03:** Standardmäßig zeigt der Graph die letzten 4 Wochen. Umschaltbar sind 1 Woche, 4 Wochen, 3 Monate, 1 Jahr und Alles.
 - **GRA-04:** Tippt man eine Linie an oder fährt mit der Maus darüber, wird sie hervorgehoben und alle anderen werden abgeblendet. Ein Tooltip zeigt Name, Datum, Score und die Ups und Downs dieser Periode.
-- **GRA-05:** In der Legende kann man einzelne Mitglieder aus- und einblenden.
-- **GRA-06:** Die Linien sind geglättet. Der Graph soll optisch hochwertig wirken, mit dunklem Hintergrund, leuchtenden Linien und flüssigen Übergängen.
+- **GRA-05:** Es gibt keine Legende. Am Ende jeder Linie steht klein der Name mit dem aktuellen Score. Tippt man eine Linie oder eine Zeile der Rangliste an, wird diese Person hervorgehoben.
+- **GRA-06:** Der Graph folgt dem hellen, flachen Stil der App („Kursblatt“): heller Hintergrund, gerade Linienstücke, kein Leuchten, eine gestrichelte Linie beim Startwert 5,0. Die y-Achse zoomt auf die Daten.
 - **GRA-07:** Im Graph erscheinen Marker für Einstellungsänderungen (SET-03), für Beitritte und Austritte sowie für den Wechsel zwischen anonymen und offenen Perioden.
 - **GRA-08:** Der Graph funktioniert auf dem Smartphone im Hochformat. Er darf dort horizontal gescrollt oder gezoomt werden.
 

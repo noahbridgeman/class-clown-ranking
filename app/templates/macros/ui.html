@@ -1,56 +1,168 @@
-{# Recurring UI elements. A redesign changes their markup here, not on every page.
-   Import with {% import "macros/ui.html" as ui %}. #}
+{# Recurring UI elements "Kursblatt" (docs/design.md, section 3). A redesign changes their
+   markup here, not on every page. Import with {% import "macros/ui.html" as ui %}. #}
 
+{# A block of content. Flat, without frame: sections start with a strong rule (ui.section). #}
 {% macro card(role=none) -%}
 <section class="card"{% if role %} role="{{ role }}"{% endif %}>
   {{ caller() }}
 </section>
 {%- endmacro %}
 
-{# kind: primary, secondary or danger. With href it is a link styled as a button. #}
-{% macro button(label, kind="primary", href=none) -%}
-{%- set classes = "button" if kind == "primary" else "button button-" ~ kind -%}
+{# A titled section: 2 px ink rule, mono label as heading. #}
+{% macro section(title, count=none) -%}
+<section class="section">
+  <h2 class="section-title">{{ title }}{% if count is not none %} · {{ count }}{% endif %}</h2>
+  {{ caller() }}
+</section>
+{%- endmacro %}
+
+{# Kicker, h1 and a line below, as on every page. kicker_href makes the kicker a link. #}
+{% macro page_head(title, kicker=none, sub=none, kicker_href=none) -%}
+<div class="page-head">
+  {% if kicker %}
+    {% if kicker_href %}<a class="kicker" href="{{ kicker_href }}">{{ kicker }} ›</a>
+    {% else %}<p class="kicker">{{ kicker }}</p>{% endif %}
+  {% endif %}
+  <h1>{{ title }}</h1>
+  {% if sub %}<p class="page-sub">{{ sub }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{# kind: primary (ink, green text), up (green area), secondary (ink frame) or danger.
+   With href it is a link styled as a button. attrs: further attributes. #}
+{% macro button(label, kind="primary", href=none, attrs={}) -%}
+{%- set classes = "button button-" ~ kind -%}
 {%- if href -%}
 <a class="{{ classes }}" href="{{ href }}">{{ label }}</a>
 {%- else -%}
-<button type="submit" class="{{ classes }}">{{ label }}</button>
+<button type="submit" class="{{ classes }}"{{ _attrs(attrs) }}>{{ label }}</button>
 {%- endif -%}
 {%- endmacro %}
 
 {# A submit button that looks like a link, for small actions inside lists. #}
-{% macro link_button(label) -%}
-<button type="submit" class="link-button">{{ label }}</button>
+{% macro link_button(label, kind=none, attrs={}) -%}
+<button type="submit" class="link-button{% if kind %} link-button-{{ kind }}{% endif %}"{{ _attrs(attrs) }}>{{ label }}</button>
 {%- endmacro %}
 
+{# Mono link with an arrow: "LABEL ›", or "‹ LABEL" with back=true. #}
+{% macro text_link(label, href, back=false, kind=none) -%}
+<a class="text-link{% if kind %} text-link-{{ kind }}{% endif %}" href="{{ href }}">
+  {%- if back %}<span aria-hidden="true">‹ </span>{{ label }}
+  {%- else %}<span>{{ label }}</span><span aria-hidden="true">›</span>{% endif -%}
+</a>
+{%- endmacro %}
+
+{# Small mono tag. kind: ink (filled, e.g. DU, ADMIN), up, down or none (muted). #}
 {% macro badge(text, kind=none) -%}
 <span class="badge{% if kind %} badge-{{ kind }}{% endif %}">{{ text }}</span>
 {%- endmacro %}
 
-{# The member's color (GRA-02). An SVG attribute, so no inline style is needed. #}
-{% macro color_dot(index) -%}
-<svg class="dot" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="{{ member_color(index) }}"/></svg>
+{# Round button with the initial, top right on every page. #}
+{% macro profile_button(user, href, label) -%}
+<a class="profile" href="{{ href }}" aria-label="{{ label }}">{{ (user.display_name or "?")[:1]|upper }}</a>
+{%- endmacro %}
+
+{# The running band. data: services.ticker.Ticker; prefix: text in front, e.g. VOTING OFFEN.
+   The content is there twice so the loop is seamless; the copy is hidden from readers. #}
+{% macro ticker(data, average_label, new_label, prefix=none) -%}
+<div class="ticker" aria-label="{{ average_label }}">
+  <div class="ticker-track">
+    {% for copy in (0, 1) %}
+      <span class="ticker-run"{% if copy %} aria-hidden="true"{% endif %}>
+        {% if prefix %}<span class="ticker-item">{{ prefix }}</span>{% endif %}
+        {% if data.average %}{{ _ticker_item(average_label, data.average, new_label) }}{% endif %}
+        {% for item in data.members %}{{ _ticker_item(item.label, item, new_label) }}{% endfor %}
+      </span>
+    {% endfor %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro _ticker_item(label, item, new_label) -%}
+<span class="ticker-item">{{ label }} {{ item.score }}
+  {%- if item.trend == "new" %} <span class="trend-up">{{ new_label }}</span>
+  {%- elif item.change %} <span class="trend-{{ item.trend }}">{{ item.change }}</span>{% endif -%}
+</span>
+{%- endmacro %}
+
+{# Black status area. kind: dark (default) or outline. With href the whole block links. #}
+{% macro status(href=none, kind="dark") -%}
+{%- set classes = "status-block status-" ~ kind -%}
+{% if href %}<a class="{{ classes }}" href="{{ href }}">{{ caller() }}</a>
+{% else %}<div class="{{ classes }}">{{ caller() }}</div>{% endif %}
+{%- endmacro %}
+
+{# A labelled value cell: highlight cells (kind up/down) and the boxes on the voting page. #}
+{% macro cell(label, value, kind="frame") -%}
+<div class="cell cell-{{ kind }}">
+  <span class="cell-label">{{ label }}</span>
+  <span class="cell-value">{{ value }}</span>
+</div>
+{%- endmacro %}
+
+{# Two or more radio labels side by side; the chosen one is an ink area.
+   options: value → label, in display order. #}
+{% macro segment(name, legend, options, selected, hint=none, error=none) -%}
+<fieldset class="segment-field">
+  <legend class="field-label">{{ legend }}</legend>
+  <div class="segment">
+    {% for value, text in options.items() %}
+      <label class="segment-option"><input type="radio" name="{{ name }}" value="{{ value }}"
+        {%- if value == selected %} checked{% endif %}> {{ text }}</label>
+    {% endfor %}
+  </div>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+</fieldset>
+{%- endmacro %}
+
+{# ▲ UP / ▼ DOWN. Pressing the chosen one again takes the vote back (VOT-05). #}
+{% macro vote_button(kind, label, value, pressed, aria_label) -%}
+<button type="submit" name="choice" value="{{ value }}" class="vote vote-{{ kind }}"
+        aria-pressed="{{ 'true' if pressed else 'false' }}" aria-label="{{ aria_label }}">{{ label }}</button>
+{%- endmacro %}
+
+{# Segment bar: done of total, filled in ink. #}
+{% macro progress(done, total) -%}
+<div class="progress" aria-hidden="true">
+  {% for i in range(total) %}<span class="progress-segment{% if i < done %} progress-done{% endif %}"></span>{% endfor %}
+</div>
+{%- endmacro %}
+
+{# Tiny history line, 44 × 18. points: y values from 0 (bottom) to 1 (top). #}
+{% macro sparkline(points, kind=none) -%}
+{%- if points|length > 1 -%}
+<svg class="sparkline{% if kind %} sparkline-{{ kind }}{% endif %}" viewBox="0 0 44 18" aria-hidden="true">
+  <polyline points="{% for y in points %}{{ (44 * loop.index0 / (points|length - 1))|round(2) }},{{ (16 - 14 * y)|round(2) }} {% endfor %}"/>
+</svg>
+{%- else -%}
+<span class="sparkline" aria-hidden="true"></span>
+{%- endif -%}
 {%- endmacro %}
 
 {# Label, input and error message. attrs: further input attributes; true renders a bare
    attribute such as autofocus, none or false leaves it out. #}
-{% macro text_field(name, label, value=none, error=none, type="text", attrs={}) -%}
-<label for="{{ name }}">{{ label }}</label>
-<input id="{{ name }}" name="{{ name }}" type="{{ type }}"
-       {%- for key, attr in attrs.items() if attr is not none and attr is not false %} {{ key }}{% if attr is not true %}="{{ attr }}"{% endif %}{% endfor %}
+{% macro text_field(name, label, value=none, error=none, type="text", attrs={}, hint=none) -%}
+<label class="field-label" for="{{ name }}">{{ label }}</label>
+<input id="{{ name }}" name="{{ name }}" type="{{ type }}"{{ _attrs(attrs) }}
        {%- if value is not none %} value="{{ value }}"{% endif %}
        {%- if error %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+{% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
 {% if error %}<p id="{{ name }}-error" class="error" role="alert">{{ error }}</p>{% endif %}
 {%- endmacro %}
 
 {# A select. options: value → label, in display order. #}
 {% macro select_field(name, label, options, selected, error=none, attrs={}) -%}
-<label for="{{ name }}">{{ label }}</label>
-<select id="{{ name }}" name="{{ name }}"
-        {%- for key, attr in attrs.items() if attr is not none and attr is not false %} {{ key }}{% if attr is not true %}="{{ attr }}"{% endif %}{% endfor %}
+<label class="field-label" for="{{ name }}">{{ label }}</label>
+<select id="{{ name }}" name="{{ name }}"{{ _attrs(attrs) }}
         {%- if error %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
   {% for value, text in options.items() %}
     <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
   {% endfor %}
 </select>
 {% if error %}<p id="{{ name }}-error" class="error" role="alert">{{ error }}</p>{% endif %}
+{%- endmacro %}
+
+{% macro _attrs(attrs) -%}
+{%- for key, attr in attrs.items() if attr is not none and attr is not false %} {{ key }}{% if attr is not true %}="{{ attr }}"{% endif %}{% endfor -%}
 {%- endmacro %}

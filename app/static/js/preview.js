@@ -17,13 +17,13 @@
     const data = JSON.parse(container.dataset.preview);
     const texts = JSON.parse(container.dataset.texts);
     const axisText = { color: token("--color-muted"), fontSize: number("--graph-font-size") };
-    const accent = token("--color-accent");
+    const accent = token("--color-ink");
     const chart = echarts.init(container, null, { renderer: "canvas" });
     new ResizeObserver(() => chart.resize()).observe(container);
     chart.setOption({
       backgroundColor: "transparent",
       animationDuration: number("--graph-animation-ms"),
-      textStyle: { fontFamily: token("--font-sans") },
+      textStyle: { fontFamily: token("--font-mono") },
       grid: { left: 0, right: axisText.fontSize, top: axisText.fontSize, bottom: 0, containLabel: true },
       tooltip: { show: false },
       xAxis: {
@@ -36,7 +36,7 @@
         nameGap: axisText.fontSize * 1.8,
         nameTextStyle: axisText,
         axisLabel: axisText,
-        axisLine: { lineStyle: { color: token("--color-border") } },
+        axisLine: { lineStyle: { color: token("--color-line") } },
         splitLine: { show: false },
       },
       yAxis: {
@@ -45,7 +45,7 @@
         max: 10,
         interval: 5,
         axisLabel: axisText,
-        splitLine: { lineStyle: { color: token("--color-border") } },
+        splitLine: { lineStyle: { color: token("--color-line") } },
       },
       series: [
         {
@@ -56,7 +56,7 @@
           lineStyle: {
             color: accent,
             width: number("--graph-line-width"),
-            shadowBlur: number("--graph-glow"),
+            shadowBlur: 0,
             shadowColor: accent,
           },
         },

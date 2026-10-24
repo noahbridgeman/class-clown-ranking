@@ -177,7 +177,23 @@ VAR_CALL = re.compile(r"var\([^)]*\)")
 VAR_USE = re.compile(r"var\(\s*(--[\w-]+)")
 VAR_DEFINITION = re.compile(r"(--[\w-]+)\s*:")
 # Recurring elements whose markup lives only in macros/ui.html.
-MACRO_CLASSES = ("card", "button", "link-button", "badge", "dot")
+MACRO_CLASSES = (
+    "card",
+    "section",
+    "page-head",
+    "button",
+    "link-button",
+    "text-link",
+    "badge",
+    "profile",
+    "ticker",
+    "status-block",
+    "cell",
+    "segment",
+    "vote",
+    "progress",
+    "sparkline",
+)
 
 
 def stylesheets() -> list[Path]:

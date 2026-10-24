@@ -27,7 +27,6 @@
       {% for member in members %}
         {% set is_me = member.user_id == current_user.id %}
         <li class="member{% if is_me %} member-me{% endif %}">
-          {{ ui.color_dot(member.color_index) }}
           <span class="member-name">
             {{ member_name(member.user) }}
             {% if is_me %}<span class="muted">({{ t("groups.you") }})</span>{% endif %}

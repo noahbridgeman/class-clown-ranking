@@ -53,7 +53,6 @@ class TestHome:
         assert "Ada" in html and "Bo" in html
         assert "Admin</span>" in html
         assert "(du)" in html
-        assert 'fill="#' in html
         assert "Verwalten" not in html
         assert "Einladungen" not in html
 

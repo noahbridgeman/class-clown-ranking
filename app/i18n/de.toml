@@ -13,7 +13,12 @@ create_group = "Neue Gruppe erstellen"
 [nav]
 login = "Anmelden"
 logout = "Abmelden"
-change_name = "Name ändern"
+account = "Dein Konto"
+ranking = "Ranking"
+
+[ticker]
+average = "Gruppenschnitt"
+new = "neu"
 
 [auth]
 login_title = "Anmelden"
