@@ -5,8 +5,9 @@ Changes are the difference of the displayed, rounded scores (A12, A13), so a
 change always matches the two numbers people see.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from itertools import combinations
 
 from app.domain.formatting import round_half_up
@@ -112,3 +113,65 @@ def _extreme(changes: Mapping[UserId, float], sign: int) -> Movement | None:
     best = max(d * sign for d in candidates.values())
     users = tuple(sorted(u for u, d in candidates.items() if d * sign == best))
     return Movement(user_ids=users, delta=best * sign)
+
+
+START_SCORE = 5.0  # score of rating 0 (INV-06)
+STEADY_MAX = 0.1  # "hardly changed": a displayed change of at most this
+
+
+class Label(StrEnum):
+    """One label per leaderboard row (docs/design.md section 6, A22), in priority order."""
+
+    BEST = "best"
+    GAIN = "gain"
+    DROP = "drop"
+    STEADY = "steady"
+    RECOVERING = "recovering"
+    BELOW_START = "below_start"
+    NEW = "new"
+
+
+@dataclass(frozen=True)
+class LabelFacts:
+    score: float
+    best: float  # highest own score so far
+    results: int  # number of own results
+    delta: float | None  # displayed change in the latest period
+    previous_delta: float | None  # displayed change in the period before
+    is_gain: bool
+    is_drop: bool
+    is_new: bool
+
+
+def label(facts: LabelFacts) -> Label | None:
+    """The first label in Label's order that applies, or None."""
+    shown = round_half_up(facts.score)
+    checks = (
+        (
+            Label.BEST,
+            facts.results >= 2 and shown == round_half_up(facts.best) and facts.score > START_SCORE,
+        ),
+        (Label.GAIN, facts.is_gain),
+        (Label.DROP, facts.is_drop),
+        (Label.STEADY, facts.delta is not None and abs(facts.delta) <= STEADY_MAX),
+        (
+            Label.RECOVERING,
+            facts.delta is not None
+            and facts.delta > 0
+            and facts.previous_delta is not None
+            and facts.previous_delta < 0,
+        ),
+        (Label.BELOW_START, shown < round_half_up(START_SCORE)),
+        (Label.NEW, facts.is_new),
+    )
+    return next((name for name, applies in checks if applies), None)
+
+
+def sparkline(scores: Sequence[float]) -> list[float]:
+    """Scores scaled to 0 (lowest) … 1 (highest) of the given ones; flat lines sit at 0.5."""
+    if not scores:
+        return []
+    low, high = min(scores), max(scores)
+    if high - low < 1e-9:
+        return [0.5] * len(scores)
+    return [(s - low) / (high - low) for s in scores]

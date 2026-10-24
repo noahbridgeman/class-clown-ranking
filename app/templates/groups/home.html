@@ -1,60 +1,49 @@
 {% extends "base.html" %}
 {% import "macros/ui.html" as ui %}
+{# The ranking is the group's start page (docs/design.md, section 5). #}
 {% block title %}{{ group.name }} – {{ t("app.name") }}{% endblock %}
 {% block scripts %}
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"
-          integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR"
-          crossorigin="anonymous" defer></script>
-  <script src="{{ url_for('static', filename='js/graph.js') }}" defer></script>
+  {% if board.as_of %}
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"
+            integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR"
+            crossorigin="anonymous" defer></script>
+    <script src="{{ url_for('static', filename='js/graph.js') }}" defer></script>
+  {% endif %}
+{% endblock %}
+{% block ticker_prefix %}{% if not board.as_of %}{{ t("ticker.new_group", group=group.name) }}{% endif %}{% endblock %}
+{% block masthead_class %} masthead-page{% endblock %}
+{% block masthead_lead %}
+  {{ ui.page_head(heading, kicker=t("ranking.settings_kicker", group=group.name), sub=sub,
+                  kicker_href=url_for('settings.index', group_id=group.id)) }}
 {% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ group.name }}</h1>
-    <p>{{ ui.button(t("groups.vote_link"), href=url_for('voting.index', group_id=group.id)) }}</p>
-  {% endcall %}
+  {% include "groups/_status.html" %}
 
-  {% call ui.card() %}
-    {% include "groups/_ranking.html" %}
-  {% endcall %}
+  {% set h = board.highlights %}
+  {% if h.biggest_gain or h.biggest_drop %}
+    <div class="cells">
+      {% if h.biggest_gain %}
+        {{ ui.cell(t("ranking.biggest_gain"), names(h.biggest_gain.user_ids) ~ " " ~ h.biggest_gain.delta|change(true), "up") }}
+      {% endif %}
+      {% if h.biggest_drop %}
+        {{ ui.cell(t("ranking.biggest_drop"), names(h.biggest_drop.user_ids) ~ " " ~ h.biggest_drop.delta|change(true), "down") }}
+      {% endif %}
+    </div>
+  {% endif %}
 
-  {% call ui.card() %}
-    {% include "groups/_graph.html" %}
-  {% endcall %}
+  {% include "groups/_graph.html" %}
+  {% include "groups/_ranking.html" %}
 
-  {% call ui.card() %}
-    <h2>{{ t("groups.members", count=members|length) }}</h2>
-    <ul class="members">
-      {% for member in members %}
-        {% set is_me = member.user_id == current_user.id %}
-        <li class="member{% if is_me %} member-me{% endif %}">
-          <span class="member-name">
-            {{ member_name(member.user) }}
-            {% if is_me %}<span class="muted">({{ t("groups.you") }})</span>{% endif %}
-          </span>
-          {% if member.user_id == group.admin_user_id %}{{ ui.badge(t("groups.admin_badge")) }}{% endif %}
-          {% if is_admin and not is_me %}
-            <details class="manage">
-              <summary>{{ t("groups.manage") }}</summary>
-              <form method="post" action="{{ url_for('groups.transfer_admin', group_id=group.id, user_id=member.user_id) }}">
-                {{ form.csrf_token }}
-                <p class="muted">{{ t("groups.make_admin_hint") }}</p>
-                {{ ui.button(t("groups.make_admin"), "secondary") }}
-              </form>
-              <form method="post" action="{{ url_for('groups.remove_member', group_id=group.id, user_id=member.user_id) }}">
-                {{ form.csrf_token }}
-                <p class="muted">{{ t("groups.remove_hint", name=member_name(member.user)) }}</p>
-                {{ ui.button(t("groups.remove"), "danger") }}
-              </form>
-            </details>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-    <p class="actions">
-      {% if is_admin %}<a href="{{ url_for('invitations.index', group_id=group.id) }}">{{ t("groups.invitations_link") }}</a>{% endif %}
-      <a href="{{ url_for('settings.index', group_id=group.id) }}">{{ t("settings.link") }}</a>
-      <a href="{{ url_for('groups.leave', group_id=group.id) }}">{{ t("groups.leave_link") }}</a>
-      {% if is_admin %}<a class="danger" href="{{ url_for('groups.delete', group_id=group.id) }}">{{ t("groups.delete_link") }}</a>{% endif %}
-    </p>
-  {% endcall %}
+  {% if is_admin and not board.as_of %}
+    {% call ui.status(kind="dark") %}
+      <span class="status-stack">
+        <span class="status-title">{{ t("ranking.few_title", count=board.rows|length) }}</span>
+        <span class="status-note">{{ t("ranking.few_text", max=max_group_size) }}</span>
+        {{ ui.text_link(t("ranking.few_link"), url_for('invitations.index', group_id=group.id), kind="on-dark") }}
+      </span>
+    {% endcall %}
+  {% endif %}
 {% endblock %}
+{% macro names(user_ids) -%}
+{%- for user_id in user_ids %}{{ member_name(board.names[user_id].user) }}{% if not loop.last %}{{ t("ranking.list_separator") }}{% endif %}{% endfor -%}
+{%- endmacro %}

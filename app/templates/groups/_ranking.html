@@ -1,53 +1,20 @@
 {# RNK-01…04. board: services.leaderboard.Leaderboard #}
 {% import "macros/ui.html" as ui %}
-{% macro names(user_ids) -%}
-{%- for user_id in user_ids %}{{ member_name(board.names[user_id].user) }}{% if not loop.last %}{{ t("ranking.list_separator") }}{% endif %}{% endfor -%}
-{%- endmacro %}
-
-<h2>{{ t("ranking.title") }}</h2>
-{% if board.as_of %}
-  <p class="muted">{{ t("ranking.as_of", date=board.as_of|local_date(group.timezone)) }}</p>
-{% else %}
-  <p class="muted">{{ t("ranking.empty") }}</p>
-{% endif %}
-
 {% set h = board.highlights %}
-{% if h.biggest_gain or h.biggest_drop or h.new_leaders %}
-  <ul class="highlights">
-    {% if h.new_leaders %}
-      <li class="highlight highlight-leader"><span class="highlight-label">{{ t("ranking.new_leader") }}</span> {{ names(h.new_leaders) }}</li>
-    {% endif %}
-    {% if h.biggest_gain %}
-      <li class="highlight highlight-gain"><span class="highlight-label">{{ t("ranking.biggest_gain") }}</span> {{ names(h.biggest_gain.user_ids) }} <span class="delta delta-up">{{ h.biggest_gain.delta|delta }}</span></li>
-    {% endif %}
-    {% if h.biggest_drop %}
-      <li class="highlight highlight-drop"><span class="highlight-label">{{ t("ranking.biggest_drop") }}</span> {{ names(h.biggest_drop.user_ids) }} <span class="delta delta-down">{{ h.biggest_drop.delta|delta }}</span></li>
-    {% endif %}
-  </ul>
-{% endif %}
-
-<ul class="ranking">
+<ol class="ranking" aria-label="{{ t('ranking.list_label') }}">
   {% for row in board.rows %}
     {% set is_me = row.member.user_id == current_user.id %}
-    <li class="rank{% if is_me %} rank-me{% endif %}"{% if is_me %} aria-current="true"{% endif %}>
-      <span class="rank-place">{{ t("ranking.place", place=row.place) }}</span>
-      <span class="rank-name">
-        {{ member_name(row.member.user) }}
-        {% if is_me %}<span class="muted">({{ t("groups.you") }})</span>{% endif %}
+    {% set is_gain = h.biggest_gain and row.member.user_id in h.biggest_gain.user_ids %}
+    {% set is_drop = h.biggest_drop and row.member.user_id in h.biggest_drop.user_ids %}
+    <li class="rank{% if is_me %} rank-me{% endif %}{% if row.place == 1 and board.as_of %} rank-first{% endif %}" data-user="{{ row.member.user_id }}"{% if is_me %} aria-current="true"{% endif %}>
+      <span class="rank-place">{{ "%02d"|format(row.place) }}</span>
+      <span class="rank-who">
+        <span class="rank-name">{{ member_name(row.member.user) }}{% if is_me %} {{ ui.badge(t("ranking.you"), "ink") }}{% endif %}</span>
+        {% if row.label %}<span class="rank-label rank-label-{{ row.label }}">{{ t(rank_labels[row.label]) }}</span>{% endif %}
       </span>
-      {% if row.place_change > 0 %}
-        <span class="rank-move rank-move-up" title="{{ t('ranking.moved_up_label_one' if row.place_change == 1 else 'ranking.moved_up_label', places=row.place_change) }}">{{ t("ranking.moved_up", places=row.place_change) }}</span>
-      {% elif row.place_change < 0 %}
-        <span class="rank-move rank-move-down" title="{{ t('ranking.moved_down_label_one' if row.place_change == -1 else 'ranking.moved_down_label', places=-row.place_change) }}">{{ t("ranking.moved_down", places=-row.place_change) }}</span>
-      {% endif %}
+      {% if board.as_of %}{{ ui.sparkline(row.sparkline, "up" if is_gain else "down" if is_drop else none) }}{% endif %}
       <span class="rank-score">{{ row.score|score }}</span>
-      {% if row.is_new %}
-        {{ ui.badge(t("ranking.new"), "new") }}
-      {% elif row.delta is none %}
-        <span class="delta"></span>
-      {% else %}
-        <span class="delta{% if row.delta and row.delta > 0 %} delta-up{% elif row.delta and row.delta < 0 %} delta-down{% endif %}" title="{{ t('ranking.delta_label') }}">{{ row.delta|delta }}</span>
-      {% endif %}
+      <span class="rank-delta{% if row.delta and row.delta > 0 %} trend-text-up{% elif row.delta and row.delta < 0 %} trend-text-down{% endif %}" title="{{ t('ranking.delta_label') }}">{{ row.delta|change }}</span>
     </li>
   {% endfor %}
-</ul>
+</ol>

@@ -216,24 +216,26 @@ def shoot(chrome: str, source: Path, png: Path, height: int) -> None:
         f'<body style="margin:1px 0 0 1px"><iframe src="{source.name}" '
         f'style="border:0;width:{WIDTH}px;height:{height}px"></iframe></body>'
     )
-    subprocess.run(
-        [
-            chrome,
-            "--headless=new",
-            "--disable-gpu",
-            "--hide-scrollbars",
-            "--force-device-scale-factor=1",
-            "--force-prefers-reduced-motion",
-            "--virtual-time-budget=5000",
-            f"--window-size=600,{height + 2}",
-            f"--screenshot={png}",
-            "--allow-file-access-from-files",
-            frame.as_uri(),
-        ],
-        check=True,
-        capture_output=True,
-        timeout=60,
-    )
+    command = [
+        chrome,
+        "--headless=new",
+        "--disable-gpu",
+        "--hide-scrollbars",
+        "--force-device-scale-factor=1",
+        "--force-prefers-reduced-motion",
+        "--virtual-time-budget=5000",
+        f"--window-size=600,{height + 2}",
+        f"--screenshot={png}",
+        "--allow-file-access-from-files",
+        frame.as_uri(),
+    ]
+    # Headless Chrome now and then dies on start (SIGTRAP); a second try works.
+    for attempt in range(3):
+        result = subprocess.run(command, capture_output=True, timeout=60, check=False)
+        if result.returncode == 0:
+            break
+        if attempt == 2:
+            result.check_returncode()
     subprocess.run(
         ["sips", "-c", str(height), str(WIDTH), "--cropOffset", "1", "1", str(png)],
         check=True,

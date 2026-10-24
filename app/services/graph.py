@@ -14,7 +14,6 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
-from app.domain.colors import color_for
 from app.domain.formatting import round_half_up
 from app.extensions import db
 from app.i18n import local_date, t
@@ -29,6 +28,7 @@ from app.models import (
     SettingField,
 )
 from app.services import settings
+from app.services.leaderboard import Leaderboard
 from app.services.text import member_name
 
 
@@ -86,12 +86,27 @@ class _Point:
     downs: int
 
 
-def graph_data(group: Group, viewer_id: int, range_: Range, now: datetime) -> dict[str, Any]:
+class Role(StrEnum):
+    """GRA-02: lines are colored by role, not per person (docs/design.md, section 4)."""
+
+    LEADER = "leader"
+    GAIN = "gain"
+    DROP = "drop"
+
+
+def graph_data(
+    group: Group,
+    viewer_id: int,
+    range_: Range,
+    now: datetime,
+    roles: dict[int, Role] | None = None,
+) -> dict[str, Any]:
     """The JSON for graph.js. Timestamps are milliseconds since the epoch.
 
     A point is [score, ups, downs] with the score already rounded for display (A13),
-    so the client only swaps the decimal point.
+    so the client only swaps the decimal point. `roles` come from the current leaderboard.
     """
+    roles = roles or {}
     since = range_start(range_, now, group.timezone)
     points = _points(group.id, since)
     period_ids = list(dict.fromkeys(p.period_id for p in points))
@@ -104,6 +119,7 @@ def graph_data(group: Group, viewer_id: int, range_: Range, now: datetime) -> di
         row[column[p.period_id]] = [float(round_half_up(p.score)), p.ups, p.downs]
     return {
         "range": range_.value,
+        "cadence": group.cadence.value,
         "periods": [
             {"t": _ms(closes[i]), "date": local_date(closes[i], group.timezone)} for i in period_ids
         ],
@@ -111,7 +127,7 @@ def graph_data(group: Group, viewer_id: int, range_: Range, now: datetime) -> di
             {
                 "id": m.user_id,
                 "name": member_name(m.user),
-                "color": color_for(m.color_index),
+                "role": roles.get(m.user_id),
                 "me": m.user_id == viewer_id,
                 "former": not m.is_active,
                 "points": values[m.user_id],
@@ -193,7 +209,6 @@ def _member_markers(
                 group,
                 "member",
                 t(MEMBER_MARKERS[event.kind], name=member_name(member.user)),
-                color_for(member.color_index),
             )
         )
     return markers
@@ -218,13 +233,12 @@ def _mode_markers(group: Group, since: datetime | None) -> list[dict[str, Any]]:
             group,
             "mode",
             t("graph.marker_anonymous" if anonymous else "graph.marker_open"),
-            None,
         )
         for opens_at, anonymous in db.session.execute(query.order_by(periods.c.opens_at))
     ]
 
 
-# The switch between anonymous and open has its own marker (_mode_markers).
+# The switch between anonymous and not anonymous has its own marker (_mode_markers).
 SETTINGS_IN_MARKERS = {
     SettingField.NAME: "settings.field_name",
     SettingField.CADENCE: "settings.field_cadence",
@@ -241,19 +255,25 @@ def _settings_markers(group: Group, since: datetime | None) -> list[dict[str, An
         names = [t(key) for field, key in SETTINGS_IN_MARKERS.items() if field in changed]
         if names:
             text = t("graph.marker_settings", fields=", ".join(names))
-            markers.append(_marker(at, group, "settings", text, None))
+            markers.append(_marker(at, group, "settings", text))
     return markers
 
 
-def _marker(at: datetime, group: Group, kind: str, text: str, color: str | None) -> dict[str, Any]:
-    return {
-        "t": _ms(at),
-        "date": local_date(at, group.timezone),
-        "kind": kind,
-        "text": text,
-        "color": color,
-    }
+def _marker(at: datetime, group: Group, kind: str, text: str) -> dict[str, Any]:
+    return {"t": _ms(at), "date": local_date(at, group.timezone), "kind": kind, "text": text}
 
 
 def _ms(value: datetime) -> int:
     return int(value.timestamp() * 1000)
+
+
+def roles(board: Leaderboard) -> dict[int, Role]:
+    """Biggest gain and drop of the latest period win over place 1 (GRA-02)."""
+    found: dict[int, Role] = {
+        row.member.user_id: Role.LEADER for row in board.rows if row.place == 1
+    }
+    h = board.highlights
+    for movement, role in ((h.biggest_gain, Role.GAIN), (h.biggest_drop, Role.DROP)):
+        if movement is not None:
+            found.update(dict.fromkeys(movement.user_ids, role))
+    return found

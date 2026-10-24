@@ -64,8 +64,8 @@
 
 {# The running band. data: services.ticker.Ticker; prefix: text in front, e.g. VOTING OFFEN.
    The content is there twice so the loop is seamless; the copy is hidden from readers. #}
-{% macro ticker(data, average_label, new_label, prefix=none) -%}
-<div class="ticker" aria-label="{{ average_label }}">
+{% macro ticker(data, label, average_label, new_label, prefix=none) -%}
+<div class="ticker" role="marquee" aria-label="{{ label }}">
   <div class="ticker-track">
     {% for copy in (0, 1) %}
       <span class="ticker-run"{% if copy %} aria-hidden="true"{% endif %}>

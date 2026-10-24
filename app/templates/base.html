@@ -21,7 +21,7 @@
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'>
   {% if group_page %}
-    {{ ui.ticker(ticker_data(), t("ticker.average"), t("ticker.new"), self.ticker_prefix()|trim or none) }}
+    {{ ui.ticker(ticker_data(), t("ticker.label"), t("ticker.average"), t("ticker.new"), self.ticker_prefix()|trim or none) }}
   {% endif %}
   <header class="masthead{% block masthead_class %}{% endblock %}">
     <div class="masthead-lead">

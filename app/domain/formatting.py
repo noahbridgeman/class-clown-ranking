@@ -37,3 +37,16 @@ def format_delta(value: float, decimal_separator: str = DECIMAL_SEPARATOR) -> st
 
 def _digits(value: Decimal, decimal_separator: str) -> str:
     return f"{value:f}".replace(".", decimal_separator)
+
+
+def format_change(
+    value: float | None, compact: bool = False, decimal_separator: str = DECIMAL_SEPARATOR
+) -> str:
+    """Kursblatt style (docs/design.md): "▲ 0,4" in lists, "▲0,4" compact; "–" for no change."""
+    if value is None:
+        return NO_CHANGE
+    rounded = round_half_up(value)
+    if rounded == 0:
+        return NO_CHANGE
+    arrow = UP if rounded > 0 else DOWN
+    return f"{arrow}{'' if compact else ' '}{_digits(abs(rounded), decimal_separator)}"

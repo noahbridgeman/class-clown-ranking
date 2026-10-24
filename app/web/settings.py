@@ -1,6 +1,16 @@
 from dataclasses import asdict
 
-from flask import Blueprint, Flask, flash, g, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    Flask,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_login import current_user
 from werkzeug.wrappers import Response as BaseResponse
 
@@ -10,7 +20,7 @@ from app.domain.types import Cadence
 from app.i18n import t
 from app.models import SettingField
 from app.models.group import GROUP_NAME_MAX_LENGTH
-from app.services import settings
+from app.services import membership, settings
 from app.services.settings import GroupSettings, InvalidSettings, SettingValue
 from app.web.access import admin_required, member_required
 from app.web.forms import ConfirmForm
@@ -124,6 +134,8 @@ def _render(values: GroupSettings, errors: dict | None = None, texts: dict | Non
         cadences=CADENCE_LABELS,
         name_max_length=GROUP_NAME_MAX_LENGTH,
         form=ConfirmForm(),
+        members=membership.active_members(group.id),
+        max_group_size=current_app.config["MAX_GROUP_SIZE"],
         live=False,
         **_params_context(values, errors or {}, texts or {}),
     )

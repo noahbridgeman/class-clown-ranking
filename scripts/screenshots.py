@@ -192,7 +192,7 @@ def render_pages() -> dict[str, str]:
         db.engine.dispose()
 
     html = pages.html
-    html["group_home_admin_open"] = html["group_home_admin"].replace("<details ", "<details open ")
+    html["settings_admin_open"] = html["settings_admin"].replace("<details ", "<details open ", 1)
     return html
 
 

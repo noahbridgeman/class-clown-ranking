@@ -1,6 +1,16 @@
 import pytest
 
-from app.domain.ranking import Movement, RankEntry, deltas, highlights, overtakes, rank
+from app.domain.ranking import (
+    LabelFacts,
+    Movement,
+    RankEntry,
+    deltas,
+    highlights,
+    label,
+    overtakes,
+    rank,
+    sparkline,
+)
 from app.domain.types import UserId
 
 A, B, C, D = UserId(1), UserId(2), UserId(3), UserId(4)
@@ -126,3 +136,48 @@ def test_newcomer_on_place_one_is_a_new_leader_without_change():
     assert result.biggest_gain is None
     assert D not in result.place_changes
     assert result.place_changes == {A: -1, B: -1}
+
+
+def facts(**overrides):
+    values = {
+        "score": 6.0,
+        "best": 7.0,
+        "results": 3,
+        "delta": 0.5,
+        "previous_delta": 0.2,
+        "is_gain": False,
+        "is_drop": False,
+        "is_new": False,
+    }
+    return LabelFacts(**{**values, **overrides})
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [
+        ({"score": 7.0, "best": 7.04}, "best"),  # equal when displayed
+        ({"score": 7.0, "best": 7.0, "results": 1}, None),  # one result is no record yet
+        ({"score": 4.9, "best": 4.9, "delta": -0.5}, "below_start"),  # a record only above 5
+        ({"score": 7.0, "best": 7.0, "is_gain": True}, "best"),  # best goes first
+        ({"is_gain": True}, "gain"),
+        ({"is_drop": True, "delta": -0.5}, "drop"),
+        ({"delta": 0.1}, "steady"),
+        ({"delta": 0.0}, "steady"),
+        ({"delta": 0.3, "previous_delta": -0.2}, "recovering"),
+        ({"score": 4.2, "delta": -0.3}, "below_start"),
+        (
+            {"score": 5.0, "delta": None, "previous_delta": None, "is_new": True, "results": 0},
+            "new",
+        ),
+        ({}, None),
+    ],
+)
+def test_label(overrides, expected):
+    """A22: at most one label, in the order of docs/design.md section 6."""
+    assert label(facts(**overrides)) == expected
+
+
+def test_sparkline_scales_to_its_own_range():
+    assert sparkline([4.0, 6.0, 5.0]) == [0.0, 1.0, 0.5]
+    assert sparkline([5.0, 5.0]) == [0.5, 0.5]
+    assert sparkline([]) == []

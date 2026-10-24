@@ -1,10 +1,21 @@
 import re
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from string import Formatter
 
 import pytest
 
-from app.i18n import Translator, _flatten, load_texts, t
+from app.i18n import (
+    Translator,
+    _flatten,
+    countdown,
+    countdown_short,
+    load_texts,
+    short_date,
+    short_datetime,
+    t,
+    weekday_time,
+)
 
 APP_DIR = Path(__file__).parent.parent / "app"
 KEY_USAGE = re.compile(r"""\bt\(\s*["']([\w.]+)["']""")
@@ -105,3 +116,24 @@ def test_duration(app, seconds, text):
     from app.i18n import duration
 
     assert duration(timedelta(seconds=seconds)) == text
+
+
+@pytest.mark.parametrize(
+    ("remaining", "full", "short"),
+    [
+        (timedelta(hours=20, minutes=46, seconds=1), "20:47 h", "20:47 h"),
+        (timedelta(days=3, hours=14, minutes=22), "3 T 14:22 h", "3 T"),
+        (timedelta(minutes=5), "0:05 h", "0:05 h"),
+        (timedelta(seconds=-3), "0:00 h", "0:00 h"),
+    ],
+)
+def test_countdown(app, remaining, full, short):
+    assert countdown(remaining) == full
+    assert countdown_short(remaining) == short
+
+
+def test_short_formats(app):
+    at = datetime(2026, 10, 19, 11, 0, tzinfo=UTC)  # Monday 13:00 in Berlin
+    assert short_datetime(at, "Europe/Berlin") == "Mo 19.10., 13:00"
+    assert short_date(at, "Europe/Berlin") == "Mo 19.10."
+    assert weekday_time(at, "Europe/Berlin") == "Mo 13:00"

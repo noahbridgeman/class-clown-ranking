@@ -1,0 +1,26 @@
+{# Voting open (links to the ballot) or when the next one opens. ballot: voting.Ballot #}
+{% import "macros/ui.html" as ui %}
+{% set vote_url = url_for('voting.index', group_id=group.id) %}
+{% if ballot.period %}
+  {% call ui.status(href=vote_url) %}
+    <span class="status-dot status-dot-on" aria-hidden="true"></span>
+    <span class="status-text">
+      <span class="status-title">{{ t("ranking.voting_open") }}</span>
+      <span class="status-meta">{{ t("ranking.voting_open_meta", done=ballot.rated, total=ballot.others|length,
+                                     until=ballot.period.closes_at|weekday_time(group.timezone)) }}</span>
+    </span>
+    <span class="status-figure">{{ (ballot.period.closes_at - ballot.now)|countdown }} ›</span>
+  {% endcall %}
+{% elif ballot.next_window %}
+  {% set window = ballot.next_window %}
+  {% call ui.status(href=vote_url, kind="outline") %}
+    <span class="status-dot" aria-hidden="true"></span>
+    <span class="status-text">
+      <span class="status-title">{{ t("ranking.next_voting" if board.as_of else "ranking.first_voting") }}</span>
+      <span class="status-meta">{{ t("ranking.window_meta", start=window.opens_at|short_datetime(ballot.timezone),
+                                     end=window.closes_at|weekday_time(ballot.timezone)) }}</span>
+    </span>
+    <span class="status-figure">
+      {%- if ballot.next_opens_at %}{{ (window.opens_at - ballot.now)|countdown_short }}{% else %}{{ t("ranking.opens_soon") }}{% endif %} ›</span>
+  {% endcall %}
+{% endif %}

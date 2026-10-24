@@ -20,7 +20,7 @@ from tests.factories import add_member, make_daily, make_group, make_user
 
 MEMBERS = 30  # MAX_GROUP_SIZE (A8)
 DAYS = 365
-MAX_QUERIES = 12
+MAX_QUERIES = 16  # leaderboard, sparklines, ticker and status block; constant
 MAX_SECONDS = 1.0  # generous for slow CI runners; measured about 0.05 s
 MAX_YEAR_BYTES = 200_000  # uncompressed; the default range of 4 weeks is far smaller
 
@@ -119,3 +119,19 @@ def test_a_year_has_every_point(full_year, login_as):
     assert len(body["periods"]) == DAYS
     assert len(body["series"]) == MEMBERS
     assert all(len(s["points"]) == DAYS for s in body["series"])
+
+
+@pytest.mark.parametrize("path", ["/", "/graph.json?range=all"])
+def test_query_count_does_not_grow_with_the_data(full_year, app, clock, login_as, path):
+    """NFA-12: a small fresh group needs as many queries as the full year."""
+    group, user = full_year
+    small = make_daily(make_group(user, "Klein"))
+    add_member(small, make_user())
+    client = login_as(user)
+    counts = []
+    for group_id in (group.id, small.id):
+        client.get(f"/g/{group_id}{path}")
+        with count_queries() as statements:
+            client.get(f"/g/{group_id}{path}")
+        counts.append(len(statements))
+    assert counts[0] <= counts[1] + 1, counts  # the full group may add the period it shows

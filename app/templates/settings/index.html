@@ -60,6 +60,34 @@
     {% endif %}
   {% endcall %}
 
+  {% call ui.section(t("groups.members_title"), members|length ~ " / " ~ max_group_size) %}
+    <ul class="members">
+      {% for member in members %}
+        {% set is_me = member.user_id == current_user.id %}
+        <li class="member{% if is_me %} member-me{% endif %}">
+          <span class="member-name">{{ member_name(member.user) }}{% if is_me %} ({{ t("groups.you") }}){% endif %}</span>
+          {% if member.user_id == group.admin_user_id %}{{ ui.badge(t("groups.admin_badge"), "ink") }}{% endif %}
+          {% if is_admin and not is_me %}
+            <details class="manage">
+              <summary>{{ t("groups.manage") }}</summary>
+              <form method="post" action="{{ url_for('groups.transfer_admin', group_id=group.id, user_id=member.user_id) }}">
+                {{ form.csrf_token }}
+                <p class="hint">{{ t("groups.make_admin_hint") }}</p>
+                {{ ui.button(t("groups.make_admin"), "secondary") }}
+              </form>
+              <form method="post" action="{{ url_for('groups.remove_member', group_id=group.id, user_id=member.user_id) }}">
+                {{ form.csrf_token }}
+                <p class="hint">{{ t("groups.remove_hint", name=member_name(member.user)) }}</p>
+                {{ ui.button(t("groups.remove"), "danger") }}
+              </form>
+            </details>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    {% if is_admin %}<p class="actions">{{ ui.text_link(t("groups.invitations_link"), url_for('invitations.index', group_id=group.id)) }}</p>{% endif %}
+  {% endcall %}
+
   {% call ui.card() %}
     <h2>{{ t("settings.log_title") }}</h2>
     {% if log %}
@@ -79,6 +107,10 @@
     {% else %}
       <p class="muted">{{ t("settings.log_empty") }}</p>
     {% endif %}
-    <p class="actions"><a href="{{ url_for('groups.home', group_id=group.id) }}">{{ t("settings.back") }}</a></p>
   {% endcall %}
+
+  <div class="group-actions">
+    {{ ui.button(t("groups.leave_link"), "secondary", href=url_for('groups.leave', group_id=group.id)) }}
+    {% if is_admin %}{{ ui.button(t("groups.delete_link"), "danger", href=url_for('groups.delete', group_id=group.id)) }}{% endif %}
+  </div>
 {% endblock %}
