@@ -1,7 +1,6 @@
 """Joining, leaving and removing members (MEM-01, MEM-02, MEM-04, ROL-03, A5)."""
 
 from datetime import datetime
-from enum import StrEnum
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
@@ -11,11 +10,7 @@ from app.extensions import db
 from app.models import Group, Membership, MembershipEvent, MembershipEventKind, User
 from app.services import notifications
 from app.services.errors import InvalidInput, NotAllowed, NotFound
-
-
-class LeaveResult(StrEnum):
-    LEFT = "left"
-    GROUP_DELETED = "group_deleted"
+from app.services.locks import lock_group
 
 
 def active_membership(group_id: int, user_id: int) -> Membership | None:
@@ -49,7 +44,10 @@ def member_count(group_id: int) -> int:
 
 
 def join(group: Group, user: User, now: datetime) -> Membership:
-    """Adds the user, or reactivates the old membership (MEM-04). Does not commit."""
+    """Adds the user, or reactivates the old membership (MEM-04). Does not commit.
+
+    Callers adding to an existing group hold lock_group, so color indexes cannot collide.
+    """
     membership = db.session.scalar(
         select(Membership).where(Membership.group_id == group.id, Membership.user_id == user.id)
     )
@@ -70,19 +68,17 @@ def join(group: Group, user: User, now: datetime) -> Membership:
     return membership
 
 
-def leave(group: Group, user: User, confirmation: str | None = None) -> LeaveResult:
+def leave(group: Group, user: User) -> None:
     """MEM-01. A leaving admin hands over to the longest-standing member (ROL-03).
 
-    The last member can only leave by deleting the group, confirmed by its name (A5).
+    The last member leaves through groups.leave_group, which deletes the group (A5).
     """
+    lock_group(group)
     membership = _active_or_not_found(group.id, user.id)
-    now = get_clock().now()
     heir = successor(group.id, user.id)
     if heir is None:
-        from app.services import groups  # groups imports this module
-
-        groups.delete_group(group, user, confirmation)
-        return LeaveResult.GROUP_DELETED
+        raise InvalidInput("groups.last_member")
+    now = get_clock().now()
     membership.left_at = now
     _record(group, user.id, MembershipEventKind.LEFT, now, actor_id=user.id)
     new_admin = None
@@ -92,11 +88,11 @@ def leave(group: Group, user: User, confirmation: str | None = None) -> LeaveRes
     db.session.commit()
     if new_admin is not None:
         notifications.admin_granted(new_admin, group)
-    return LeaveResult.LEFT
 
 
 def remove(group: Group, actor: User, user_id: int) -> None:
     """MEM-02. The admin removes someone else; leaving is a separate operation."""
+    lock_group(group)
     require_admin(group, actor)
     if user_id == actor.id:
         raise InvalidInput("groups.cannot_remove_self")

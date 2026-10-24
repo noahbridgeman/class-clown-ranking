@@ -7,6 +7,7 @@ from app.i18n import t
 from app.models.group import GROUP_NAME_MAX_LENGTH
 from app.services import groups, membership
 from app.services.errors import InvalidInput
+from app.services.text import member_name
 from app.web.access import admin_required, member_required
 from app.web.forms import ConfirmForm, ConfirmNameForm, GroupNameForm
 
@@ -17,6 +18,7 @@ Page = tuple[str, int] | BaseResponse
 
 def register(app: Flask) -> None:
     app.add_template_global(color_for, "member_color")
+    app.add_template_global(member_name)
     app.register_blueprint(bp)
 
 
@@ -54,7 +56,7 @@ def home(group_id: int) -> str:
 @admin_required
 def remove_member(group_id: int, user_id: int) -> BaseResponse:
     if ConfirmForm().validate_on_submit():
-        name = membership.require_active(group_id, user_id).user.display_name
+        name = member_name(membership.require_active(group_id, user_id).user)
         try:
             membership.remove(g.group, current_user._get_current_object(), user_id)
         except InvalidInput as invalid:
@@ -68,7 +70,7 @@ def remove_member(group_id: int, user_id: int) -> BaseResponse:
 @admin_required
 def transfer_admin(group_id: int, user_id: int) -> BaseResponse:
     if ConfirmForm().validate_on_submit():
-        name = membership.require_active(group_id, user_id).user.display_name
+        name = member_name(membership.require_active(group_id, user_id).user)
         try:
             groups.transfer_admin(g.group, current_user._get_current_object(), user_id)
         except InvalidInput as invalid:
@@ -87,17 +89,13 @@ def leave(group_id: int) -> Page:
     if form.validate_on_submit():
         name = group.name
         try:
-            result = membership.leave(
+            result = groups.leave_group(
                 group, current_user._get_current_object(), form.confirmation.data
             )
         except InvalidInput as invalid:
             error = invalid.message()
         else:
-            key = (
-                "groups.deleted"
-                if result is membership.LeaveResult.GROUP_DELETED
-                else "groups.left"
-            )
+            key = "groups.deleted" if result is groups.LeaveResult.GROUP_DELETED else "groups.left"
             flash(t(key, group=name), "success")
             return redirect(url_for("main.index"))
     successor = membership.successor(group_id, current_user.id)

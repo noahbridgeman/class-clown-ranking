@@ -71,7 +71,7 @@ class TestLeave:
     def test_member_leaves(self, app, clock):
         group = make_group()
         user = add_member(group)
-        assert membership.leave(group, user) is membership.LeaveResult.LEFT
+        membership.leave(group, user)
         assert membership.active_membership(group.id, user.id) is None
         row = db.session.scalar(select(Membership).where(Membership.user_id == user.id))
         assert row.left_at == clock.now()
@@ -112,22 +112,13 @@ class TestLeave:
         membership.leave(group, admin)
         assert group.admin_user_id == first.id
 
-    def test_last_member_needs_confirmation(self, app):
+    def test_last_member_cannot_simply_leave(self, app):
         admin = make_user()
-        group = make_group(admin, name="Die Runde")
+        group = make_group(admin)
         with pytest.raises(InvalidInput) as error:
-            membership.leave(group, admin, "falsch")
-        assert error.value.message_key == "groups.confirmation_mismatch"
-        assert db.session.get(Group, group.id) is not None
-
-    def test_last_member_leaving_deletes_the_group(self, app):
-        admin = make_user()
-        group = make_group(admin, name="Die Runde")
-        group_id = group.id
-        result = membership.leave(group, admin, " Die  Runde ")
-        assert result is membership.LeaveResult.GROUP_DELETED
-        db.session.expire_all()
-        assert db.session.get(Group, group_id) is None
+            membership.leave(group, admin)
+        assert error.value.message_key == "groups.last_member"
+        assert_single_active_admin(group)
 
     def test_non_member_cannot_leave(self, app):
         group = make_group()
