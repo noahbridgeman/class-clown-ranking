@@ -89,3 +89,21 @@ def test_overtakes_need_strict_order_before_and_after():
 
 def test_overtakes_ignore_new_and_departed_members():
     assert overtakes({A: 4.0, C: 9.0}, {A: 5.0, B: 4.5}) == []
+
+
+def test_highlights_ignore_departed_members():
+    """The leader left: the others did not move up by themselves."""
+    result = highlights({A: 9.0, B: 6.0, C: 5.0}, {B: 6.1, C: 5.0})
+
+    assert result.place_changes == {}
+    assert result.new_leaders == ()
+    assert result.biggest_gain == Movement((B,), pytest.approx(0.1))
+
+
+def test_newcomer_on_place_one_is_a_new_leader_without_change():
+    result = highlights({A: 6.0, B: 5.0}, {A: 6.0, B: 5.0, D: 7.0})
+
+    assert result.new_leaders == (D,)
+    assert result.biggest_gain is None
+    assert D not in result.place_changes
+    assert result.place_changes == {A: -1, B: -1}

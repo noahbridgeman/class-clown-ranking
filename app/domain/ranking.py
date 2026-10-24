@@ -53,7 +53,13 @@ def deltas(
 
 
 def highlights(prev: Mapping[UserId, float], curr: Mapping[UserId, float]) -> Highlights:
-    """RNK-03: biggest gain, biggest drop, new leaders and place changes."""
+    """RNK-03: biggest gain, biggest drop, new leaders and place changes (A12).
+
+    `curr` holds the active members. Members of `prev` who have left are ignored,
+    so nobody "moves up" just because someone left. Newcomers have no change,
+    but count as new leader if they land on place 1.
+    """
+    prev = {u: s for u, s in prev.items() if u in curr}
     changes = {u: d for u, d in deltas(prev, curr).items() if d is not None}
     prev_places = _places(prev)
     curr_places = _places(curr)
