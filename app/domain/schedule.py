@@ -1,9 +1,10 @@
 """Voting windows in the group's local time (VOT-01, PER-04, PER-05, VOT-10).
 
 Daily: [13:00, 13:00 next day). Weekly: [Sunday 00:00, Monday 13:00). Windows
-are half-open. Local wall times are resolved with fold=0: a time that does not
-exist (DST gap) maps to the first instant after the gap, a repeated time to its
-first occurrence.
+are half-open. Local wall times are resolved with fold=0: a time inside a DST
+gap moves forward by the length of the gap (02:30 → 03:30, and 00:00 at a
+midnight gap → 01:00), a repeated time resolves to its first occurrence. A
+calendar day that is skipped entirely yields no window of its own.
 """
 
 from collections.abc import Iterator
@@ -49,15 +50,19 @@ def _windows_around(now: datetime, cadence: Cadence, tz: str) -> Iterator[Window
     for offset in range(-SEARCH_DAYS_BEFORE, SEARCH_DAYS_AFTER + 1):
         anchor = local_date + timedelta(days=offset)
         if cadence == Cadence.DAILY:
-            yield Window(
+            window = Window(
                 _to_utc(anchor, UPDATE_TIME, zone),
                 _to_utc(anchor + timedelta(days=1), UPDATE_TIME, zone),
             )
         elif anchor.weekday() == SUNDAY:
-            yield Window(
+            window = Window(
                 _to_utc(anchor, WEEKLY_OPEN_TIME, zone),
                 _to_utc(anchor + timedelta(days=1), UPDATE_TIME, zone),
             )
+        else:
+            continue
+        if window.closes_at > window.opens_at:
+            yield window
 
 
 def _to_utc(day: date, at: time, zone: ZoneInfo) -> datetime:

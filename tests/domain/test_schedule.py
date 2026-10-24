@@ -1,5 +1,5 @@
-from datetime import UTC, datetime, timedelta, timezone
-from zoneinfo import ZoneInfoNotFoundError
+from datetime import UTC, datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import pytest
 
@@ -9,6 +9,7 @@ from app.domain.types import Cadence
 BERLIN = "Europe/Berlin"
 # DST starts at midnight here, so Sunday 00:00 does not exist on 2026-09-06.
 SANTIAGO = "America/Santiago"
+MONDAY_WEEKDAY, SUNDAY_WEEKDAY = 0, 6
 
 
 def utc(*args: int) -> datetime:
@@ -158,3 +159,41 @@ def test_naive_datetime_is_rejected():
 def test_unknown_timezone_is_rejected():
     with pytest.raises(ZoneInfoNotFoundError):
         window_at(utc(2026, 10, 23, 12), Cadence.DAILY, "Mars/Olympus_Mons")
+
+
+@pytest.mark.parametrize("tz", [BERLIN, SANTIAGO])
+def test_weekly_windows_chain_over_a_year(tz):
+    zone = ZoneInfo(tz)
+    window = next_window(utc(2026, 1, 1), Cadence.WEEKLY, tz)
+    for _ in range(52):
+        opens_local = window.opens_at.astimezone(zone)
+        closes_local = window.closes_at.astimezone(zone)
+        assert opens_local.weekday() == SUNDAY_WEEKDAY
+        # 00:00, or 01:00 when midnight falls into a DST gap.
+        assert opens_local.time() in (time(0), time(1))
+        assert (closes_local.weekday(), closes_local.time()) == (MONDAY_WEEKDAY, time(13))
+        assert window_at(window.opens_at, Cadence.WEEKLY, tz) == window
+
+        following = next_window(window.opens_at, Cadence.WEEKLY, tz)
+        assert following.opens_at.astimezone(zone).date() - opens_local.date() == timedelta(7)
+        window = following
+
+
+def test_daily_window_unaffected_by_midnight_dst_change():
+    window = window_at(utc(2026, 9, 6, 12), Cadence.DAILY, SANTIAGO)
+
+    # 13:00 −04 on Saturday to 13:00 −03 on Sunday: the gap shortens it to 23 hours.
+    assert window == Window(utc(2026, 9, 5, 17), utc(2026, 9, 6, 16))
+
+
+def test_skipped_calendar_day_gives_no_empty_window():
+    """Samoa skipped 2011-12-30 entirely."""
+    tz = "Pacific/Apia"
+    window = window_at(utc(2011, 12, 29, 22), Cadence.DAILY, tz)
+    following = next_window(window.opens_at, Cadence.DAILY, tz)
+
+    assert window == Window(utc(2011, 12, 28, 23), utc(2011, 12, 29, 23))
+    assert following == Window(utc(2011, 12, 29, 23), utc(2011, 12, 30, 23))
+    after = next_window(following.opens_at, Cadence.DAILY, tz)
+    assert after.opens_at == following.closes_at
+    assert after.closes_at > after.opens_at
