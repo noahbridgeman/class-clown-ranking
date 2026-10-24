@@ -249,6 +249,6 @@ E-Mail wird nur für Konto und Einladungen genutzt. Alles rund ums Voting läuft
 
 - [x] **Gewicht einzelner Votes:** *Entschieden: wie SCO-01 (plan.md, E2).* Nach SCO-01 zählt ein einzelner Vote voll mit ±1, wenn sich alle anderen enthalten. Alternative: durch die Zahl aller anderen Mitglieder teilen statt durch die abgegebenen Votes, dann zählen Enthaltungen als 0 und dämpfen das Ergebnis.
 - [x] **Registrierung ohne Einladung:** *Entschieden: nur Eingeladene plus Allowlist (plan.md, E3).* GRP-01 geht davon aus, dass sich jeder registrieren und eine Gruppe anlegen darf. Alternativ dürfen nur Eingeladene ein Konto anlegen, oder es gibt eine Allowlist.
-- [ ] **Anonymität in kleinen Gruppen:** Bei 3 oder 4 Mitgliedern kann man oft erraten, wer wie abgestimmt hat. Offen ist, ob der Anonym-Modus eine Mindestgröße bekommt.
+- [x] **Anonymität in kleinen Gruppen:** Bei 3 oder 4 Mitgliedern kann man oft erraten, wer wie abgestimmt hat. Offen ist, ob der Anonym-Modus eine Mindestgröße bekommt. → Entschieden: keine Mindestgröße, wird hingenommen (plan.md E7).
 - [ ] **Standardwerte für K und d:** Die Werte sollten mit simulierten Verläufen kalibriert werden, bevor die erste echte Gruppe startet.
 - [ ] **Maximale Gruppengröße:** Eine harte Obergrenze ist noch nicht festgelegt. Vorschlag: 30 Mitglieder (NFA-11).

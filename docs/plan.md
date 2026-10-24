@@ -14,6 +14,7 @@ Entschieden (Rücksprache 2026-10-23):
 | E4 | Zusatzpakete: Flask-WTF (CSRF, Formulare) und python-dotenv. Kein Flask-Babel; Übersetzungen siehe E5. | NFA-03 |
 | E5 | Alle UI-Texte stehen in `app/i18n/de.toml`, gelesen mit `tomllib` aus der Stdlib, und werden über `t("key", **kw)` in Python und Jinja geholt. Eine weitere Sprache bedeutet: eine weitere TOML-Datei. | NFA-03 |
 | E6 | Die 30-Tage-Sitzung ist **gleitend**: Jeder Besuch erneuert das Remember-Cookie, abgemeldet wird erst nach 30 Tagen ohne Besuch. „Auf allen Geräten abmelden“ gibt es vorerst nicht; Logout beendet nur das aktuelle Gerät. `session_version` wird erst bei der Kontolöschung (M9) erhöht. (Rücksprache 2026-10-24) | AUTH-06 |
+| E7 | Der Anonym-Modus bekommt **keine Mindestgröße**. Dass man in kleinen Gruppen aus Zählwerten (Ups und Downs im Graph-Tooltip, GRA-04) auf einzelne Votes schließen kann, wird bewusst hingenommen. NFA-06 bedeutet: Keine Seite ordnet einen Vote ausdrücklich einer Person zu. (Rücksprache 2026-10-24) | NFA-06, GRA-04, offener Punkt 3 |
 
 Annahmen (vom Plan getroffen, bei Bedarf korrigieren):
 
@@ -42,7 +43,6 @@ Annahmen (vom Plan getroffen, bei Bedarf korrigieren):
 
 Noch offen (blockiert erst den genannten Meilenstein):
 - Synchroner Mail-Versand: Für bekannte Adressen schreibt der Login einen Token und verschickt per SMTP, für unbekannte nicht. Die Antwort ist gleich, die Antwortzeit nicht (E3). Außerdem blockiert ein hängender SMTP-Server die Anfrage (Timeout 10 s pro Operation). Lösung zusammen: Versand außerhalb der Anfrage, z. B. eine Mail-Warteschlange, die `tick` abarbeitet → spätestens vor Go-Live (M9).
-- Mindestgröße für den Anonym-Modus (offener Punkt 3) → vor M6 klären. Gehört dazu: Der Graph-Tooltip zeigt pro Person und Periode Ups und Downs (GRA-04). In anonymen Perioden kleiner Gruppen lässt sich daraus auf einzelne Votes schließen (bei 2 Mitgliedern immer, bei 3 sobald jemand 2 Ups oder 2 Downs hat), was NFA-06 widerspricht. Seit M5 bekanntes Risiko, Entscheidung offen.
 - Kalibrierte Standardwerte für K und d (offener Punkt 4) → in M9, mit dem Simulationswerkzeug aus M1.
 - Produktions-WSGI-Server, z. B. gunicorn, ist eine neue Abhängigkeit → Rückfrage in M9.
 
@@ -363,7 +363,6 @@ Jeder Meilenstein ist fertig, wenn `pytest` grün ist, `ruff` sauber ist, die ge
 - IDs: GRA-01…06, GRA-07 (Mitglieder, Anonymität), GRA-08, RNK-01…04, MEM-03, NFA-12.
 
 ### M6 – Gruppeneinstellungen und offener Modus
-- Vorher: Mindestgröße für den Anonym-Modus klären.
 - Modell `settings_changes`, Migration für `votes.reason`.
 - Einstellungsseite (Admin) und Leseansicht (alle). „Ausstehend ab \<Datum>“ wird mit `next_window` unter den ausstehenden Werten berechnet. Protokoll.
 - Taktwechsel füllt K und d über `convert_params` vor, danach sind sie editierbar. Grenzen. HTMX-Vorschau über `simulate`, dargestellt als ECharts-Mini-Graph.
