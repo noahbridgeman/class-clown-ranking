@@ -114,10 +114,15 @@ class PeriodResult(db.Model):
 
 
 class ImmutableError(RuntimeError):
-    """Raised when stored history would be changed (SCO-06, VOT-09)."""
+    """Raised when stored history would be changed (SCO-06, VOT-09).
+
+    Guards ORM flushes; bulk UPDATE and DELETE statements are only used for votes and
+    whole groups (GRP-04).
+    """
 
 
 @event.listens_for(PeriodResult, "before_update")
+@event.listens_for(PeriodResult, "before_delete")
 def _results_never_change(_mapper: Mapper[Any], _connection: Any, result: PeriodResult) -> None:
     raise ImmutableError(f"period result {result.id} must not be changed (SCO-06)")
 
@@ -128,3 +133,6 @@ def _snapshot_never_changes(_mapper: Mapper[Any], _connection: Any, period: Peri
     changed = [name for name in SNAPSHOT_FIELDS if state.attrs[name].history.has_changes()]
     if changed:
         raise ImmutableError(f"period {period.id}: {', '.join(changed)} must not change (VOT-09)")
+    status = state.attrs["status"].history
+    if status.has_changes() and status.deleted != [PeriodStatus.OPEN]:
+        raise ImmutableError(f"period {period.id} was closed already (SCO-06)")

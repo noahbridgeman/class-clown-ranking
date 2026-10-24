@@ -27,7 +27,7 @@ def index(group_id: int) -> str:
 def cast(group_id: int, user_id: int) -> Page:
     form = VoteForm()
     status = 200
-    if not form.validate_on_submit() or form.choice.data not in set(voting.Choice):
+    if not form.validate_on_submit():
         flash(t("voting.invalid_choice"), "error")
         status = 400
     else:

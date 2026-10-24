@@ -1,5 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms import HiddenField, StringField
+from wtforms import HiddenField, SelectField, StringField
+
+from app.services.voting import Choice
 
 
 class EmailForm(FlaskForm):
@@ -29,4 +31,4 @@ class LogoutForm(FlaskForm):
 
 
 class VoteForm(FlaskForm):
-    choice = StringField()  # one of voting.Choice, checked by the route
+    choice = SelectField(choices=[choice.value for choice in Choice])

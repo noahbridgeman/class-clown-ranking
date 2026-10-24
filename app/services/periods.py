@@ -62,12 +62,8 @@ def _tick_group(group_id: int, now: datetime) -> tuple[PeriodStatus | None, bool
     except NotFound:
         return None, False  # deleted since the list was read
     # Read again under the lock: a parallel run may have done the work already (PER-02).
-    period = open_period(group_id)
-    closed = None
-    if period is not None and now >= period.closes_at:
-        closed = _close(period, now)
-        period = None
-    opened = period is None and _open_current(group, now)
+    closed = close_if_due(group_id, now)
+    opened = open_period(group_id) is None and _open_current(group, now)
     db.session.commit()
     return closed, opened
 
@@ -84,13 +80,22 @@ def latest_period(group_id: int) -> Period | None:
     )
 
 
+def close_if_due(group_id: int, now: datetime) -> PeriodStatus | None:
+    """Closes the open period if its window has ended. The caller holds lock_group.
+
+    Joining, leaving and removing call this first, so the members at closing are always
+    those at the window's end, however late tick runs (PER-03, VOT-05, MEM-05).
+    Does not commit.
+    """
+    period = open_period(group_id)
+    if period is None or now < period.closes_at:
+        return None
+    return _close(period, now)
+
+
 def _close(period: Period, now: datetime) -> PeriodStatus:
-    """PER-01 steps 1–2. Members who joined after the window take no part."""
-    member_ids = [
-        UserId(m.user_id)
-        for m in membership.active_members(period.group_id)
-        if m.joined_at < period.closes_at
-    ]
+    """PER-01 steps 1–2 for the active members."""
+    member_ids = [UserId(m.user_id) for m in membership.active_members(period.group_id)]
     if len(member_ids) < MIN_MEMBERS:
         period.status = PeriodStatus.SKIPPED  # no results and no decay (A2)
     else:

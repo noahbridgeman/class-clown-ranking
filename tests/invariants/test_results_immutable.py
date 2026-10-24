@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import ImmutableError, Period, PeriodResult
+from app.models import ImmutableError, Period, PeriodResult, PeriodStatus
 from tests.factories import IN_WEEK_WINDOW, WEEK_CLOSES, add_member, make_group, tick, vote
 
 
@@ -64,3 +64,16 @@ def test_status_may_change_while_open(app, clock):
     tick()
     clock.set(WEEK_CLOSES)
     assert tick().failed == []
+
+
+def test_results_cannot_be_deleted(closed):
+    db.session.delete(db.session.scalar(select(PeriodResult)))
+    with pytest.raises(ImmutableError):
+        db.session.commit()
+
+
+def test_closed_period_cannot_be_reopened(closed):
+    period = db.session.scalar(select(Period))
+    period.status = PeriodStatus.OPEN
+    with pytest.raises(ImmutableError, match="closed already"):
+        db.session.commit()

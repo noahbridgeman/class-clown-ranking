@@ -265,6 +265,72 @@ class TestMembers:
         assert late.id not in results(all_periods(group)[0])
 
 
+class TestLateUpdate:
+    """Between the window's end and a late tick, votes are final (VOT-05, PER-03)."""
+
+    def test_leaving_keeps_the_votes_and_the_result(self, trio, clock):
+        group, a, b, c = trio
+        vote(group, b, a, "up")
+        vote(group, c, b, "down")
+        clock.set(WEEK_CLOSES + timedelta(hours=3))
+        membership.leave(group, b)
+        [period] = all_periods(group)
+        assert period.status == PeriodStatus.CLOSED  # closed by the departure
+        stored = results(period)
+        assert set(stored) == {a.id, b.id, c.id}
+        assert (stored[a.id].ups, stored[b.id].downs) == (1, 1)
+        assert tick().failed == []
+        assert results(period) == stored
+
+    def test_removing_keeps_the_votes_and_the_result(self, trio, clock):
+        group, a, b, c = trio
+        vote(group, b, c, "up")
+        clock.set(WEEK_CLOSES + timedelta(minutes=5))
+        membership.remove(group, a, b.id)
+        stored = results(all_periods(group)[0])
+        assert b.id in stored
+        assert stored[c.id].ups == 1
+
+    def test_leaving_and_rejoining_keeps_the_place_in_the_period(self, trio, clock):
+        group, a, b, _c = trio
+        vote(group, a, b, "up")
+        clock.set(WEEK_CLOSES + timedelta(minutes=5))
+        membership.leave(group, b)
+        add_member(group, b)
+        tick()
+        assert results(all_periods(group)[0])[b.id].ups == 1
+
+
+class TestDaylightSaving:
+    """PER-04: the update stays at 13:00 local time across the switch."""
+
+    def test_daily_window_over_the_autumn_switch_lasts_25_hours(self, app, clock):
+        group = make_daily(make_group())
+        add_member(group)
+        clock.set(datetime(2026, 10, 24, 11, 30, tzinfo=UTC))  # Sat 13:30 CEST
+        tick()
+        period = periods.open_period(group.id)
+        assert period.opens_at == datetime(2026, 10, 24, 11, 0, tzinfo=UTC)  # 13:00 CEST
+        assert period.closes_at == datetime(2026, 10, 25, 12, 0, tzinfo=UTC)  # 13:00 CET
+
+    def test_daily_window_over_the_spring_switch_lasts_23_hours(self, app, clock):
+        group = make_daily(make_group())
+        add_member(group)
+        clock.set(datetime(2027, 3, 27, 12, 30, tzinfo=UTC))  # Sat 13:30 CET
+        tick()
+        period = periods.open_period(group.id)
+        assert period.opens_at == datetime(2027, 3, 27, 12, 0, tzinfo=UTC)  # 13:00 CET
+        assert period.closes_at == datetime(2027, 3, 28, 11, 0, tzinfo=UTC)  # 13:00 CEST
+
+    def test_weekly_window_over_the_autumn_switch(self, app, clock):
+        """Sunday 00:00 CEST to Monday 13:00 CET: 38 hours instead of 37."""
+        group = make_group()
+        clock.set(WEEK_OPENS)
+        tick()
+        period = periods.open_period(group.id)
+        assert period.closes_at - period.opens_at == timedelta(hours=38)
+
+
 class TestRobustness:
     def test_a_failing_group_does_not_stop_the_others(self, app, clock, monkeypatch):
         broken, fine = make_group(), make_group()
