@@ -126,6 +126,8 @@ def convert_params(params: ScoreParams, src: Cadence, dst: Cadence) -> ScorePara
     d_day = d_week^(1/7) and K_day = K_week · (1 − d_day) / (1 − d_week), written as
     K_week / (1 + d_day + … + d_day⁶) so that it stays exact near and at d = 1.
     """
+    if not (_is_number(params.k) and _is_number(params.d) and 0 < params.d <= 1):
+        raise ValueError(f"cannot convert {params!r}")
     if src == dst:
         return params
     if src == Cadence.WEEKLY:
@@ -142,15 +144,16 @@ def _week_sum(d_day: float) -> float:
 def bounds(cadence: Cadence, d: float) -> ParamBounds:
     """SET-05: allowed range for d, and for K given d.
 
-    Daily values are valid exactly when their weekly equivalent is, so converting
-    a valid setting in either direction always gives a valid one (A11). The daily
-    K range therefore depends on d.
+    Daily K and d are each valid exactly when their weekly equivalent is, so
+    converting a valid setting in either direction always gives a valid one (A11).
+    The daily K range therefore depends on d.
     """
     w = WEEKLY_BOUNDS
     if cadence == Cadence.WEEKLY:
         return w
     d_min, d_max = w.d_min ** (1 / DAYS_PER_WEEK), w.d_max ** (1 / DAYS_PER_WEEK)
-    d_for_k = min(max(d, d_min), d_max) if math.isfinite(d) else d_max
+    # The weekly equivalent of K uses d as given, even when d itself is out of range.
+    d_for_k = d if _is_number(d) and d > 0 else d_max
     week_sum = _week_sum(d_for_k)
     return ParamBounds(k_min=w.k_min / week_sum, k_max=w.k_max / week_sum, d_min=d_min, d_max=d_max)
 
@@ -169,7 +172,12 @@ def validate(params: ScoreParams, cadence: Cadence) -> set[str]:
 def _within(value: float, low: float, high: float) -> bool:
     """low ≤ value ≤ high, tolerating rounding from a conversion."""
     tol = BOUNDS_REL_TOL * max(abs(low), abs(high))
-    return math.isfinite(value) and low - tol <= value <= high + tol
+    return _is_number(value) and low - tol <= value <= high + tol
+
+
+def _is_number(value: float) -> bool:
+    """A finite int or float; bool is rejected although it is an int."""
+    return isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def default_params(cadence: Cadence) -> ScoreParams:

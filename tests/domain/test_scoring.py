@@ -180,6 +180,8 @@ def test_every_valid_weekly_setting_converts_to_a_valid_daily_one(k, d):
         pytest.param(ScoreParams(0.006, 0.906), id="weekly K below min"),
         pytest.param(ScoreParams(0.05, 0.9), id="weekly d below min"),
         pytest.param(ScoreParams(0.01, 0.999), id="weekly d above max"),
+        pytest.param(ScoreParams(0.2866, 0.999), id="weekly d and K above max"),
+        pytest.param(ScoreParams(0.0001, 0.8), id="weekly d and K below min"),
     ],
 )
 def test_daily_is_invalid_exactly_when_its_weekly_equivalent_is(daily):
@@ -277,3 +279,24 @@ def test_simulate_matches_step_by_step():
 
     assert scoring.simulate(WEEKLY, nets, r0=0.2) == expected
     assert scoring.simulate(WEEKLY, []) == []
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        ScoreParams(0.5, -0.5),
+        ScoreParams(0.5, 0.0),
+        ScoreParams(0.5, 1.5),
+        ScoreParams(math.nan, 0.95),
+        ScoreParams(0.5, math.inf),
+    ],
+)
+def test_convert_rejects_impossible_params(params):
+    with pytest.raises(ValueError):
+        scoring.convert_params(params, Cadence.WEEKLY, Cadence.DAILY)
+
+
+@pytest.mark.parametrize("cadence", list(Cadence))
+def test_validate_rejects_bool(cadence):
+    assert scoring.validate(ScoreParams(True, 0.95), cadence) == {"k"}
+    assert "d" in scoring.validate(ScoreParams(0.1, True), cadence)
