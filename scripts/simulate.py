@@ -6,6 +6,7 @@ python scripts/simulate.py --k 0.5 --d 0.95 --cadence weekly --periods 26
 import argparse
 from collections.abc import Callable, Sequence
 
+from app.domain.formatting import format_score
 from app.domain.scoring import ScoreParams, default_params, simulate, validate
 from app.domain.types import Cadence
 
@@ -28,11 +29,13 @@ def curves(params: ScoreParams, periods: int) -> dict[str, list[float]]:
 
 def format_table(data: dict[str, list[float]], every: int = SAMPLE_EVERY) -> str:
     periods = len(next(iter(data.values()), []))
-    columns = list(range(every - 1, periods, every))
+    # Every n-th period, and always the last one.
+    columns = sorted({*range(every - 1, periods, every), periods - 1} - {-1})
     width = max(len(name) for name in data)
     header = " " * width + "".join(f"{i + 1:>6}" for i in columns)
     rows = [
-        f"{name:<{width}}" + "".join(f"{s[i]:6.1f}" for i in columns) for name, s in data.items()
+        f"{name:<{width}}" + "".join(f"{format_score(s[i]):>6}" for i in columns)
+        for name, s in data.items()
     ]
     return "\n".join([header, *rows])
 
@@ -44,6 +47,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--d", type=float)
     parser.add_argument("--periods", type=int, default=26)
     args = parser.parse_args(argv)
+    if args.periods < 1:
+        parser.error("--periods muss mindestens 1 sein")
 
     cadence = Cadence(args.cadence)
     defaults = default_params(cadence)

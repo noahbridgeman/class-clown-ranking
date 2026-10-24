@@ -2,6 +2,8 @@ import importlib.util
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 ROOT = Path(__file__).parent.parent
 
 
@@ -24,3 +26,16 @@ def test_script_warns_about_invalid_params(capsys):
     _load().main(["--k", "5", "--periods", "2"])
 
     assert "außerhalb der Grenzen: k" in capsys.readouterr().out
+
+
+def test_script_shows_last_period(capsys):
+    _load().main(["--periods", "1"])
+
+    rows = capsys.readouterr().out.splitlines()
+    assert rows[1].split() == ["1"]
+    assert rows[2].split()[-1] == "6,2"
+
+
+def test_script_rejects_zero_periods():
+    with pytest.raises(SystemExit):
+        _load().main(["--periods", "0"])
