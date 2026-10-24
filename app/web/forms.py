@@ -32,3 +32,7 @@ class LogoutForm(FlaskForm):
 
 class VoteForm(FlaskForm):
     choice = SelectField(choices=[choice.value for choice in Choice])
+
+
+class ReasonForm(FlaskForm):
+    reason = StringField()

@@ -32,7 +32,7 @@ from app.clock import FrozenClock  # noqa: E402
 from app.config import TestConfig  # noqa: E402
 from app.extensions import db  # noqa: E402
 from app.models import User  # noqa: E402
-from app.services import invitations, membership  # noqa: E402
+from app.services import invitations, membership, voting  # noqa: E402
 from app.services.mail import Mail  # noqa: E402
 from tests.conftest import IsolatedClient  # noqa: E402
 from tests.factories import (  # noqa: E402
@@ -162,6 +162,30 @@ def render_pages() -> dict[str, str]:
         tick()
         pages.grab("group_ranking", pages.client(bo), f"{g}/")
         pages.grab("group_ranking_year", pages.client(bo), f"{g}/?range=1y")
+        pages.grab("settings_admin", pages.client(ada), f"{g}/settings")
+        settings_form = {
+            "name": "Die Spaßvögel",
+            "cadence": "daily",
+            "params_cadence": "weekly",
+            "is_anonymous": "false",
+            "timezone": "Europe/Berlin",
+            "k": "0,5",
+            "d": "0,95",
+        }
+        pages.grab(
+            "settings_error",
+            pages.client(ada),
+            f"{g}/settings",
+            "POST",
+            {**settings_form, "k": "9", "params_cadence": "daily"},
+        )
+        pages.client(ada).post(f"{g}/settings", data=settings_form)
+        pages.grab("settings_member", pages.client(bo), f"{g}/settings")
+        tick()  # the daily, open window takes over the pending settings
+        vote(group, ada, bo, "up")
+        vote(group, ada, cleo, "down")
+        voting.set_reason(group, ada, bo.id, "Die Geschichte mit der Ente")
+        pages.grab("vote_open_mode", pages.client(ada), f"{g}/vote")
         membership.leave(group, cleo)
         db.session.remove()
         db.drop_all()

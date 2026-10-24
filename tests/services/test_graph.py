@@ -1,5 +1,6 @@
 """GRA-01…07 and MEM-03: the data behind the graph."""
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -7,7 +8,7 @@ import pytest
 
 from app.domain.colors import color_for
 from app.i18n import load_texts
-from app.services import graph, membership
+from app.services import graph, membership, settings
 from app.services.graph import Range, graph_data, parse_range
 from tests.factories import add_member, make_daily, make_group, make_user, next_day, tick, vote
 
@@ -187,3 +188,13 @@ def test_markers_for_switching_between_anonymous_and_open(daily, clock):
     modes = [m for m in data(group, ada, clock)["markers"] if m["kind"] == "mode"]
     assert [m["text"] for m in modes] == ["Ab hier offen", "Ab hier anonym"]
     assert modes[1]["t"] - modes[0]["t"] == timedelta(days=2) / timedelta(milliseconds=1)
+
+
+def test_markers_for_settings_changes(daily, clock):
+    """GRA-07 / SET-03: where a window took over changes; anonymity has its own marker."""
+    group, ada, _bo = daily
+    wanted = replace(settings.upcoming(group), name="Neu", is_anonymous=False)
+    settings.change(group, ada, wanted)
+    next_day(clock)
+    texts = [m["text"] for m in data(group, ada, clock)["markers"] if m["kind"] != "member"]
+    assert texts == ["Ab hier offen", "Einstellungen geändert: Gruppenname"]

@@ -44,12 +44,14 @@
   --radius-pill: 999px;
   --border-width: 1px;
   --focus-ring-width: 2px;
+  --focus-ring-offset: 1px;
   --container-width: 720px;
   --dot-size: 12px;
   --touch-target: 44px;
   --vote-button-width: 72px;
   --rank-place-width: 2.5em;
   --graph-height: 320px;
+  --preview-height: 180px;
 
   /* Graph (GRA-06). graph.js reads these as plain numbers (pixels, milliseconds). */
   --graph-font-size: 12;

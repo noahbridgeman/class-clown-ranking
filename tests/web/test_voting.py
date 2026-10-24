@@ -155,3 +155,73 @@ def test_vote_with_csrf_token(csrf_app):
     response = client.post(url, data={"choice": "up", "csrf_token": csrf_token(page)})
     assert response.status_code == 302
     assert db.session.scalar(select(Vote.value)) == 1
+
+
+class TestReasons:
+    @pytest.fixture
+    def open_trio(self, app, clock):
+        a, b, c = (make_user(display_name=name) for name in ("Ada", "Bo", "Cleo"))
+        group = make_group(a, "Runde")
+        group.is_anonymous = False
+        add_member(group, b)
+        add_member(group, c)
+        clock.set(IN_WEEK_WINDOW)
+        tick()
+        return group, a, b, c
+
+    def test_field_appears_after_voting_in_open_periods(self, open_trio, login_as):
+        group, a, b, _c = open_trio
+        client = login_as(a)
+        assert 'name="reason"' not in page(client, group)
+        vote(group, a, b, "up")
+        html = page(client, group)
+        assert html.count('name="reason"') == 1
+        assert f'id="reason-{b.id}"' in html and "hx-preserve" in html
+
+    def test_no_field_in_anonymous_periods(self, trio, login_as):
+        group, a, b, _c = trio
+        vote(group, a, b, "up")
+        assert 'name="reason"' not in page(login_as(a), group)
+
+    def test_saving_with_htmx_shows_it(self, open_trio, login_as):
+        group, a, b, _c = open_trio
+        vote(group, a, b, "up")
+        response = login_as(a).post(
+            f"/g/{group.id}/vote/{b.id}/reason", data={"reason": "Ente"}, headers=HTMX
+        )
+        html = response.get_data(as_text=True)
+        assert response.status_code == 200
+        assert 'value="Ente"' in html and "Begründung gespeichert." in html
+
+    def test_too_long_is_refused(self, open_trio, login_as):
+        group, a, b, _c = open_trio
+        vote(group, a, b, "up")
+        response = login_as(a).post(
+            f"/g/{group.id}/vote/{b.id}/reason", data={"reason": "x" * 141}, headers=HTMX
+        )
+        assert response.status_code == 400
+        assert "Höchstens 140 Zeichen." in response.get_data(as_text=True)
+
+    def test_without_javascript_redirects_back(self, open_trio, login_as):
+        group, a, b, _c = open_trio
+        vote(group, a, b, "up")
+        response = login_as(a).post(f"/g/{group.id}/vote/{b.id}/reason", data={"reason": "Ente"})
+        assert response.location == f"/g/{group.id}/vote"
+
+
+def test_reason_without_csrf_token_is_refused_with_a_message(csrf_app):
+    csrf_app.extensions["clock"].set(IN_WEEK_WINDOW)
+    admin = make_user()
+    group = make_group(admin)
+    group.is_anonymous = False
+    other = add_member(group)
+    tick()
+    vote(group, admin, other, "up")
+    client = csrf_app.test_client()
+    with client.session_transaction() as session:
+        session["_user_id"] = admin.get_id()
+    response = client.post(
+        f"/g/{group.id}/vote/{other.id}/reason", data={"reason": "x"}, headers=HTMX
+    )
+    assert response.status_code == 400
+    assert "Bitte lade die Seite neu" in response.get_data(as_text=True)

@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     SmallInteger,
+    String,
     UniqueConstraint,
     event,
     inspect,
@@ -26,6 +27,8 @@ class PeriodStatus(StrEnum):
     CLOSED = "closed"
     SKIPPED = "skipped"  # fewer than 2 active members at closing (PER-06, A2)
 
+
+REASON_MAX_LENGTH = 140  # VOT-08
 
 # The settings a period copies from its group when it opens (VOT-09, SET-01, SCO-09).
 SNAPSHOT_FIELDS = ("group_id", "seq", "opens_at", "closes_at", "cadence", "is_anonymous", "k", "d")
@@ -81,6 +84,7 @@ class Vote(db.Model):
         UniqueConstraint("period_id", "voter_user_id", "target_user_id"),  # VOT-02
         CheckConstraint("voter_user_id <> target_user_id", name="no_self_vote"),  # VOT-03
         CheckConstraint("value IN (-1, 1)", name="value"),
+        CheckConstraint(f"length(reason) <= {REASON_MAX_LENGTH}", name="reason_length"),
         Index(None, "period_id", "target_user_id"),
     )
 
@@ -89,6 +93,8 @@ class Vote(db.Model):
     voter_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     target_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     value: Mapped[int] = mapped_column(SmallInteger)
+    # Only in open periods (VOT-08). Like everything about votes, read via vote_queries.
+    reason: Mapped[str | None] = mapped_column(String(REASON_MAX_LENGTH))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
 

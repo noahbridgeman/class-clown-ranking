@@ -85,4 +85,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M6 (Gruppeneinstellungen und offener Modus). M0 bis M5 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M7 (Voting-Übersicht). M0 bis M6 sind abgeschlossen. Details in `docs/plan.md`.

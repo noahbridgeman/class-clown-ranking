@@ -10,6 +10,7 @@ import re
 import pytest
 from flask import Flask
 
+from app.services import voting
 from tests.factories import IN_WEEK_WINDOW, add_member, make_group, make_user, tick, vote
 
 VOTER_COUNT = re.compile(r"\d+ von \d+ Mitgliedern haben schon abgestimmt")
@@ -53,9 +54,14 @@ def test_open_window_shows_nothing_of_others_votes(app, clock, login_as, anonymo
     vote(group, a, b, "up")
     vote(group, a, observer, "down")
     vote(group, b, a, "down")
+    if not anonymous:
+        voting.set_reason(group, a, b.id, "Die Sache mit der Ente")  # VOT-08
     after = snapshot(client, urls)
 
     assert after == before
+    # Neither does the rated person see a reason given to them (VOT-07, VOT-08).
+    rated = snapshot(login_as(b), urls)
+    assert not any("Ente" in html for html in rated.values())
 
 
 def test_the_count_is_the_only_difference(app, clock, login_as):

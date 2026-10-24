@@ -10,9 +10,11 @@ from app.clock import get_clock
 from app.domain import schedule
 from app.extensions import db
 from app.models import Group, Membership, Period, User, Vote
-from app.services import membership, periods, vote_queries
+from app.models.period import REASON_MAX_LENGTH
+from app.services import membership, periods, settings, vote_queries
 from app.services.errors import InvalidInput
 from app.services.locks import lock_group
+from app.services.text import clean_text
 
 
 class Choice(StrEnum):
@@ -32,9 +34,11 @@ class Ballot:
     period: Period | None  # set while the window accepts votes
     others: list[Membership]  # everyone the member can rate
     own: dict[int, int]  # target user id → +1 or −1
+    reasons: dict[int, str]  # target user id → own reason, open periods only (VOT-08)
     voters: int  # members who have voted so far
     members: int
     next_opens_at: datetime | None  # outside a window; None if one opens any moment
+    timezone: str  # of the next window; differs from the group's while a change is pending
 
     @property
     def rated(self) -> int:
@@ -52,16 +56,21 @@ def ballot(group: Group, user: User) -> Ballot:
             period=period,
             others=others,
             own=vote_queries.own_votes(period, user.id),
+            reasons=vote_queries.own_reasons(period, user.id),
             voters=vote_queries.voter_count(period),
             members=len(active),
             next_opens_at=None,
+            timezone=group.timezone,
         )
     # Between the window's start and the next tick no period exists yet.
-    pending = schedule.window_at(now, group.cadence, group.timezone)
+    # The next window follows the upcoming settings (SET-01, PER-05).
+    upcoming = settings.upcoming(group)
+    pending = schedule.window_at(now, upcoming.cadence, upcoming.timezone)
     next_opens_at = None
-    if pending is None or (period is None and periods.had_period(group.id, pending)):
-        next_opens_at = schedule.next_window(now, group.cadence, group.timezone).opens_at
-    return Ballot(now, None, others, {}, 0, len(active), next_opens_at)
+    # An expired period not yet closed is the latest one too, so had_period sees it.
+    if pending is None or periods.had_period(group.id, pending):
+        next_opens_at = schedule.next_window(now, upcoming.cadence, upcoming.timezone).opens_at
+    return Ballot(now, None, others, {}, {}, 0, len(active), next_opens_at, upcoming.timezone)
 
 
 def set_vote(group: Group, voter: User, target_id: int, choice: Choice) -> None:
@@ -105,6 +114,32 @@ def set_vote(group: Group, voter: User, target_id: int, choice: Choice) -> None:
     elif vote.value != value:
         vote.value = value
         vote.updated_at = now
+    db.session.commit()
+
+
+def set_reason(group: Group, voter: User, target_id: int, raw: str | None) -> None:
+    """VOT-08: an optional reason on the voter's own vote, only in open periods.
+
+    Empty text removes it. Retracting the vote removes the reason with it.
+    """
+    lock_group(group)
+    membership.require_active(group.id, voter.id)
+    reason = clean_text(raw, REASON_MAX_LENGTH)
+    period = periods.open_period(group.id)
+    if period is None or not period.accepts_votes(get_clock().now()):
+        raise InvalidInput("voting.closed")
+    if period.is_anonymous:
+        raise InvalidInput("voting.reason_anonymous")
+    vote = db.session.scalar(
+        select(Vote).where(
+            Vote.period_id == period.id,
+            Vote.voter_user_id == voter.id,
+            Vote.target_user_id == target_id,
+        )
+    )
+    if vote is None:
+        raise InvalidInput("voting.reason_needs_vote")
+    vote.reason = reason
     db.session.commit()
 
 
