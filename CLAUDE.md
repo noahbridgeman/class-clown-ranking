@@ -85,4 +85,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M5 (Graph und Rangliste). M0 bis M4 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M6 (Gruppeneinstellungen und offener Modus). M0 bis M5 sind abgeschlossen. Details in `docs/plan.md`.

@@ -48,10 +48,25 @@
   --dot-size: 12px;
   --touch-target: 44px;
   --vote-button-width: 72px;
+  --rank-place-width: 2.5em;
+  --graph-height: 320px;
+
+  /* Graph (GRA-06). graph.js reads these as plain numbers (pixels, milliseconds). */
+  --graph-font-size: 12;
+  --graph-legend-space: 40;
+  --graph-marker-width: 1.5;
+  --graph-line-width: 2;
+  --graph-line-width-me: 3.5;
+  --graph-line-width-emphasis: 4;
+  --graph-glow: 12;
+  --graph-symbol-size: 6;
+  --graph-blur-opacity: 0.12;
+  --graph-animation-ms: 700;
 }
 
 @media (min-width: 640px) {
   :root {
     --font-size-title: 1.75rem;
+    --graph-height: 400px;
   }
 }

@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,6 +37,7 @@ from app.services.mail import Mail  # noqa: E402
 from tests.conftest import IsolatedClient  # noqa: E402
 from tests.factories import (  # noqa: E402
     IN_WEEK_WINDOW,
+    WEEK_CLOSES,
     add_member,
     allow,
     make_group,
@@ -148,6 +149,19 @@ def render_pages() -> dict[str, str]:
         pages.grab("vote_open", pages.client(ada), f"{g}/vote")
         pages.grab("vote_error", pages.client(ada), f"{g}/vote/{ada.id}", "POST", {"choice": "up"})
         pages.grab("vote_alone", pages.client(loner), f"/g/{solo.id}/vote")
+        vote(group, bo, cleo, "up")
+        clock.set(WEEK_CLOSES)
+        tick()
+        pages.grab("group_ranking_first", pages.client(bo), f"{g}/")
+        clock.set(IN_WEEK_WINDOW + timedelta(days=7))
+        tick()
+        vote(group, ada, cleo, "up")
+        vote(group, bo, cleo, "up")
+        vote(group, cleo, bo, "down")
+        clock.set(WEEK_CLOSES + timedelta(days=7))
+        tick()
+        pages.grab("group_ranking", pages.client(bo), f"{g}/")
+        pages.grab("group_ranking_year", pages.client(bo), f"{g}/?range=1y")
         membership.leave(group, cleo)
         db.session.remove()
         db.drop_all()

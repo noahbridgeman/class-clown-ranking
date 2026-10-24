@@ -1,11 +1,24 @@
-from flask import Blueprint, Flask, flash, g, redirect, render_template, url_for
+from flask import (
+    Blueprint,
+    Flask,
+    abort,
+    flash,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_login import current_user, login_required
 from werkzeug.wrappers import Response as BaseResponse
 
+from app.clock import get_clock
 from app.domain.colors import color_for
+from app.domain.formatting import DECIMAL_SEPARATOR, format_delta, format_score
 from app.i18n import t
 from app.models.group import GROUP_NAME_MAX_LENGTH
-from app.services import groups, membership
+from app.services import graph, groups, leaderboard, membership
 from app.services.errors import InvalidInput
 from app.services.text import member_name
 from app.web.access import admin_required, member_required
@@ -19,6 +32,10 @@ Page = tuple[str, int] | BaseResponse
 def register(app: Flask) -> None:
     app.add_template_global(color_for, "member_color")
     app.add_template_global(member_name)
+    # Display rounding lives in domain.formatting only (A13).
+    app.add_template_filter(format_score, "score")
+    app.add_template_filter(format_delta, "delta")
+    app.add_template_global(DECIMAL_SEPARATOR, "decimal_separator")
     app.register_blueprint(bp)
 
 
@@ -43,13 +60,29 @@ def create() -> Page:
 @bp.get("/g/<int:group_id>/")
 @member_required
 def home(group_id: int) -> str:
+    # Without JavaScript the range links reload the page; graph.js picks the range up.
+    selected_range = graph.parse_range(request.args.get("range")) or graph.DEFAULT_RANGE
+    members = membership.active_members(group_id)
     return render_template(
         "groups/home.html",
         group=g.group,
-        members=membership.active_members(group_id),
+        board=leaderboard.leaderboard(group_id, members),
+        ranges=graph.RANGE_LABELS,
+        selected_range=selected_range,
+        members=members,
         is_admin=g.group.admin_user_id == current_user.id,
         form=ConfirmForm(),
     )
+
+
+@bp.get("/g/<int:group_id>/graph.json")
+@member_required
+def graph_json(group_id: int) -> BaseResponse:
+    range_ = graph.parse_range(request.args.get("range"))
+    if range_ is None:
+        abort(400, t("graph.invalid_range"))
+    data = graph.graph_data(g.group, current_user.id, range_, get_clock().now())
+    return jsonify(data)
 
 
 @bp.post("/g/<int:group_id>/members/<int:user_id>/remove")
