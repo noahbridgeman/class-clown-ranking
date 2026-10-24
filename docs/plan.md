@@ -29,8 +29,8 @@ Annahmen (vom Plan getroffen, bei Bedarf korrigieren):
 | A9 | Löscht jemand sein Konto, verlässt er damit alle Gruppen, und für den Austritt gelten MEM-05 und ROL-03. Ein späteres neues Konto mit derselben Adresse ist eine neue Person, MEM-04 greift dann nicht. | NFA-05 |
 | A10 | Für Nicht-Mitglieder antworten Gruppen-URLs mit **404**, nicht mit 403. | Sonst verrät die Antwort, dass es die Gruppe gibt. |
 | A11 | Grenzen für K und d (SET-05), wöchentlich: K ∈ [0,05; 2,0], d ∈ [0,5; 0,99]. d = 1 ist ausgeschlossen, damit der Decay immer wirkt (SCO-05) und das Gleichgewicht K/(1−d) endlich bleibt (Rücksprache 2026-10-24). Tägliche Werte sind genau dann gültig, wenn ihr wöchentliches Gegenstück nach SCO-07 gültig ist: d ∈ [0,5^(1/7); 0,99^(1/7)], und die K-Grenzen hängen von d ab (K_woche-Grenzen geteilt durch 1 + d + … + d⁶). Damit ist die Umrechnung in beide Richtungen verlustfrei und braucht kein Kappen. | Die Anforderung nennt keine Zahlen. Die Werte sind vorläufig und werden mit der Kalibrierung in M9 überprüft. |
-| A12 | Hervorhebungen in der Rangliste (RNK-03): größter Anstieg und größter Absturz (nur echte Veränderungen, bei Gleichstand alle Betroffenen), neu auf Platz 1, und Platzänderungen gegenüber der Vorperiode. Verglichen wird nur unter den aktuell aktiven Mitgliedern: Ausgetretene zählen nicht, niemand rückt also allein durch einen Austritt auf. Neue haben keine Veränderung, zählen aber als „neu auf Platz 1“, wenn sie dort landen. Veränderungen werden mit voller Genauigkeit berechnet. | RNK-03 nennt nur Beispiele. |
-| A13 | Anzeige (SCO-04, RNK-02): eine Nachkommastelle, kaufmännisch gerundet (5,25 → 5,3), deutsches Komma. Eine Veränderung, die gerundet 0,0 ergibt, erscheint als „–“ statt als Pfeil. „−0,0“ gibt es nicht. Umgesetzt als reine Funktionen in `domain/formatting.py`; die Jinja-Filter in M5 rufen sie nur auf. | Rücksprache 2026-10-24. |
+| A12 | Hervorhebungen in der Rangliste (RNK-03): größter Anstieg und größter Absturz (nur echte Veränderungen, bei Gleichstand alle Betroffenen), neu auf Platz 1, und Platzänderungen gegenüber der Vorperiode. Verglichen wird nur unter den aktuell aktiven Mitgliedern: Ausgetretene zählen nicht, niemand rückt also allein durch einen Austritt auf. Neue haben keine Veränderung, zählen aber als „neu auf Platz 1“, wenn sie dort landen. Veränderungen sind die Differenz der angezeigten, gerundeten Scores (A13), auch für den größten Anstieg und Absturz. | RNK-03 nennt nur Beispiele. |
+| A13 | Anzeige (SCO-04, RNK-02): eine Nachkommastelle, kaufmännisch gerundet (5,25 → 5,3), deutsches Komma. Die Veränderung ist die Differenz der beiden **angezeigten** Werte (5,249 → 5,251 erscheint als 5,2 → 5,3 und ▲ +0,1), sie passt also immer zu den sichtbaren Zahlen. Ergibt sie 0,0, erscheint „–“ statt eines Pfeils. „−0,0“ gibt es nicht. Plätze (A7) vergleichen weiter mit voller Genauigkeit. Umgesetzt als reine Funktionen in `domain/formatting.py` und `ranking.deltas`; die Jinja-Filter in M5 rufen sie nur auf. | Rücksprache 2026-10-24. |
 
 Noch offen (blockiert erst den genannten Meilenstein):
 - Mindestgröße für den Anonym-Modus (offener Punkt 3) → vor M6 klären.
@@ -186,11 +186,12 @@ def compute_period(prior: Mapping[UserId, float],
                    votes: Iterable[tuple[UserId, UserId, int]],
                    p: ScoreParams) -> dict[UserId, MemberResult]  # SCO-05, SCO-09
 def convert_params(p, src: Cadence, dst: Cadence) -> ScoreParams # SCO-07
-def bounds(cadence: Cadence) -> ParamBounds; def validate(p, cadence) # SET-05
+def bounds(cadence: Cadence, d: float) -> ParamBounds            # SET-05, K-Grenzen täglich abhängig von d
+def validate(p, cadence) -> set[str]                            # ungültige Felder, leer = gültig
 def simulate(p, nets: Sequence[float], r0=0.0) -> list[float]  # SET-05-Vorschau, Kalibrierung
 ```
 - `compute_period` legt für **jedes** Mitglied in `prior` ein Ergebnis an, auch ohne Votes, denn der Decay wirkt immer (SCO-05). Votes mit Beteiligten außerhalb von `prior` lösen einen Fehler aus. Die Reihenfolge ist deterministisch (sortiert nach UserId).
-- `convert_params` behandelt d = 1 als Grenzwert: Dann ist (1−d_tag)/(1−d_woche) → 1/7. Ein Roundtrip-Test prüft, dass weekly→daily→weekly die Ausgangswerte ergibt und das Gleichgewicht K/(1−d) gleich bleibt.
+- `convert_params` rechnet K über 1 + d_tag + … + d_tag⁶ statt über (1−d_tag)/(1−d_woche). Das ist gleichwertig, bleibt aber nahe d = 1 genau. Es wird nie gekappt: Nach A11 ist ein täglicher Wert (K und d jeweils) genau dann gültig, wenn sein wöchentliches Gegenstück gültig ist. Deshalb hängen die täglichen K-Grenzen von d ab, und die Einstellungsseite (M6) muss sie bei jeder Änderung von d neu holen. Unmögliche Eingaben (d ≤ 0, d > 1, nicht endlich) lösen `ValueError` aus. Roundtrip-Tests prüfen beide Richtungen und das Gleichgewicht K/(1−d).
 
 ### `app/domain/schedule.py` (VOT-01, PER-04, PER-05, VOT-10)
 ```python
@@ -204,10 +205,13 @@ def next_window(now: datetime, cadence, tz: str) -> Window        # erstes Fenst
 - Tests: Wechsel auf Sommer- und Winterzeit in `Europe/Berlin` (Fenster mit 23 bzw. 25 h), eine Zeitzone mit DST-Wechsel um Mitternacht (z. B. `America/Santiago`) für So 00:00, Randfälle genau an der Grenze (Fenster halboffen).
 
 ### `app/domain/ranking.py` (RNK-01…03, „überholt“ für M8)
-`rank(scores) -> list[RankEntry]` (Gleichstand nach A7), `deltas(prev, curr)`, `highlights(prev, curr) -> Highlights` (größter Anstieg, größter Absturz, neu auf Platz 1 …), `overtakes(prev, curr) -> list[(overtaker, overtaken)]`.
+`rank(scores) -> list[RankEntry]` (Gleichstand nach A7), `deltas(prev, curr)` (Differenz der angezeigten, gerundeten Scores, A13), `highlights(prev, curr) -> Highlights` (A12), `overtakes(prev, curr) -> list[(overtaker, overtaken)]`.
+
+### `app/domain/formatting.py` (SCO-04, RNK-02)
+`format_score(value) -> "5,3"`, `format_delta(value) -> "▲ +0,4" | "▼ −0,4" | "–"`, `round_half_up(value) -> Decimal` (A13). Die Jinja-Filter `score` und `delta` (M5) rufen nur diese Funktionen auf.
 
 ### `app/domain/colors.py` (GRA-02)
-Eine feste Palette mit 20 gut unterscheidbaren Farben, die auf dunklem Hintergrund leuchten. Ab Index 20 kommen Farben nach dem Goldener-Winkel-HSL-Verfahren dazu. `color_for(index) -> str`.
+Eine feste Palette mit 30 Farben (eine pro Mitglied einer vollen Gruppe, A8), paarweise CIE76-ΔE > 20 und L* > 48, damit sie auf dunklem Hintergrund leuchten. Weil `color_index` nie neu vergeben wird (MEM-04), gibt es auch höhere Indizes: Dort wird aus einem festen HSL-Raster jeweils die Farbe mit dem größten Abstand zu allen bisher vergebenen gewählt (deterministisch). Sind alle Kandidaten vergeben, wiederholen sich die Zusatzfarben in derselben Reihenfolge. `color_for(index) -> str`.
 
 ## 5 Periodenlauf (`flask --app app tick`)
 
@@ -307,7 +311,7 @@ Jeder Meilenstein ist fertig, wenn `pytest` grün ist, `ruff` sauber ist, die ge
 - IDs: NFA-01 (Grundlayout), NFA-03.
 
 ### M1 – Domänenkern (rein)
-- `scoring.py`, `schedule.py`, `ranking.py`, `colors.py` komplett, mit gründlichen Tabellentests: Formeln mit Referenzwerten, Decay ohne Votes, Gleichgewicht, Umrechnung mit Roundtrip und d = 1, Grenzen, Determinismus, DST, Fenstergrenzen.
+- `scoring.py`, `schedule.py`, `ranking.py`, `colors.py` komplett, mit gründlichen Tabellentests: Formeln mit Referenzwerten, Decay ohne Votes, Gleichgewicht, Umrechnung mit Roundtrip in beide Richtungen und nahe d = 1, Grenzen, Determinismus, DST, Fenstergrenzen.
 - Ein kleines Simulationsskript über `simulate()` für die spätere Kalibrierung.
 - IDs: SCO-01…05, SCO-07, SCO-09, NFA-14, VOT-01, PER-04, SET-05 (Grenzen), RNK-01…03 (Logik), GRA-02 (Palette).
 - Dazu `domain/formatting.py` (SCO-04, A13) und `scripts/simulate.py`.
