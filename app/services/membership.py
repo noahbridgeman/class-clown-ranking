@@ -1,4 +1,4 @@
-"""Joining, leaving and removing members (MEM-01, MEM-02, MEM-04, ROL-03, A5)."""
+"""Joining, leaving and removing members (MEM-01, MEM-02, MEM-04, MEM-05, ROL-03, A5)."""
 
 from datetime import datetime
 
@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 from app.clock import get_clock
 from app.extensions import db
 from app.models import Group, Membership, MembershipEvent, MembershipEventKind, User
-from app.services import notifications
+from app.services import notifications, periods, voting
 from app.services.errors import InvalidInput, NotAllowed, NotFound
 from app.services.locks import lock_group
 
@@ -48,6 +48,8 @@ def join(group: Group, user: User, now: datetime) -> Membership:
 
     Callers adding to an existing group hold lock_group, so color indexes cannot collide.
     """
+    # A window that ended before the join is closed without the newcomer.
+    periods.close_if_due(group.id, now)
     membership = db.session.scalar(
         select(Membership).where(Membership.group_id == group.id, Membership.user_id == user.id)
     )
@@ -79,7 +81,10 @@ def leave(group: Group, user: User) -> None:
     if heir is None:
         raise InvalidInput("groups.last_member")
     now = get_clock().now()
+    # Votes of a window that has ended are final, so its period is closed first.
+    periods.close_if_due(group.id, now)
     membership.left_at = now
+    voting.discard_open_votes(group.id, user.id)
     _record(group, user.id, MembershipEventKind.LEFT, now, actor_id=user.id)
     new_admin = None
     if group.admin_user_id == user.id:
@@ -98,7 +103,9 @@ def remove(group: Group, actor: User, user_id: int) -> None:
         raise InvalidInput("groups.cannot_remove_self")
     membership = _active_or_not_found(group.id, user_id)
     now = get_clock().now()
+    periods.close_if_due(group.id, now)
     membership.left_at = now
+    voting.discard_open_votes(group.id, user_id)
     _record(group, user_id, MembershipEventKind.REMOVED, now, actor_id=actor.id)
     db.session.commit()
 

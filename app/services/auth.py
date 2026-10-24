@@ -5,7 +5,7 @@ import unicodedata
 from datetime import datetime, timedelta
 
 from flask import current_app
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.clock import get_clock
@@ -116,6 +116,16 @@ def _rate_limited(email: str, now: datetime) -> bool:
         .where(LoginToken.email == email, LoginToken.created_at > now - RATE_LIMIT_WINDOW)
     )
     return (recent or 0) >= current_app.config["LOGIN_MAILS_PER_HOUR"]
+
+
+def delete_stale_tokens(now: datetime) -> int:
+    """Removes expired tokens the rate limit no longer counts. Called by tick. Does not commit."""
+    result = db.session.execute(
+        delete(LoginToken).where(
+            LoginToken.expires_at <= now, LoginToken.created_at <= now - RATE_LIMIT_WINDOW
+        )
+    )
+    return result.rowcount
 
 
 def _consume(nonce: str, now: datetime) -> str | None:

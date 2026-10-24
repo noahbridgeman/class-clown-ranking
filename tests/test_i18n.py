@@ -77,3 +77,31 @@ def test_local_date_uses_the_group_timezone():
     assert (
         local_date(datetime(2026, 10, 30, 23, 30, tzinfo=UTC), "America/New_York") == "30.10.2026"
     )
+
+
+def test_local_datetime_names_weekday_and_local_time(app):
+    from datetime import UTC, datetime
+
+    from app.i18n import local_datetime
+
+    closes = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)
+    assert local_datetime(closes, "Europe/Berlin") == "Mo. 26.10.2026 um 13:00 Uhr"
+
+
+@pytest.mark.parametrize(
+    ("seconds", "text"),
+    [
+        (0, "0 Min."),
+        (1, "1 Min."),  # rounded up, so "0 Min." only shows at the very end
+        (59 * 60, "59 Min."),
+        (2 * 3600 + 5 * 60, "2 Std. 5 Min."),
+        (37 * 3600 + 1, "1 T. 13 Std."),
+        (-30, "0 Min."),
+    ],
+)
+def test_duration(app, seconds, text):
+    from datetime import timedelta
+
+    from app.i18n import duration
+
+    assert duration(timedelta(seconds=seconds)) == text

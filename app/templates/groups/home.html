@@ -4,6 +4,7 @@
   <section class="card">
     <h1>{{ group.name }}</h1>
     <p class="muted">{{ t("groups.graph_coming_soon") }}</p>
+    <p><a class="button" href="{{ url_for('voting.index', group_id=group.id) }}">{{ t("groups.vote_link") }}</a></p>
   </section>
 
   <section class="card">

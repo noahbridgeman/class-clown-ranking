@@ -196,3 +196,26 @@ h2 { font-size: 1.1rem; margin: 0 0 12px; }
 .button-secondary { background: var(--border); }
 
 .button-danger { background: var(--danger); color: #1a0007; }
+
+.ballot-progress { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+
+.vote-buttons { display: flex; gap: 8px; margin: 0 0 0 auto; }
+
+.vote {
+  min-width: 72px;
+  min-height: 44px; /* touch target */
+  padding: 8px 12px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.vote:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.vote-up[aria-pressed="true"] { color: #062417; background: var(--success); border-color: var(--success); }
+
+.vote-down[aria-pressed="true"] { color: #1a0007; background: var(--danger); border-color: var(--danger); }

@@ -1,0 +1,46 @@
+{# Swapped in by HTMX after every vote and refreshed every minute; without JavaScript the forms reload the page. #}
+{% set vote_url = url_for('voting.index', group_id=group.id) %}
+<div id="ballot" hx-get="{{ vote_url }}" hx-trigger="every 60s" hx-swap="outerHTML">
+  {# A full page shows flashes at the top already; HTMX swaps only this block. #}
+  {% if partial and show_flashes %}{% include "partials/flashes.html" %}{% endif %}
+  {% set period = ballot.period %}
+  {% if period %}
+    <p>{{ t("voting.intro") }}</p>
+    <p class="muted">{{ t("voting.anonymous") if period.is_anonymous else t("voting.open_mode") }}</p>
+    <p class="ballot-status">
+      {{ t("voting.closes", at=period.closes_at|local_datetime(group.timezone), remaining=(period.closes_at - ballot.now)|duration) }}
+      <span class="muted">{{ t("voting.change_hint") }}</span>
+    </p>
+    {% if ballot.others %}
+      <p class="ballot-progress"><strong>{{ t("voting.progress", done=ballot.rated, total=ballot.others|length) }}</strong>
+        <span class="muted">{{ t("voting.voters", count=ballot.voters, members=ballot.members) }}</span></p>
+      <ul class="members ballot">
+        {% for member in ballot.others %}
+          {% set name = member_name(member.user) %}
+          {% set current = ballot.own.get(member.user_id) %}
+          {% set url = url_for('voting.cast', group_id=group.id, user_id=member.user_id) %}
+          <li class="member">
+            <svg class="dot" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="{{ member_color(member.color_index) }}"/></svg>
+            <span class="member-name">{{ name }}</span>
+            <form class="vote-buttons" method="post" action="{{ url }}" hx-post="{{ url }}" hx-target="#ballot" hx-swap="outerHTML">
+              {{ form.csrf_token }}
+              {# Pressing the selected button again takes the vote back (VOT-05). #}
+              <button type="submit" name="choice" value="{{ 'none' if current == 1 else 'up' }}"
+                      class="vote vote-up" aria-pressed="{{ 'true' if current == 1 else 'false' }}"
+                      aria-label="{{ t('voting.up_label', name=name) }}">▲ {{ t("voting.up") }}</button>
+              <button type="submit" name="choice" value="{{ 'none' if current == -1 else 'down' }}"
+                      class="vote vote-down" aria-pressed="{{ 'true' if current == -1 else 'false' }}"
+                      aria-label="{{ t('voting.down_label', name=name) }}">▼ {{ t("voting.down") }}</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">{{ t("voting.alone") }}</p>
+    {% endif %}
+  {% elif ballot.next_opens_at %}
+    <p>{{ t("voting.next_window", at=ballot.next_opens_at|local_datetime(group.timezone)) }}</p>
+  {% else %}
+    <p>{{ t("voting.opens_soon") }}</p>
+  {% endif %}
+</div>
