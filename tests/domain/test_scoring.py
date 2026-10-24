@@ -114,6 +114,8 @@ def test_compute_period_is_deterministic():
         pytest.param([(UserId(99), A, 1)], id="non-member voter"),
         pytest.param([(A, B, 0)], id="zero value"),
         pytest.param([(A, B, 2)], id="value out of range"),
+        pytest.param([(A, B, True)], id="bool"),
+        pytest.param([(A, B, 1.0)], id="float"),
         pytest.param([(A, B, 1), (A, B, -1)], id="duplicate"),
     ],
 )
@@ -129,31 +131,77 @@ def test_convert_weekly_to_daily_reference():
     assert daily.k == pytest.approx(0.5 * (1 - 0.95 ** (1 / 7)) / 0.05)
 
 
-@pytest.mark.parametrize(
-    ("k", "d"),
-    [(0.5, 0.95), (0.05, 0.5), (2.0, 0.5), (1.0, 0.99), (0.2, 0.75), (0.7, 1.0)],
-)
+WEEKLY_GRID = list(itertools.product([0.05, 0.1, 0.5, 1.0, 2.0], [0.5, 0.6, 0.9, 0.95, 0.99]))
+
+
+@pytest.mark.parametrize(("k", "d"), WEEKLY_GRID)
 def test_convert_roundtrip_keeps_params_and_equilibrium(k, d):
     weekly = ScoreParams(k=k, d=d)
     daily = scoring.convert_params(weekly, Cadence.WEEKLY, Cadence.DAILY)
     back = scoring.convert_params(daily, Cadence.DAILY, Cadence.WEEKLY)
 
-    assert back.k == pytest.approx(k, rel=1e-9)
-    assert back.d == pytest.approx(d, rel=1e-9)
-    if d < 1:
-        assert daily.k / (1 - daily.d) == pytest.approx(k / (1 - d), rel=1e-9)
+    assert back.k == pytest.approx(k, rel=1e-12)
+    assert back.d == pytest.approx(d, rel=1e-12)
+    assert daily.k / (1 - daily.d) == pytest.approx(k / (1 - d), rel=1e-9)
 
 
-def test_convert_with_d_one_uses_limit():
+def _daily_grid() -> list[ScoreParams]:
+    b = scoring.bounds(Cadence.DAILY, 0.95)
+    grid = []
+    for i in range(5):
+        d = b.d_min + (b.d_max - b.d_min) * i / 4
+        db = scoring.bounds(Cadence.DAILY, d)
+        grid += [ScoreParams(db.k_min + (db.k_max - db.k_min) * j / 4, d) for j in range(5)]
+    return grid
+
+
+@pytest.mark.parametrize("daily", _daily_grid())
+def test_daily_roundtrip_keeps_params_and_validity(daily):
+    weekly = scoring.convert_params(daily, Cadence.DAILY, Cadence.WEEKLY)
+    back = scoring.convert_params(weekly, Cadence.WEEKLY, Cadence.DAILY)
+
+    assert scoring.validate(daily, Cadence.DAILY) == set()
+    assert scoring.validate(weekly, Cadence.WEEKLY) == set()
+    assert back.k == pytest.approx(daily.k, rel=1e-12)
+    assert back.d == pytest.approx(daily.d, rel=1e-12)
+
+
+@pytest.mark.parametrize(("k", "d"), WEEKLY_GRID)
+def test_every_valid_weekly_setting_converts_to_a_valid_daily_one(k, d):
+    daily = scoring.convert_params(ScoreParams(k, d), Cadence.WEEKLY, Cadence.DAILY)
+
+    assert scoring.validate(daily, Cadence.DAILY) == set()
+
+
+@pytest.mark.parametrize(
+    "daily",
+    [
+        pytest.param(ScoreParams(0.3, 0.99), id="weekly K above max"),
+        pytest.param(ScoreParams(0.006, 0.906), id="weekly K below min"),
+        pytest.param(ScoreParams(0.05, 0.9), id="weekly d below min"),
+        pytest.param(ScoreParams(0.01, 0.999), id="weekly d above max"),
+    ],
+)
+def test_daily_is_invalid_exactly_when_its_weekly_equivalent_is(daily):
+    weekly = scoring.convert_params(daily, Cadence.DAILY, Cadence.WEEKLY)
+
+    assert scoring.validate(weekly, Cadence.WEEKLY)
+    assert scoring.validate(daily, Cadence.DAILY) == scoring.validate(weekly, Cadence.WEEKLY)
+
+
+def test_convert_with_d_one_gives_seventh_of_k():
+    """d = 1 is not a valid setting (A11), but the conversion is still exact there."""
     daily = scoring.convert_params(ScoreParams(k=0.7, d=1.0), Cadence.WEEKLY, Cadence.DAILY)
 
-    assert daily == ScoreParams(k=pytest.approx(0.1), d=1.0)
+    assert daily == ScoreParams(k=pytest.approx(0.1, rel=1e-15), d=1.0)
 
 
-def test_convert_with_d_close_to_one_approaches_limit():
-    daily = scoring.convert_params(ScoreParams(k=0.7, d=1 - 1e-12), Cadence.WEEKLY, Cadence.DAILY)
+def test_convert_is_accurate_close_to_d_one():
+    weekly = ScoreParams(k=0.7, d=1 - 1e-12)
+    daily = scoring.convert_params(weekly, Cadence.WEEKLY, Cadence.DAILY)
 
-    assert daily.k == pytest.approx(0.1, rel=1e-3)
+    assert daily.k == pytest.approx(0.1, rel=1e-9)
+    assert scoring.convert_params(daily, Cadence.DAILY, Cadence.WEEKLY).k == pytest.approx(0.7)
 
 
 def test_convert_same_cadence_is_identity():
@@ -161,7 +209,7 @@ def test_convert_same_cadence_is_identity():
 
 
 def test_convert_has_same_effect_over_a_week():
-    """SET-04: a week of daily periods ≈ one weekly period at the equilibrium."""
+    """SET-04: seven daily periods with constant voting equal one weekly period."""
     daily = scoring.convert_params(WEEKLY, Cadence.WEEKLY, Cadence.DAILY)
     eq = WEEKLY.k / (1 - WEEKLY.d)
     start = 0.3 * eq
@@ -174,29 +222,18 @@ def test_convert_has_same_effect_over_a_week():
     assert daily_rating == pytest.approx(weekly_rating)
 
 
-def test_every_valid_weekly_setting_converts_to_a_valid_daily_one():
-    b = scoring.bounds(Cadence.WEEKLY)
-    for k, d in itertools.product(
-        [b.k_min, 0.1, 0.5, 1.0, b.k_max], [b.d_min, 0.6, 0.9, 0.99, b.d_max]
-    ):
-        daily = scoring.convert_params(ScoreParams(k, d), Cadence.WEEKLY, Cadence.DAILY)
-        assert scoring.validate(daily, Cadence.DAILY) == set(), (k, d)
+def test_daily_bounds():
+    b = scoring.bounds(Cadence.DAILY, 0.95 ** (1 / 7))
+    week_sum = sum(0.95 ** (i / 7) for i in range(7))
+
+    assert b.d_min == pytest.approx(0.5 ** (1 / 7))
+    assert b.d_max == pytest.approx(0.99 ** (1 / 7))
+    assert b.k_min == pytest.approx(0.05 / week_sum)
+    assert b.k_max == pytest.approx(2.0 / week_sum)
 
 
-def test_convert_clamps_daily_values_outside_weekly_range():
-    b = scoring.bounds(Cadence.DAILY)
-    weekly = scoring.convert_params(ScoreParams(b.k_max, 1.0), Cadence.DAILY, Cadence.WEEKLY)
-
-    assert weekly == ScoreParams(k=scoring.WEEKLY_BOUNDS.k_max, d=1.0)
-
-
-def test_daily_bounds_are_image_of_weekly_bounds():
-    daily = scoring.bounds(Cadence.DAILY)
-
-    assert daily.d_min == pytest.approx(0.5 ** (1 / 7))
-    assert daily.d_max == 1.0
-    assert daily.k_min == pytest.approx(0.05 / 7)
-    assert daily.k_max == pytest.approx(2.0 * (1 - 0.5 ** (1 / 7)) / 0.5)
+def test_weekly_bounds_do_not_depend_on_d():
+    assert scoring.bounds(Cadence.WEEKLY, 0.5) == scoring.bounds(Cadence.WEEKLY, 0.99)
 
 
 @pytest.mark.parametrize("cadence", list(Cadence))
@@ -209,14 +246,16 @@ def test_default_params_are_valid(cadence):
     [
         (0.5, 0.95, set()),
         (0.05, 0.5, set()),
-        (2.0, 1.0, set()),
+        (2.0, 0.99, set()),
         (0.0, 0.95, {"k"}),
         (-0.1, 0.95, {"k"}),
         (2.01, 0.95, {"k"}),
         (0.5, 0.0, {"d"}),
         (0.5, 0.49, {"d"}),
+        (0.5, 1.0, {"d"}),
         (0.5, 1.01, {"d"}),
         (math.nan, math.inf, {"k", "d"}),
+        (0.5, math.nan, {"d"}),
     ],
 )
 def test_validate_weekly(k, d, invalid):
@@ -226,6 +265,7 @@ def test_validate_weekly(k, d, invalid):
 def test_validate_daily_uses_daily_bounds():
     assert scoring.validate(ScoreParams(0.5, 0.95), Cadence.DAILY) == {"k"}
     assert scoring.validate(ScoreParams(0.1, 0.8), Cadence.DAILY) == {"d"}
+    assert scoring.validate(ScoreParams(0.1, 1.0), Cadence.DAILY) == {"d"}
 
 
 def test_simulate_matches_step_by_step():

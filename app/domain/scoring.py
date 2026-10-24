@@ -38,9 +38,11 @@ class MemberResult:
 # Starting values from the requirements; calibrated in M9.
 DEFAULT_WEEKLY_PARAMS = ScoreParams(k=0.5, d=0.95)
 
-# SET-05 (assumption A11). Daily bounds are the image of the weekly bounds under
-# convert_params, so every valid weekly setting converts to a valid daily one.
-WEEKLY_BOUNDS = ParamBounds(k_min=0.05, k_max=2.0, d_min=0.5, d_max=1.0)
+# SET-05 (assumption A11). d stays below 1 so that the decay always applies (SCO-05)
+# and the equilibrium K / (1 − d) stays finite. Daily bounds follow from these.
+WEEKLY_BOUNDS = ParamBounds(k_min=0.05, k_max=2.0, d_min=0.5, d_max=0.99)
+# A value converted to the other cadence may miss a bound by a rounding error.
+BOUNDS_REL_TOL = 1e-9
 
 
 def net(ups: int, downs: int) -> float:
@@ -107,7 +109,7 @@ def _check_vote(
     members: Mapping[UserId, float],
     seen: set[tuple[UserId, UserId]],
 ) -> None:
-    if value not in VOTE_VALUES:
+    if type(value) is not int or value not in VOTE_VALUES:
         raise ValueError(f"vote value must be -1 or 1, got {value!r}")
     if voter == target:
         raise ValueError(f"user {voter} voted for themselves")  # VOT-03
@@ -121,54 +123,53 @@ def _check_vote(
 def convert_params(params: ScoreParams, src: Cadence, dst: Cadence) -> ScoreParams:
     """SCO-07: keeps the equilibrium K / (1 − d) when the cadence changes.
 
-    The result is clamped to the bounds of `dst`; that only changes values that
-    sit at the edge of the daily range (SET-04 lets the admin adjust afterwards).
+    d_day = d_week^(1/7) and K_day = K_week · (1 − d_day) / (1 − d_week), written as
+    K_week / (1 + d_day + … + d_day⁶) so that it stays exact near and at d = 1.
     """
     if src == dst:
         return params
-    exponent = 1 / DAYS_PER_WEEK if src == Cadence.WEEKLY else DAYS_PER_WEEK
-    d_new = params.d**exponent
-    k_new = params.k * _equilibrium_ratio(d_new, params.d, src)
-    return _clamp(ScoreParams(k=k_new, d=d_new), bounds(dst))
+    if src == Cadence.WEEKLY:
+        d_day = params.d ** (1 / DAYS_PER_WEEK)
+        return ScoreParams(k=params.k / _week_sum(d_day), d=d_day)
+    return ScoreParams(k=params.k * _week_sum(params.d), d=params.d**DAYS_PER_WEEK)
 
 
-def _equilibrium_ratio(d_new: float, d_old: float, src: Cadence) -> float:
-    """(1 − d_new) / (1 − d_old), with the limit for d = 1."""
-    if d_old == 1.0 or d_new == 1.0:
-        return 1 / DAYS_PER_WEEK if src == Cadence.WEEKLY else DAYS_PER_WEEK
-    return (1 - d_new) / (1 - d_old)
+def _week_sum(d_day: float) -> float:
+    """1 + x + … + x⁶ = (1 − x⁷) / (1 − x) for x = d_day."""
+    return math.fsum(d_day**i for i in range(DAYS_PER_WEEK))
 
 
-def bounds(cadence: Cadence) -> ParamBounds:
-    """SET-05: allowed range for K and d."""
-    if cadence == Cadence.WEEKLY:
-        return WEEKLY_BOUNDS
+def bounds(cadence: Cadence, d: float) -> ParamBounds:
+    """SET-05: allowed range for d, and for K given d.
+
+    Daily values are valid exactly when their weekly equivalent is, so converting
+    a valid setting in either direction always gives a valid one (A11). The daily
+    K range therefore depends on d.
+    """
     w = WEEKLY_BOUNDS
-    d_min = w.d_min ** (1 / DAYS_PER_WEEK)
-    return ParamBounds(
-        k_min=w.k_min / DAYS_PER_WEEK,
-        k_max=w.k_max * (1 - d_min) / (1 - w.d_min),
-        d_min=d_min,
-        d_max=w.d_max,
-    )
+    if cadence == Cadence.WEEKLY:
+        return w
+    d_min, d_max = w.d_min ** (1 / DAYS_PER_WEEK), w.d_max ** (1 / DAYS_PER_WEEK)
+    d_for_k = min(max(d, d_min), d_max) if math.isfinite(d) else d_max
+    week_sum = _week_sum(d_for_k)
+    return ParamBounds(k_min=w.k_min / week_sum, k_max=w.k_max / week_sum, d_min=d_min, d_max=d_max)
 
 
 def validate(params: ScoreParams, cadence: Cadence) -> set[str]:
     """Names of the fields ("k", "d") outside the bounds; empty if valid."""
-    b = bounds(cadence)
+    b = bounds(cadence, params.d)
     invalid = set()
-    if not (math.isfinite(params.k) and b.k_min <= params.k <= b.k_max):
-        invalid.add("k")
-    if not (math.isfinite(params.d) and b.d_min <= params.d <= b.d_max):
+    if not _within(params.d, b.d_min, b.d_max):
         invalid.add("d")
+    if not _within(params.k, b.k_min, b.k_max):
+        invalid.add("k")
     return invalid
 
 
-def _clamp(params: ScoreParams, b: ParamBounds) -> ScoreParams:
-    return ScoreParams(
-        k=min(max(params.k, b.k_min), b.k_max),
-        d=min(max(params.d, b.d_min), b.d_max),
-    )
+def _within(value: float, low: float, high: float) -> bool:
+    """low ≤ value ≤ high, tolerating rounding from a conversion."""
+    tol = BOUNDS_REL_TOL * max(abs(low), abs(high))
+    return math.isfinite(value) and low - tol <= value <= high + tol
 
 
 def default_params(cadence: Cadence) -> ScoreParams:
