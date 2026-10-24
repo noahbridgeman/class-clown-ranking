@@ -76,7 +76,7 @@ def revoke(group_id: int, invitation_id: int) -> Page:
 def show(token: str) -> Page:
     invitation = invitations.find_open(token)
     if invitation is None:
-        return render_template("invitations/invalid.html"), 400
+        return _not_open(token)
     if current_user.is_authenticated and current_user.email != invitation.email:
         return _wrong_account(token)
     return render_template("invitations/accept.html", invitation=invitation, form=ConfirmForm())
@@ -92,13 +92,22 @@ def accept(token: str) -> Page:
     except invitations.WrongAccount:
         return _wrong_account(token)
     if accepted is None:
-        return render_template("invitations/invalid.html"), 400
+        return _not_open(token)
     if current is None:
         # The invitation link proves the address, so it logs in like a login link.
         session.clear()
         login_user(accepted.user, remember=True)
     flash(t("invitations.joined", group=accepted.group.name), "success")
     return redirect(url_for("groups.home", group_id=accepted.group.id))
+
+
+def _not_open(token: str) -> Page:
+    """Members who open their used link again just land in the group."""
+    if current_user.is_authenticated:
+        group = invitations.joined_group(token, current_user._get_current_object())
+        if group is not None:
+            return redirect(url_for("groups.home", group_id=group.id))
+    return render_template("invitations/invalid.html"), 400
 
 
 def _wrong_account(token: str) -> tuple[str, int]:
@@ -134,4 +143,5 @@ def _render_list(form: EmailForm, error: str | None = None, partial: bool = Fals
         error=error,
         max_length=EMAIL_MAX_LENGTH,
         action_form=ConfirmForm(),
+        partial=partial,
     )

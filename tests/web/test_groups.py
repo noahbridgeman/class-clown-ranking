@@ -85,6 +85,16 @@ class TestManageMembers:
         assert "Bo wurde aus der Gruppe entfernt." in client.get(response.location).get_data(True)
         assert membership.active_membership(group.id, bo.id) is None
 
+    def test_flash_names_deleted_accounts_as_such(self, login_as):
+        admin = make_user()
+        group = make_group(admin)
+        gone = add_member(group, make_user(display_name=None))
+        client = login_as(admin)
+        client.post(f"/g/{group.id}/members/{gone.id}/remove")
+        html = client.get(f"/g/{group.id}/").get_data(True)
+        assert "Gelöschtes Mitglied wurde aus der Gruppe entfernt." in html
+        assert "None" not in html
+
     def test_remove_self_is_refused_with_message(self, login_as):
         admin = make_user()
         group = make_group(admin)
@@ -120,7 +130,7 @@ class TestLeave:
         group = make_group(name="Runde")
         bo = add_member(group)
         client = login_as(bo)
-        assert "Du kannst jederzeit" in client.get(f"/g/{group.id}/leave").get_data(True)
+        assert "Mit einer neuen Einladung" in client.get(f"/g/{group.id}/leave").get_data(True)
         response = client.post(f"/g/{group.id}/leave")
         assert response.location == "/"
         assert "verlassen" in client.get("/").get_data(True)

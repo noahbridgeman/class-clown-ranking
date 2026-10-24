@@ -54,4 +54,7 @@ def _render(title: str, text: str, error: HTTPException | None = None) -> tuple[
     # Boosted navigation expects a whole page.
     fragment = request.headers.get("HX-Request") and not request.headers.get("HX-Boosted")
     template = "errors/_message.html" if fragment else "errors/page.html"
+    if fragment:
+        # Show the error in the message area instead of replacing the target, e.g. a list.
+        headers += [("HX-Retarget", "#messages"), ("HX-Reswap", "innerHTML")]
     return render_template(template, title=title, text=text), status, headers

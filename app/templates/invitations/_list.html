@@ -1,6 +1,7 @@
 {# Swapped in by HTMX after every action; without JavaScript the forms reload the page. #}
 <div id="invitations">
-  {% include "partials/flashes.html" %}
+  {# A full page shows flashes at the top already; HTMX swaps only this block. #}
+  {% if partial %}{% include "partials/flashes.html" %}{% endif %}
   <form method="post" action="{{ url_for('invitations.create', group_id=group.id) }}" class="form"
         hx-post="{{ url_for('invitations.create', group_id=group.id) }}"
         hx-target="#invitations" hx-swap="outerHTML">

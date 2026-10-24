@@ -5,6 +5,7 @@ from flask import current_app
 from app.i18n import t
 from app.models import Group, Invitation, User
 from app.services import mail
+from app.services.text import member_name
 
 
 def admin_granted(user: User, group: Group) -> bool:
@@ -22,7 +23,7 @@ def admin_granted(user: User, group: Group) -> bool:
 
 def invitation(invitation: Invitation, link: str) -> bool:
     days = current_app.config["INVITATION_LIFETIME"].days
-    inviter = invitation.invited_by.display_name or t("groups.deleted_member")
+    inviter = member_name(invitation.invited_by)
     return mail.try_send(
         mail.Mail(
             to=invitation.email,

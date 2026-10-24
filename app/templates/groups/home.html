@@ -14,7 +14,7 @@
         <li class="member{% if is_me %} member-me{% endif %}">
           <svg class="dot" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="{{ member_color(member.color_index) }}"/></svg>
           <span class="member-name">
-            {% with user=member.user %}{% include "partials/member_name.html" %}{% endwith %}
+            {{ member_name(member.user) }}
             {% if is_me %}<span class="muted">({{ t("groups.you") }})</span>{% endif %}
           </span>
           {% if member.user_id == group.admin_user_id %}<span class="badge">{{ t("groups.admin_badge") }}</span>{% endif %}
@@ -28,7 +28,7 @@
               </form>
               <form method="post" action="{{ url_for('groups.remove_member', group_id=group.id, user_id=member.user_id) }}">
                 {{ form.csrf_token }}
-                <p class="muted">{% with user=member.user %}{{ t("groups.remove_hint", name=(user.display_name or t("groups.deleted_member"))) }}{% endwith %}</p>
+                <p class="muted">{{ t("groups.remove_hint", name=member_name(member.user)) }}</p>
                 <button type="submit" class="button button-danger">{{ t("groups.remove") }}</button>
               </form>
             </details>

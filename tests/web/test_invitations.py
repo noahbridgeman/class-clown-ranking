@@ -1,5 +1,5 @@
 import re
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -8,7 +8,7 @@ from app.extensions import db
 from app.models import User
 from app.services import invitations, membership
 from app.services.mail import Mail
-from tests.factories import make_group, make_user
+from tests.factories import add_member, make_group, make_user
 
 LINK = re.compile(r"http://localhost:5000(/invite/\S+)")
 
@@ -47,9 +47,8 @@ class TestAdminPage:
         client = login_as(admin)
         response = client.post(f"/g/{group.id}/invitations", data={"email": "neu@example.org"})
         assert response.location == f"/g/{group.id}/invitations"
-        assert "Einladung an neu@example.org verschickt." in client.get(response.location).get_data(
-            True
-        )
+        html = client.get(response.location).get_data(True)
+        assert html.count("Einladung an neu@example.org verschickt.") == 1
         assert [mail.to for mail in outbox] == ["neu@example.org"]
 
     def test_invite_with_htmx_returns_the_list(self, group, admin, login_as):
@@ -63,7 +62,7 @@ class TestAdminPage:
         assert response.status_code == 200
         assert html.lstrip().startswith('<div id="invitations">') or 'id="invitations"' in html
         assert "<html" not in html
-        assert "verschickt" in html
+        assert html.count("verschickt") == 1
         assert 'value=""' in html  # the field is cleared for the next address
 
     def test_htmx_error_keeps_the_input(self, group, admin, login_as):
@@ -115,6 +114,29 @@ class TestAdminPage:
         assert client.post(f"/g/{group.id}/invitations/{foreign.id}/revoke").status_code == 404
         assert foreign.revoked_at is None
 
+    def test_expiry_date_is_shown_in_group_time_across_the_dst_switch(
+        self, group, admin, login_as, clock
+    ):
+        # 23:30 UTC on 24 Oct + 7 days = 23:30 UTC on 31 Oct, already 1 Nov in Berlin (UTC+1).
+        clock.set(datetime(2026, 10, 24, 23, 30, tzinfo=UTC))
+        invitations.invite(group, admin, "neu@example.org")
+        html = login_as(admin).get(f"/g/{group.id}/invitations").get_data(True)
+        assert "offen bis 01.11.2026" in html
+
+    def test_lost_admin_role_shows_error_without_replacing_the_list(self, group, admin, login_as):
+        from app.services import groups
+
+        invitation = invitations.invite(group, admin, "neu@example.org").invitation
+        client = login_as(admin)
+        groups.transfer_admin(group, admin, add_member(group).id)  # e.g. in another tab
+        response = client.post(
+            f"/g/{group.id}/invitations/{invitation.id}/revoke", headers={"HX-Request": "true"}
+        )
+        assert response.status_code == 403
+        assert response.headers["HX-Retarget"] == "#messages"
+        assert response.headers["HX-Reswap"] == "innerHTML"
+        assert "Kein Zugriff" in response.get_data(True)
+
 
 class TestAcceptAsGuest:
     def test_link_logs_in_creates_account_and_joins(self, group, admin, client, outbox):
@@ -164,6 +186,27 @@ class TestAcceptAsGuest:
         client.post(invite_path(outbox))
         with client.session_transaction() as session:
             assert "leftover" not in session
+
+
+class TestUsedLinkOpenedAgain:
+    def test_member_lands_in_the_group(self, group, admin, client, outbox):
+        invitations.invite(group, admin, "neu@example.org")
+        client.post(invite_path(outbox))
+        response = client.get(invite_path(outbox))
+        assert response.location == f"/g/{group.id}/"
+        assert client.post(invite_path(outbox)).location == f"/g/{group.id}/"
+
+    def test_former_member_sees_invalid(self, group, admin, client, outbox):
+        invitations.invite(group, admin, "neu@example.org")
+        client.post(invite_path(outbox))
+        user = db.session.scalar(select(User).where(User.email == "neu@example.org"))
+        membership.leave(group, user)
+        assert client.get(invite_path(outbox)).status_code == 400
+
+    def test_someone_else_sees_invalid(self, group, admin, login_as, outbox, app):
+        invitations.invite(group, admin, "neu@example.org")
+        app.test_client().post(invite_path(outbox))
+        assert login_as(make_user()).get(invite_path(outbox)).status_code == 400
 
 
 class TestAcceptWhileLoggedIn:

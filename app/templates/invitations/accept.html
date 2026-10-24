@@ -4,9 +4,7 @@
 {% block content %}
   <section class="card">
     <h1>{{ title }}</h1>
-    {% with user=invitation.invited_by %}
-      <p>{{ t("invitations.accept_text", inviter=(user.display_name or t("groups.deleted_member")), group=invitation.group.name) }}</p>
-    {% endwith %}
+    <p>{{ t("invitations.accept_text", inviter=member_name(invitation.invited_by), group=invitation.group.name) }}</p>
     {% if not current_user.is_authenticated %}<p class="muted">{{ t("invitations.accept_login_hint") }}</p>{% endif %}
     <form method="post" class="form">
       {{ form.csrf_token }}

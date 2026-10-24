@@ -26,7 +26,7 @@ class IsolatedClient(FlaskClient):
     request share a transaction. Commit test data before a request, since a rollback in
     the request would discard it. ``with client:`` does not work, because its contexts
     would be opened and closed in different contextvars contexts. Tests of real
-    concurrency (M4: parallel tick runs) need a file database with NullPool.
+    concurrency need a file database with NullPool, see tests/invariants/test_concurrency.py.
     """
 
     def open(self, *args: Any, **kwargs: Any) -> Any:

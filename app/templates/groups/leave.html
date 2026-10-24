@@ -9,9 +9,7 @@
     {% else %}
       <p>{{ t("groups.leave_text") }}</p>
       {% if is_admin %}
-        {% with user=successor.user %}
-          <p>{{ t("groups.leave_admin_successor", name=(user.display_name or t("groups.deleted_member"))) }}</p>
-        {% endwith %}
+        <p>{{ t("groups.leave_admin_successor", name=member_name(successor.user)) }}</p>
       {% endif %}
     {% endif %}
     <form method="post" action="{{ url_for('groups.leave', group_id=group.id) }}" class="form">

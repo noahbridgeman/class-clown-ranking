@@ -2,6 +2,8 @@
 
 import unicodedata
 
+from app.i18n import t
+from app.models import User
 from app.services.errors import InvalidInput
 
 # Invisible or layout-changing characters: controls, format characters such as bidi
@@ -35,3 +37,8 @@ def _forbidden_in_name(char: str) -> bool:
 def _visible(char: str) -> bool:
     # Letters, numbers, punctuation, symbols; marks and spaces alone show nothing.
     return unicodedata.category(char)[0] in "LNPS" and char not in _BLANK_LETTERS
+
+
+def member_name(user: User) -> str:
+    """The display name, or a placeholder once the account is deleted (NFA-05)."""
+    return user.display_name or t("groups.deleted_member")

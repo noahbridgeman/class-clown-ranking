@@ -103,6 +103,12 @@ class TestErrorPages:
         assert response.status_code == 404
         assert "Seite nicht gefunden" in html
         assert "<html" not in html
+        assert response.headers["HX-Retarget"] == "#messages"
+
+    def test_full_pages_have_the_message_area(self, client):
+        response = client.get("/gibt-es-nicht")
+        assert 'id="messages"' in response.get_data(as_text=True)
+        assert "HX-Retarget" not in response.headers
 
     def test_http_error_keeps_its_status(self, app):
         @app.get("/teapot")
