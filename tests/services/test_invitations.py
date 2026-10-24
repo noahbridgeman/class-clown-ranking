@@ -172,11 +172,30 @@ class TestRateLimits:
         assert error.value.message_key == "invitations.rate_limited"
         assert len(outbox) == 5
 
-    def test_address_limit_spans_groups(self, admin, outbox):
+    def test_address_limit_spans_groups_and_inviters(self, app, outbox):
         for number in range(5):
-            invitations.invite(make_group(admin, f"G{number}"), admin, "opfer@example.org")
+            owner = make_user()
+            invitations.invite(make_group(owner, f"G{number}"), owner, "opfer@example.org")
+        owner = make_user()
         with pytest.raises(InvalidInput):
-            invitations.invite(make_group(admin, "G5"), admin, "opfer@example.org")
+            invitations.invite(make_group(owner, "G5"), owner, "opfer@example.org")
+
+    def test_inviter_limit_spans_their_groups(self, admin, app):
+        app.config["INVITATIONS_PER_INVITER_PER_DAY"] = 4
+        first, second = make_group(admin, "Eins"), make_group(admin, "Zwei")
+        for number in range(2):
+            invitations.invite(first, admin, f"a{number}@example.org")
+            invitations.invite(second, admin, f"b{number}@example.org")
+        with pytest.raises(InvalidInput) as error:
+            invitations.invite(make_group(admin, "Drei"), admin, "c@example.org")
+        assert error.value.message_key == "invitations.rate_limited"
+
+    def test_inviter_limit_does_not_bind_a_co_admin(self, admin, app, group):
+        app.config["INVITATIONS_PER_INVITER_PER_DAY"] = 1
+        invitations.invite(group, admin, "a@example.org")
+        heir = add_member(group)
+        groups.transfer_admin(group, admin, heir.id)
+        assert invitations.invite(group, heir, "b@example.org").invitation
 
     def test_address_limit_resets_after_a_day(self, group, admin, clock):
         for _ in range(5):
@@ -195,6 +214,15 @@ class TestRateLimits:
 
 
 class TestResendAndRevoke:
+    def test_resend_names_the_current_admin(self, group, admin, outbox, clock):
+        invitation = invitations.invite(group, admin, "neu@example.org").invitation
+        heir = add_member(group, make_user(display_name="Bo"))
+        groups.transfer_admin(group, admin, heir.id)
+        clock.advance(timedelta(minutes=10))
+        invitations.resend(group, heir, invitation.id)
+        assert invitation.invited_by_user_id == heir.id
+        assert outbox[-1].subject.startswith("Bo lädt dich")
+
     def test_resend_replaces_the_link(self, group, admin, outbox, clock):
         invitation = invitations.invite(group, admin, "neu@example.org").invitation
         old = token(outbox)

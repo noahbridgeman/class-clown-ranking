@@ -30,12 +30,15 @@ def _enum(enum: type[StrEnum], name: str) -> Enum:
 
 class Group(db.Model):
     __tablename__ = "groups"
+    __table_args__ = (Index(None, "created_by_user_id", "created_at"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     # All settings columns hold the effective values (SET-01 and A6 from M6 on).
     name: Mapped[str] = mapped_column(String(GROUP_NAME_MAX_LENGTH))
     # Exactly one admin, enforced by the column itself (ROL-01).
     admin_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    # Never changes, unlike the admin; limits new groups per person (A16).
+    created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     cadence: Mapped[Cadence] = mapped_column(_enum(Cadence, "cadence"))
     is_anonymous: Mapped[bool]
     timezone: Mapped[str] = mapped_column(String(TIMEZONE_MAX_LENGTH))

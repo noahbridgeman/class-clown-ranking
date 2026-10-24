@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 from sqlalchemy import func, select
 
@@ -47,6 +49,25 @@ class TestCreate:
             groups.create_group(make_user(), raw)
         assert error.value.message_key == key
         assert count(Group) == 0
+
+    def test_three_new_groups_per_day(self, app, clock):
+        user = make_user()
+        for number in range(3):
+            groups.create_group(user, f"G{number}")
+        with pytest.raises(InvalidInput) as error:
+            groups.create_group(user, "G3")
+        assert error.value.message_key == "groups.rate_limited"
+        clock.advance(timedelta(days=1))
+        assert groups.create_group(user, "G3")
+
+    def test_creation_limit_follows_the_creator_not_the_admin(self, app):
+        user = make_user()
+        for number in range(3):
+            group = groups.create_group(user, f"G{number}")
+            heir = add_member(group)
+            groups.transfer_admin(group, user, heir.id)
+        with pytest.raises(InvalidInput):
+            groups.create_group(user, "G3")
 
     def test_sixty_characters_are_fine(self, app):
         assert groups.create_group(make_user(), "x" * 60).name == "x" * 60
@@ -153,3 +174,32 @@ class TestDelete:
     def test_foreign_keys_are_enforced(self, app):
         """Cascades rely on SQLite's foreign key support being switched on."""
         assert db.session.execute(db.text("PRAGMA foreign_keys")).scalar() == 1
+
+
+class TestLeaveGroup:
+    def test_member_leaves(self, app):
+        group = make_group()
+        bo = add_member(group)
+        assert groups.leave_group(group, bo) is groups.LeaveResult.LEFT
+        assert membership.active_membership(group.id, bo.id) is None
+
+    def test_last_member_needs_confirmation(self, app):
+        admin = make_user()
+        group = make_group(admin, name="Die Runde")
+        with pytest.raises(InvalidInput) as error:
+            groups.leave_group(group, admin, "falsch")
+        assert error.value.message_key == "groups.confirmation_mismatch"
+        assert db.session.get(Group, group.id) is not None
+
+    def test_last_member_leaving_deletes_the_group(self, app):
+        admin = make_user()
+        group = make_group(admin, name="Die Runde")
+        group_id = group.id
+        result = groups.leave_group(group, admin, " Die  Runde ")
+        assert result is groups.LeaveResult.GROUP_DELETED
+        db.session.expire_all()
+        assert db.session.get(Group, group_id) is None
+
+    def test_non_member(self, app):
+        with pytest.raises(NotFound):
+            groups.leave_group(make_group(), make_user())

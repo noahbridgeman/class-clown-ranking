@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from flask import current_app
-from sqlalchemy import func, select, update
+from sqlalchemy import ColumnElement, and_, func, select, update
 
 from app.clock import get_clock
 from app.extensions import db
 from app.models import Group, Invitation, InvitationStatus, Membership, User
 from app.services import auth, membership, notifications, tokens
 from app.services.errors import InvalidInput, NotFound
+from app.services.locks import lock_group
 
 TOKEN_SALT = "invitation"
 RATE_LIMIT_WINDOW = timedelta(days=1)
@@ -45,8 +46,9 @@ def invitations_of(group: Group) -> list[Invitation]:
 
 def invite(group: Group, actor: User, raw_email: str) -> Sent:
     """INV-01. An expired invitation to the same address is sent again instead."""
-    membership.require_admin(group, actor)
     email = auth.normalize_email(raw_email)
+    lock_group(group)
+    membership.require_admin(group, actor)
     now = get_clock().now()
     if _is_active_member(group, email):
         raise InvalidInput("invitations.already_member")
@@ -54,9 +56,9 @@ def invite(group: Group, actor: User, raw_email: str) -> Sent:
     if existing is not None:
         if existing.status(now) is InvitationStatus.OPEN:
             raise InvalidInput("invitations.already_invited")
-        return _send_again(group, existing, now)
+        return _send_again(group, existing, actor, now)
     _check_room(group, now)
-    _check_new_invitation_limits(group, email, now)
+    _check_new_invitation_limits(group, actor, email, now)
     nonce = tokens.new_nonce()
     invitation = Invitation(
         group_id=group.id,
@@ -75,30 +77,51 @@ def invite(group: Group, actor: User, raw_email: str) -> Sent:
 
 def resend(group: Group, actor: User, invitation_id: int) -> Sent:
     """INV-04: a new link replaces the old one, valid for the full lifetime again."""
+    lock_group(group)
     membership.require_admin(group, actor)
     invitation = _pending_or_not_found(group, invitation_id)
-    return _send_again(group, invitation, get_clock().now())
+    return _send_again(group, invitation, actor, get_clock().now())
 
 
 def revoke(group: Group, actor: User, invitation_id: int) -> None:
     """INV-04: the link stops working at once."""
+    lock_group(group)
     membership.require_admin(group, actor)
     invitation = _pending_or_not_found(group, invitation_id)
-    invitation.revoked_at = get_clock().now()
+    result = db.session.execute(
+        update(Invitation)
+        .where(_pending(), Invitation.id == invitation.id)
+        .values(revoked_at=get_clock().now())
+        .execution_options(synchronize_session=False)
+    )
+    if result.rowcount != 1:
+        raise InvalidInput("invitations.not_pending")
     db.session.commit()
 
 
 def find_open(link_token: str) -> Invitation | None:
     """The invitation behind a link, if it can still be accepted."""
-    nonce = tokens.unsign(link_token, TOKEN_SALT)
-    if nonce is None:
-        return None
-    invitation = db.session.scalar(
-        select(Invitation).where(Invitation.nonce_hash == tokens.hash_nonce(nonce))
-    )
+    invitation = _find(link_token)
     if invitation is None or invitation.status(get_clock().now()) is not InvitationStatus.OPEN:
         return None
     return invitation
+
+
+def joined_group(link_token: str, user: User) -> Group | None:
+    """The link's group, if the user is already in it, e.g. when opening a used link again."""
+    invitation = _find(link_token)
+    if invitation is None or membership.active_membership(invitation.group_id, user.id) is None:
+        return None
+    return invitation.group
+
+
+def _find(link_token: str) -> Invitation | None:
+    nonce = tokens.unsign(link_token, TOKEN_SALT)
+    if nonce is None:
+        return None
+    return db.session.scalar(
+        select(Invitation).where(Invitation.nonce_hash == tokens.hash_nonce(nonce))
+    )
 
 
 def accept(link_token: str, current: User | None) -> Accepted | None:
@@ -112,6 +135,10 @@ def accept(link_token: str, current: User | None) -> Accepted | None:
         return None
     if current is not None and current.email != invitation.email:
         raise WrongAccount
+    try:
+        lock_group(invitation.group)
+    except NotFound:
+        return None
     now = get_clock().now()
     if not _claim(invitation, now):
         return None
@@ -132,12 +159,7 @@ def _claim(invitation: Invitation, now: datetime) -> bool:
     """Marks it accepted. The conditional UPDATE lets only one of two racing requests win."""
     result = db.session.execute(
         update(Invitation)
-        .where(
-            Invitation.id == invitation.id,
-            Invitation.accepted_at.is_(None),
-            Invitation.revoked_at.is_(None),
-            Invitation.expires_at > now,
-        )
+        .where(_pending(), Invitation.id == invitation.id, Invitation.expires_at > now)
         .values(accepted_at=now)
         .execution_options(synchronize_session=False)
     )
@@ -147,7 +169,8 @@ def _claim(invitation: Invitation, now: datetime) -> bool:
     return True
 
 
-def _send_again(group: Group, invitation: Invitation, now: datetime) -> Sent:
+def _send_again(group: Group, invitation: Invitation, actor: User, now: datetime) -> Sent:
+    """The mail names whoever sends it now, e.g. the new admin after a handover."""
     config = current_app.config
     if invitation.send_count >= config["INVITATION_MAX_SENDS"]:
         raise InvalidInput("invitations.rate_limited")
@@ -161,6 +184,7 @@ def _send_again(group: Group, invitation: Invitation, now: datetime) -> Sent:
     invitation.last_sent_at = now
     invitation.expires_at = now + _lifetime()
     invitation.send_count += 1
+    invitation.invited_by_user_id = actor.id
     db.session.commit()
     return Sent(invitation, notifications.invitation(invitation, link(nonce)))
 
@@ -172,26 +196,31 @@ def _check_room(group: Group, now: datetime) -> None:
         raise InvalidInput("invitations.group_full", max=current_app.config["MAX_GROUP_SIZE"])
 
 
-def _check_new_invitation_limits(group: Group, email: str, now: datetime) -> None:
-    """NFA-09: revoking and inviting again must not turn into a way to spam an address."""
+def _check_new_invitation_limits(group: Group, actor: User, email: str, now: datetime) -> None:
+    """NFA-09 (A16): per group, per inviter across all their groups, and per address.
+
+    Revoking and inviting again must not become a way to spam an address, and many
+    groups must not multiply what one account can send.
+    """
     since = now - RATE_LIMIT_WINDOW
-    per_group = _count(Invitation.group_id == group.id, Invitation.created_at > since)
-    per_address = _count(Invitation.email == email, Invitation.created_at > since)
-    config = current_app.config
-    if (
-        per_group >= config["INVITATIONS_PER_GROUP_PER_DAY"]
-        or per_address >= config["INVITATIONS_PER_ADDRESS_PER_DAY"]
-    ):
-        raise InvalidInput("invitations.rate_limited")
+    recent = Invitation.created_at > since
+    limits = [
+        (Invitation.group_id == group.id, "INVITATIONS_PER_GROUP_PER_DAY"),
+        (Invitation.invited_by_user_id == actor.id, "INVITATIONS_PER_INVITER_PER_DAY"),
+        (Invitation.email == email, "INVITATIONS_PER_ADDRESS_PER_DAY"),
+    ]
+    for condition, limit in limits:
+        if _count(condition, recent) >= current_app.config[limit]:
+            raise InvalidInput("invitations.rate_limited")
 
 
 def _open_count(group: Group, now: datetime) -> int:
-    return _count(
-        Invitation.group_id == group.id,
-        Invitation.accepted_at.is_(None),
-        Invitation.revoked_at.is_(None),
-        Invitation.expires_at > now,
-    )
+    return _count(Invitation.group_id == group.id, _pending(), Invitation.expires_at > now)
+
+
+def _pending() -> ColumnElement[bool]:
+    """Neither accepted nor revoked; open or expired depending on the time."""
+    return and_(Invitation.accepted_at.is_(None), Invitation.revoked_at.is_(None))
 
 
 def _count(*conditions: object) -> int:
@@ -202,12 +231,7 @@ def _latest_pending(group: Group, email: str) -> Invitation | None:
     """The open or expired invitation to this address; there is at most one."""
     return db.session.scalar(
         select(Invitation)
-        .where(
-            Invitation.group_id == group.id,
-            Invitation.email == email,
-            Invitation.accepted_at.is_(None),
-            Invitation.revoked_at.is_(None),
-        )
+        .where(Invitation.group_id == group.id, Invitation.email == email, _pending())
         .order_by(Invitation.created_at.desc())
     )
 
