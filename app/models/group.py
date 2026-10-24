@@ -86,6 +86,42 @@ class MembershipEvent(db.Model):
     actor_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
 
+class SettingField(StrEnum):
+    NAME = "name"
+    CADENCE = "cadence"
+    IS_ANONYMOUS = "is_anonymous"
+    TIMEZONE = "timezone"
+    K = "k"
+    D = "d"
+
+
+SETTING_VALUE_MAX_LENGTH = 64  # the longest is a timezone name
+
+
+class SettingsChange(db.Model):
+    """One change of one setting (SET-03). Pending until the next window opens (SET-01, E1).
+
+    Values are stored as text: see app.services.settings for the format.
+    """
+
+    __tablename__ = "settings_changes"
+    __table_args__ = (Index(None, "group_id", "applied_at"), Index(None, "group_id", "changed_at"))
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    group_id: Mapped[int] = mapped_column(ForeignKey("groups.id", **GROUP_FK))
+    changed_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    changed_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    field: Mapped[SettingField] = mapped_column(text_enum(SettingField, "field"))
+    old_value: Mapped[str] = mapped_column(String(SETTING_VALUE_MAX_LENGTH))
+    new_value: Mapped[str] = mapped_column(String(SETTING_VALUE_MAX_LENGTH))
+    applied_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # NULL = pending
+    applied_in_period_id: Mapped[int | None] = mapped_column(
+        ForeignKey("periods.id", ondelete="SET NULL")
+    )
+
+    changed_by: Mapped[User] = relationship(foreign_keys=[changed_by_user_id])
+
+
 class InvitationStatus(StrEnum):
     OPEN = "open"
     EXPIRED = "expired"

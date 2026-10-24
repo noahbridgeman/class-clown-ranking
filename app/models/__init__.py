@@ -8,6 +8,8 @@ from app.models.group import (
     Membership,
     MembershipEvent,
     MembershipEventKind,
+    SettingField,
+    SettingsChange,
 )
 from app.models.period import (
     ImmutableError,
@@ -31,6 +33,8 @@ __all__ = [
     "Period",
     "PeriodResult",
     "PeriodStatus",
+    "SettingField",
+    "SettingsChange",
     "User",
     "Vote",
 ]

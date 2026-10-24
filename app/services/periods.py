@@ -17,7 +17,7 @@ from app.domain import schedule, scoring
 from app.domain.types import UserId
 from app.extensions import db
 from app.models import Group, Period, PeriodResult, PeriodStatus, Vote
-from app.services import auth, membership
+from app.services import auth, membership, settings
 from app.services.errors import NotFound
 from app.services.locks import lock_group
 
@@ -121,29 +121,32 @@ def _votes(period: Period) -> list[tuple[UserId, UserId, int]]:
 
 
 def _open_current(group: Group, now: datetime) -> bool:
-    """PER-01 step 4: a period for the window containing now, with the group's settings.
+    """PER-01 step 4: a period for the window containing now.
 
-    Pending settings are applied here first from M6 on (E1, SET-01).
+    The window follows the upcoming settings, and opening it takes them over (E1,
+    SET-01): a change of cadence or timezone decides which window comes next (PER-05).
     """
-    window = schedule.window_at(now, group.cadence, group.timezone)
+    upcoming = settings.upcoming(group)
+    window = schedule.window_at(now, upcoming.cadence, upcoming.timezone)
     if window is None:
         return False
     if had_period(group.id, window):
         return False
     previous = latest_period(group.id)
-    db.session.add(
-        Period(
-            group_id=group.id,
-            seq=previous.seq + 1 if previous else 1,
-            opens_at=window.opens_at,
-            closes_at=window.closes_at,
-            cadence=group.cadence,
-            is_anonymous=group.is_anonymous,
-            k=group.k,
-            d=group.d,
-            status=PeriodStatus.OPEN,
-        )
+    period = Period(
+        group_id=group.id,
+        seq=previous.seq + 1 if previous else 1,
+        opens_at=window.opens_at,
+        closes_at=window.closes_at,
+        cadence=upcoming.cadence,
+        is_anonymous=upcoming.is_anonymous,
+        k=upcoming.k,
+        d=upcoming.d,
+        status=PeriodStatus.OPEN,
     )
+    db.session.add(period)
+    db.session.flush()
+    settings.apply_pending(group, period, now)
     return True
 
 

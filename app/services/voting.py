@@ -10,7 +10,7 @@ from app.clock import get_clock
 from app.domain import schedule
 from app.extensions import db
 from app.models import Group, Membership, Period, User, Vote
-from app.services import membership, periods, vote_queries
+from app.services import membership, periods, settings, vote_queries
 from app.services.errors import InvalidInput
 from app.services.locks import lock_group
 
@@ -57,10 +57,12 @@ def ballot(group: Group, user: User) -> Ballot:
             next_opens_at=None,
         )
     # Between the window's start and the next tick no period exists yet.
-    pending = schedule.window_at(now, group.cadence, group.timezone)
+    # The next window follows the upcoming settings (SET-01, PER-05).
+    upcoming = settings.upcoming(group)
+    pending = schedule.window_at(now, upcoming.cadence, upcoming.timezone)
     next_opens_at = None
     if pending is None or (period is None and periods.had_period(group.id, pending)):
-        next_opens_at = schedule.next_window(now, group.cadence, group.timezone).opens_at
+        next_opens_at = schedule.next_window(now, upcoming.cadence, upcoming.timezone).opens_at
     return Ballot(now, None, others, {}, 0, len(active), next_opens_at)
 
 
