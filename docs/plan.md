@@ -34,6 +34,10 @@ Annahmen (vom Plan getroffen, bei Bedarf korrigieren):
 | A13 | Anzeige (SCO-04, RNK-02): eine Nachkommastelle, kaufmännisch gerundet (5,25 → 5,3), deutsches Komma. Die Veränderung ist die Differenz der beiden **angezeigten** Werte (5,249 → 5,251 erscheint als 5,2 → 5,3 und ▲ +0,1), sie passt also immer zu den sichtbaren Zahlen. Ergibt sie 0,0, erscheint „–“ statt eines Pfeils. „−0,0“ gibt es nicht. Plätze (A7) vergleichen weiter mit voller Genauigkeit. Umgesetzt als reine Funktionen in `domain/formatting.py` und `ranking.deltas`; die Jinja-Filter in M5 rufen sie nur auf. | Rücksprache 2026-10-24. |
 | A14 | Der Login-Link öffnet eine Bestätigungsseite mit einem Button. Erst das Absenden (POST) löst den Token ein. Alte Links bleiben gültig, wenn ein neuer angefordert wird, bis sie ablaufen oder benutzt sind. | Mail-Scanner (z. B. Outlook Safe Links) rufen Links automatisch per GET auf und würden einmalige Tokens sonst verbrauchen. AUTH-02, Rücksprache 2026-10-24. |
 | A15 | Anzeigenamen: Leerraum wird getrimmt und zusammengefasst, 1–40 Zeichen. Abgelehnt werden unsichtbare und layoutverändernde Zeichen (Unicode-Kategorien Cc, Cf außer dem Zero-Width-Joiner für Emoji, Cs, Co, Cn, Zl, Zp), und mindestens ein sichtbares Zeichen ist Pflicht (Füllzeichen wie U+3164 zählen nicht). Doppelte Namen sind erlaubt. E-Mail-Adressen werden nur grob geprüft (`x@y.z`, ≤ 254 Zeichen, keine Steuer- oder Formatzeichen), denn die echte Prüfung ist, ob der Link ankommt. Keine NFKC-Normalisierung (Rücksprache 2026-10-24). | AUTH-04, AUTH-05 |
+| A16 | Grenzen für Einladungen (NFA-09): höchstens 30 neue Einladungen pro Gruppe und 5 pro Adresse (über alle Gruppen) in 24 Stunden, so lässt sich eine Adresse auch durch Zurückziehen und neu Einladen nicht zuspammen. Pro Einladung höchstens 5 Mails, mit mindestens 10 Minuten Abstand. Die Werte stehen in `Config` und sind vorläufig. | NFA-09 nennt keine Zahlen. |
+| A17 | Der Einladungslink wirkt wie ein Login-Link (A14: Bestätigungsseite, erst POST nimmt an) und legt das Konto bei Bedarf an, auch ohne Allowlist (E3, INV-03). Ist jemand mit einer anderen Adresse angemeldet, wird abgelehnt (INV-02); der Abmelde-Button führt zurück zur Einladung. Deshalb braucht `login_tokens` keine Spalte `invitation_id`. | Ein zweiter Mail-Schritt brächte keine zusätzliche Sicherheit: Der Link ging an genau diese Adresse und ist einmalig. |
+| A18 | Die Einladungsliste (INV-05) zeigt alle Einladungen mit Status, die neueste oben. Wer eine Adresse mit abgelaufener Einladung erneut einlädt, schickt dieselbe Einladung neu (es bleibt bei einer Zeile pro Adresse). Abgelaufene Einladungen zählen nicht zur Gruppengröße (A8), beim Neu-Senden wird die Grenze daher erneut geprüft. | INV-04, INV-05, A8 |
+| A19 | Admin-Routen antworten einfachen Mitgliedern mit 403 (sie kennen die Gruppe ja), Nicht-Mitgliedern wie alle Gruppenrouten mit 404 (A10). Gäste werden zum Login geleitet. | NFA-07 |
 
 Noch offen (blockiert erst den genannten Meilenstein):
 - Synchroner Mail-Versand: Für bekannte Adressen schreibt der Login einen Token und verschickt per SMTP, für unbekannte nicht. Die Antwort ist gleich, die Antwortzeit nicht (E3). Außerdem blockiert ein hängender SMTP-Server die Anfrage (Timeout 10 s pro Operation). Lösung zusammen: Versand außerhalb der Anfrage, z. B. eine Mail-Warteschlange, die `tick` abarbeitet → spätestens vor Go-Live (M9).
@@ -77,7 +81,8 @@ Tabellennamen im Plural, PKs als Integer. `ts` = `DateTime(timezone=True)` in UT
 | nonce_hash | str(64), unique | SHA-256 eines Zufalls-Nonce. Der Link enthält ein mit itsdangerous signiertes `{nonce}` |
 | created_at, expires_at | ts | gültig 15 min |
 | used_at | ts, nullable | einmalig nutzbar: Einlösen setzt `used_at` per bedingtem UPDATE |
-| invitation_id | FK, nullable | nur wenn der Login über eine Einladung läuft. Kommt mit M3 per Migration dazu |
+
+Eine Spalte `invitation_id` gibt es nicht: Der Einladungslink loggt selbst ein (A17).
 
 Rate-Limit: Gezählt werden `login_tokens` je E-Mail in der letzten Stunde (`LOGIN_MAILS_PER_HOUR` = 5, auch benutzte Tokens zählen). Darüber hinaus wird stillschweigend nichts verschickt, die Antwort bleibt gleich (E3). Zählen und Einfügen sind nicht atomar, parallele Anfragen können das Limit also knapp überschreiten. Bei 5 pro Stunde ist das hinnehmbar. IP-Adressen werden nicht gespeichert (NFA-04). Abgelaufene Tokens räumt `tick` auf (ab M4, vorher bleiben sie liegen).
 
@@ -173,7 +178,7 @@ PK `(user_id, group_id, kind)`, `enabled bool`. Fehlt eine Zeile, gilt der Anlas
 `periods(group_id, closes_at)`, `period_results(user_id, period_id)`, `votes(period_id, target_user_id)`, `memberships(user_id)`, `settings_changes(group_id, applied_at)`, `membership_events(group_id, occurred_at)`.
 
 ### Löschverhalten
-- **Gruppe löschen (GRP-04):** `ON DELETE CASCADE` von `groups` auf alle gruppenbezogenen Tabellen. Die Bestätigung erfolgt durch Eintippen des Gruppennamens.
+- **Gruppe löschen (GRP-04):** `ON DELETE CASCADE` von `groups` auf alle gruppenbezogenen Tabellen. SQLite braucht dafür `PRAGMA foreign_keys=ON` pro Verbindung (`extensions.py`); Migrationen schalten es ab, weil der Batch-Modus Tabellen neu anlegt und sonst Zeilen kaskadierend löschen würde. Die Bestätigung erfolgt durch Eintippen des Gruppennamens.
 - **Konto löschen (NFA-05):** `email`, `display_name` → NULL, `deleted_at` setzen, `session_version++`. `push_subscriptions`, `login_tokens` und `notification_preferences` werden gelöscht, `votes.reason` der Person → NULL. Danach Austritt aus allen Gruppen (A9). `votes` und `period_results` bleiben erhalten und verweisen auf den Grabstein.
 
 ## 4 Kernlogik (reine Module)
@@ -406,5 +411,6 @@ Jeder Meilenstein ist fertig, wenn `pytest` grün ist, `ruff` sauber ist, die ge
 - [x] M0 Projektgerüst (2026-10-23). `login_manager` folgt mit M2, weil Flask-Login ohne `user_loader` nicht nutzbar ist.
 - [x] M1 Domänenkern (2026-10-24). Simulationsskript: `scripts/simulate.py`. Grenzen, Hervorhebungen und Anzeige als A11–A13 festgelegt. Palette mit 30 Farben (A8).
 - [x] M2 Konto und Login (2026-10-24). Mail-Backends `smtp`/`console`/`memory`, Login mit Bestätigungsseite (A14), Name-Gate, Allowlist-CLI `users allow`. Produktion verlangt `BASE_URL` (https mit Host), `MAIL_HOST` und `MAIL_FROM`, SMTP-Login nur verschlüsselt. Login-Links umgehen das Name-Gate, damit ein namenloses Konto wechseln kann (ab M3 auch für Einladungen nötig). Der Login leert die Session. Zeitstempel über `UTCDateTime` (immer UTC, naive Werte werden abgelehnt). Tests: Jede Test-Client-Anfrage läuft in einem eigenen App-Kontext (`IsolatedClient`), damit `g` und die DB-Session nicht zwischen Anfragen durchsickern. Ein Migrationstest prüft, dass `db upgrade` genau das Modell-Schema erzeugt. `invitation_id` in `login_tokens` folgt mit M3.
-- [ ] M3 Gruppen, Einladungen, Mitgliedschaft ← **aktuell**
-- [ ] M4 … M9
+- [x] M3 Gruppen, Einladungen, Mitgliedschaft (2026-10-24). Gruppenauswahl auf der Startseite, Gruppenseite mit Mitgliederliste (Farbpunkte als SVG, damit die CSP in M9 ohne `unsafe-inline` auskommt), Verwalten per `<details>` ohne JavaScript, Einladungsliste mit HTMX und Fallback ohne JavaScript. Einladungslink als Login (A17), Grenzen A16, Liste A18. Admin-Mail bei ROL-02 und ROL-03. Bestätigung durch Eintippen des Gruppennamens beim Löschen und beim Austritt des letzten Mitglieds (A5). `access.py` mit Sweep-Test über `app.url_map` (A19): Jede Gruppenroute muss eine Zugriffsstufe deklarieren. Service-Fehler `NotFound`/`NotAllowed` werden zentral zu 404/403. MEM-05 (Votes verwerfen) folgt mit den Votes in M4.
+- [ ] M4 Voting und Periodenlauf ← **aktuell**
+- [ ] M5 … M9
