@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 from flask import Flask
@@ -57,8 +58,10 @@ def _require_base_url(app: Flask) -> None:
     base_url = (app.config["BASE_URL"] or "").strip()
     if not base_url:
         raise RuntimeError("BASE_URL must be set (see .env.example)")
-    if not base_url.startswith(("https://", "http://")):
-        raise RuntimeError("BASE_URL must start with https:// or http://")
+    parts = urlsplit(base_url)
+    schemes = {"https"} if app.config["REQUIRE_HTTPS_BASE_URL"] else {"https", "http"}
+    if parts.scheme not in schemes or not parts.netloc:
+        raise RuntimeError(f"BASE_URL must be an absolute {' or '.join(sorted(schemes))} URL")
     app.config["BASE_URL"] = base_url.rstrip("/")
 
 

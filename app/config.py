@@ -10,6 +10,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI: str | None = None
     # Login links are built from this, never from the request's Host header.
     BASE_URL: str | None = None
+    # Login tokens travel in the link and the cookies are Secure, so production needs https.
+    REQUIRE_HTTPS_BASE_URL = True
     # Only development may fall back to a SQLite file in instance/.
     ALLOW_SQLITE_FALLBACK = False
     MIN_SECRET_KEY_LENGTH = 32
@@ -42,6 +44,7 @@ class Config:
 class DevConfig(Config):
     SECRET_KEY = "dev-insecure-key"
     BASE_URL = "http://localhost:5000"
+    REQUIRE_HTTPS_BASE_URL = False
     ALLOW_SQLITE_FALLBACK = True
     MIN_SECRET_KEY_LENGTH = 0
     I18N_STRICT = True
@@ -57,6 +60,7 @@ class TestConfig(Config):
     MIN_SECRET_KEY_LENGTH = 0
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     BASE_URL = "http://localhost:5000"
+    REQUIRE_HTTPS_BASE_URL = False
     I18N_STRICT = True
     SESSION_COOKIE_SECURE = False
     REMEMBER_COOKIE_SECURE = False

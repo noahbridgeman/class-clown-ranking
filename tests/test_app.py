@@ -219,10 +219,17 @@ class TestConfigSelection:
         with pytest.raises(RuntimeError, match="BASE_URL must be set"):
             create_app()
 
-    def test_base_url_needs_a_scheme(self, env):
-        env(**{**PROD_ENV, "BASE_URL": "ranking.example.org"})
-        with pytest.raises(RuntimeError, match="https://"):
+    @pytest.mark.parametrize(
+        "value", ["ranking.example.org", "http://ranking.example.org", "https://", "ftp://x.org"]
+    )
+    def test_production_base_url_must_be_absolute_https(self, env, value):
+        env(**{**PROD_ENV, "BASE_URL": value})
+        with pytest.raises(RuntimeError, match="absolute https URL"):
             create_app()
+
+    def test_development_allows_http_base_url(self, env):
+        env(APP_ENV="development", DATABASE_URL="sqlite://", BASE_URL="http://192.168.0.5:5000")
+        assert create_app().config["BASE_URL"] == "http://192.168.0.5:5000"
 
     def test_base_url_loses_trailing_slash(self, env):
         env(**{**PROD_ENV, "BASE_URL": "https://ranking.example.org/"})
@@ -246,7 +253,7 @@ class TestConfigSelection:
             create_app()
 
     def test_mail_port_and_starttls_are_converted(self, env):
-        env(**PROD_ENV, MAIL_PORT="465", MAIL_STARTTLS="false")
+        env(**PROD_ENV, MAIL_PORT="465", MAIL_STARTTLS="false", MAIL_USERNAME="user")
         config = create_app().config
         assert config["MAIL_PORT"] == 465
         assert config["MAIL_STARTTLS"] is False
