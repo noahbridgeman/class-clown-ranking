@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kursblatt – Protokoll Dark Pool</title>
+<!-- Statische Design-Referenz, 390 px breit. Keine Produktionsvorlage: Texte und Zahlen sind Beispieldaten. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:#111}a:hover{color:#444}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tk{display:inline-flex;gap:26px;padding-right:26px;animation:tick 26s linear infinite}
+</style>
+<style>@media (prefers-reduced-motion: reduce){.tk{animation:none}}</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F5F4EF; color: #111; font-family: 'Archivo Narrow', sans-serif; overflow: hidden">
+
+  <div style="height: 32px; background: #111; color: #F5F4EF; font-family: 'IBM Plex Mono', monospace; font-size: 12px; display: flex; align-items: center; overflow: hidden; white-space: nowrap" aria-label="Kursticker">
+    <div class="tk">
+      <span>GRUPPENSCHNITT 5,6 <span style="color: #12D37A">▲0,25</span></span><span>FELIX 7,2 <span style="color: #12D37A">▲0,5</span></span><span>LENA 6,9 <span style="color: #12D37A">▲0,1</span></span><span>JONAS 5,8 <span style="color: #12D37A">▲0,6</span></span><span>SOPHIE 5,3 <span style="color: #12D37A">▲0,4</span></span><span>ALI 4,6 <span style="color: #12D37A">▲0,2</span></span><span>TIM 3,8 <span style="color: #FF4A1C">▼0,3</span></span>
+      <span>GRUPPENSCHNITT 5,6 <span style="color: #12D37A">▲0,25</span></span><span>FELIX 7,2 <span style="color: #12D37A">▲0,5</span></span><span>LENA 6,9 <span style="color: #12D37A">▲0,1</span></span><span>JONAS 5,8 <span style="color: #12D37A">▲0,6</span></span><span>SOPHIE 5,3 <span style="color: #12D37A">▲0,4</span></span><span>ALI 4,6 <span style="color: #12D37A">▲0,2</span></span><span>TIM 3,8 <span style="color: #FF4A1C">▼0,3</span></span>
+    </div>
+  </div>
+
+  <div style="padding: 10px 16px 0 12px; display: flex; justify-content: space-between; align-items: center">
+    <a href="ranking.html" style="min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-decoration: none">‹ RANKING</a>
+    <button aria-label="Dein Konto" style="width: 44px; height: 44px; border: 1.5px solid #111; border-radius: 50%; background: #F5F4EF; color: #111; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">J</button>
+  </div>
+
+  <div style="padding: 4px 24px 14px; display: flex; flex-direction: column; gap: 6px">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #55554F">WG HINTERHOF · VOTING-ÜBERSICHT</div>
+    <h1 style="margin: 0; font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.01em">Übersicht</h1>
+  </div>
+
+  <div style="margin: 0 24px; border-top: 2px solid #111; border-bottom: 1px solid #111; display: flex; align-items: center; gap: 8px; padding: 6px 0">
+    <button aria-label="Vorherige Woche" style="width: 44px; height: 44px; border: 1.5px solid #111; background: transparent; color: #111; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">‹</button>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px">
+      <span style="font-size: 21px; font-weight: 700; line-height: 1">KW 42 · 11./12.10.</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; border: 1px solid #111; padding: 1px 6px">ANONYM</span>
+    </div>
+    <a href="uebersicht.html" aria-label="Nächste Woche" style="width: 44px; height: 44px; box-sizing: border-box; border: 1.5px solid #111; display: flex; align-items: center; justify-content: center; text-decoration: none; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">›</a>
+  </div>
+
+  <div style="padding: 10px 24px 0; font-family: 'IBM Plex Mono', monospace; font-size: 10px; line-height: 1.5; color: #55554F">Anonyme Woche: nur die Anzahl der Votes pro Person. Wer wen gevotet hat, sieht niemand.</div>
+
+  <div style="margin: 10px 24px 0; display: flex; align-items: center; gap: 8px; height: 22px; border-bottom: 1px solid #111; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #55554F">
+    <span style="width: 78px">NAME</span><span style="width: 60px; text-align: right">DOWN</span><span style="width: 60px">UP</span><span style="flex: 1; text-align: right">U/D</span><span style="width: 44px; text-align: right">Δ</span>
+  </div>
+  <ul style="list-style: none; margin: 0 24px; padding: 0">
+    <li style="display: flex; align-items: center; gap: 8px; height: 40px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 78px; font-size: 18px; font-weight: 700">Felix</span>
+      <span style="width: 60px; display: flex; justify-content: flex-end; border-right: 1px solid #111; height: 16px"><span style="width: 12px; background: #FF4A1C"></span></span>
+      <span style="width: 60px; display: flex; height: 16px"><span style="width: 48px; background: #12D37A"></span></span>
+      <span style="flex: 1; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px">4/1</span>
+      <span style="width: 44px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0B7A5C">▲0,7</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 8px; height: 40px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 78px; font-size: 18px">Lena</span>
+      <span style="width: 60px; display: flex; justify-content: flex-end; border-right: 1px solid #111; height: 16px"><span style="width: 12px; background: #FF4A1C"></span></span>
+      <span style="width: 60px; display: flex; height: 16px"><span style="width: 48px; background: #12D37A"></span></span>
+      <span style="flex: 1; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px">4/1</span>
+      <span style="width: 44px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0B7A5C">▲0,5</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 8px; height: 40px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 78px; font-size: 18px">Sophie</span>
+      <span style="width: 60px; display: flex; justify-content: flex-end; border-right: 1px solid #111; height: 16px"><span style="width: 12px; background: #FF4A1C"></span></span>
+      <span style="width: 60px; display: flex; height: 16px"><span style="width: 36px; background: #12D37A"></span></span>
+      <span style="flex: 1; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px">3/1</span>
+      <span style="width: 44px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0B7A5C">▲0,4</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 8px; height: 40px; border-bottom: 1px solid #DEDDD5; background: #EAF7EF; margin: 0 -24px; padding: 0 24px">
+      <span style="width: 78px; font-size: 18px; font-weight: 700">Jonas (du)</span>
+      <span style="width: 60px; display: flex; justify-content: flex-end; border-right: 1px solid #111; height: 16px"><span style="width: 36px; background: #FF4A1C"></span></span>
+      <span style="width: 60px; display: flex; height: 16px"><span style="width: 24px; background: #12D37A"></span></span>
+      <span style="flex: 1; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px">2/3</span>
+      <span style="width: 44px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #B32D0B">▼0,3</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 8px; height: 40px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 78px; font-size: 18px">Ali</span>
+      <span style="width: 60px; display: flex; justify-content: flex-end; border-right: 1px solid #111; height: 16px"><span style="width: 48px; background: #FF4A1C"></span></span>
+      <span style="width: 60px; display: flex; height: 16px"><span style="width: 12px; background: #12D37A"></span></span>
+      <span style="flex: 1; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px">1/4</span>
+      <span style="width: 44px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #B32D0B">▼0,5</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 8px; height: 40px">
+      <span style="width: 78px; font-size: 18px">Tim</span>
+      <span style="width: 60px; display: flex; justify-content: flex-end; border-right: 1px solid #111; height: 16px"><span style="width: 36px; background: #FF4A1C"></span></span>
+      <span style="width: 60px; display: flex; height: 16px"><span style="width: 12px; background: #12D37A"></span></span>
+      <span style="flex: 1; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px">1/3</span>
+      <span style="width: 44px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #B32D0B">▼0,5</span>
+    </li>
+  </ul>
+
+  <div style="margin: 18px 24px 0; padding-top: 10px; border-top: 2px solid #111; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em"><span>DEINE VOTES</span><span style="color: #55554F">NUR FÜR DICH SICHTBAR</span></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600">
+      <span style="padding: 6px 10px; background: #12D37A">FELIX ▲</span>
+      <span style="padding: 6px 10px; background: #12D37A">LENA ▲</span>
+      <span style="padding: 6px 10px; background: #FF4A1C">SOPHIE ▼</span>
+      <span style="padding: 6px 10px; background: #FF4A1C">ALI ▼</span>
+      <span style="padding: 6px 10px; border: 1px dashed #8A8A82">TIM –</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

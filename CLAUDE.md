@@ -7,6 +7,7 @@ Daraus ergibt sich pro Person ein Humor-Score von 0 bis 10 mit Verlaufsgraph.
 
 - `docs/anforderungen.md` – Quelle der Wahrheit. Alle Anforderungen haben IDs (z. B. VOT-03).
 - `docs/plan.md` – Datenmodell, Projektstruktur, Meilensteine, aktueller Stand.
+- `docs/design.md` – verbindliche Gestaltung, Referenz-Screens in `docs/design/screens/`.
 
 Bei Widerspruch zwischen Code und Anforderungen: nachfragen, nicht selbst entscheiden.
 

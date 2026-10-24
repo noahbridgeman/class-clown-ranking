@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kursblatt – Neue Gruppe</title>
+<!-- Statische Design-Referenz, 390 px breit. Keine Produktionsvorlage: Texte und Zahlen sind Beispieldaten. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:#111}a:hover{color:#444}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tk{display:inline-flex;gap:26px;padding-right:26px;animation:tick 26s linear infinite}
+.grid{stroke:#DEDDD5;stroke-width:1px}
+.ax{font-family:'IBM Plex Mono',monospace;font-size:9px;fill:#6B6B64}
+</style>
+<style>@media (prefers-reduced-motion: reduce){.tk{animation:none}}</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F5F4EF; color: #111; font-family: 'Archivo Narrow', sans-serif; overflow: hidden">
+
+  <div style="height: 32px; background: #111; color: #F5F4EF; font-family: 'IBM Plex Mono', monospace; font-size: 12px; display: flex; align-items: center; overflow: hidden; white-space: nowrap" aria-label="Kursticker">
+    <div class="tk">
+      <span>NEUE GRUPPE · STAMMTISCH DIENSTAG</span><span>JONAS 5,0 <span style="color: #12D37A">NEU</span></span><span>MARA 5,0 <span style="color: #12D37A">NEU</span></span><span>PAUL 5,0 <span style="color: #12D37A">NEU</span></span><span>KIM 5,0 <span style="color: #12D37A">NEU</span></span>
+      <span>NEUE GRUPPE · STAMMTISCH DIENSTAG</span><span>JONAS 5,0 <span style="color: #12D37A">NEU</span></span><span>MARA 5,0 <span style="color: #12D37A">NEU</span></span><span>PAUL 5,0 <span style="color: #12D37A">NEU</span></span><span>KIM 5,0 <span style="color: #12D37A">NEU</span></span>
+    </div>
+  </div>
+
+  <div style="padding: 10px 16px 10px 24px; display: flex; align-items: flex-start; gap: 12px">
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 6px">
+      <a href="einstellungen.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #55554F; text-decoration: none">STAMMTISCH DIENSTAG · EINSTELLUNGEN ›</a>
+      <h1 style="margin: 0; font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.01em">Ranking</h1>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #55554F">Gegründet Mi 28.10. · noch kein Voting</div>
+    </div>
+    <button aria-label="Dein Konto" style="width: 44px; height: 44px; border: 1.5px solid #111; border-radius: 50%; background: #F5F4EF; color: #111; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">J</button>
+  </div>
+
+  <a href="voting-geschlossen.html" style="margin: 0 24px 14px; height: 52px; padding: 0 14px; border: 1.5px solid #111; display: flex; align-items: center; gap: 10px; text-decoration: none">
+    <span style="width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #111" aria-hidden="true"></span>
+    <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 19px; font-weight: 700; line-height: 1.1">Erstes Voting</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #55554F">SO 01.11., 00:00 BIS MO 13:00</span></span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">3 T ›</span>
+  </a>
+
+  <div style="padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 32px">
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #55554F">VERLAUF</span>
+  </div>
+
+  <div style="position: relative; margin: 4px 24px 10px; height: 180px">
+    <svg width="342" height="180" viewBox="0 0 340 180" aria-hidden="true" style="position: absolute; inset: 0">
+      <line class="grid" x1="8" y1="40" x2="332" y2="40"></line>
+      <line class="grid" x1="8" y1="140" x2="332" y2="140"></line>
+      <line x1="8" y1="90" x2="332" y2="90" style="stroke: #111; stroke-width: 1px; stroke-dasharray: 3 3"></line>
+      <text class="ax" x="8" y="86">Startwert 5,0</text>
+      <circle cx="8" cy="90" r="4" style="fill: #12D37A; stroke: #111; stroke-width: 1.5px"></circle>
+    </svg>
+    <div style="position: absolute; left: 40px; right: 40px; top: 104px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.5; color: #3A3A36; background: #F5F4EF; padding: 4px 6px">Der erste Score kommt nach dem Voting, am Mo 02.11., 13:00.</div>
+  </div>
+
+  <ol style="list-style: none; margin: 0 24px; padding: 0; border-top: 1px solid #111; display: flex; flex-direction: column">
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">01</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="display: flex; align-items: center; gap: 6px; font-size: 20px; font-weight: 700; line-height: 1.1">Jonas <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; background: #111; color: #F5F4EF; padding: 2px 4px">DU</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #0B7A5C">NEU</span></span>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500">5,0</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B6B64">–</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">01</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 500; line-height: 1.1">Mara</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #0B7A5C">NEU</span></span>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500">5,0</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B6B64">–</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">01</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 500; line-height: 1.1">Paul</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #0B7A5C">NEU</span></span>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500">5,0</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B6B64">–</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">01</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 500; line-height: 1.1">Kim</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #0B7A5C">NEU</span></span>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500">5,0</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B6B64">–</span>
+    </li>
+  </ol>
+
+  <div style="margin: 16px 24px 0; padding: 14px; background: #111; color: #F5F4EF; display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 19px; font-weight: 700; line-height: 1.15">Erst 4 Leute in der Gruppe.</span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.5; color: #B9B9B1">Mehr Leute, mehr Bewegung. Bis zu 30 passen rein.</span>
+    <a href="einstellungen.html" style="min-height: 44px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #3A3A36; color: #12D37A; text-decoration: none; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.06em"><span>LEUTE EINLADEN</span><span>›</span></a>
+  </div>
+</div>
+</body>
+</html>
