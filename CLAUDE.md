@@ -72,6 +72,12 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 - Zeit nie direkt mit `datetime.now()` lesen, sondern über eine injizierbare Uhr, damit Tests die Zeit steuern können.
 - In der Datenbank alle Zeitstempel in UTC. Umrechnung in die Gruppenzeitzone nur bei Fenster-Logik und Anzeige.
 
+### Frontend (redesignfähig halten)
+
+- Keine Inline-Styles (`style="…"`, `<style>` in Templates).
+- Alle Farben, Schriften und Abstände nur über CSS-Variablen aus `app/static/css/tokens.css`. Andere CSS-Dateien enthalten keine festen Werte dafür.
+- Wiederkehrende Elemente (z. B. Farbpunkt, Button, Karte, Badge) als Jinja-Makros, nicht kopiert.
+
 ## Aktueller Stand
 
 Meilenstein: M5 (Graph und Rangliste). M0 bis M4 sind abgeschlossen. Details in `docs/plan.md`.
