@@ -21,6 +21,16 @@ def own_votes(period: Period, voter_id: int) -> dict[int, int]:
     return {target: value for target, value in rows}
 
 
+def own_reasons(period: Period, voter_id: int) -> dict[int, str]:
+    """Target user id → the voter's own reason (VOT-08). Others' reasons follow in M7."""
+    rows = db.session.execute(
+        select(Vote.target_user_id, Vote.reason).where(
+            Vote.period_id == period.id, Vote.voter_user_id == voter_id, Vote.reason.is_not(None)
+        )
+    )
+    return {target: reason for target, reason in rows}
+
+
 def voter_count(period: Period) -> int:
     """How many members have cast at least one vote; all VOT-07 allows while open."""
     return db.session.scalar(

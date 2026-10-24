@@ -3,10 +3,11 @@ from flask_login import current_user
 from werkzeug.wrappers import Response as BaseResponse
 
 from app.i18n import t
+from app.models.period import REASON_MAX_LENGTH
 from app.services import voting
 from app.services.errors import InvalidInput
 from app.web.access import member_required
-from app.web.forms import ConfirmForm, VoteForm
+from app.web.forms import ConfirmForm, ReasonForm, VoteForm
 
 bp = Blueprint("voting", __name__)
 
@@ -42,6 +43,27 @@ def cast(group_id: int, user_id: int) -> Page:
     return redirect(url_for("voting.index", group_id=group_id))
 
 
+@bp.post("/g/<int:group_id>/vote/<int:user_id>/reason")
+@member_required
+def reason(group_id: int, user_id: int) -> Page:
+    """VOT-08: saves the reason on the own vote for this member."""
+    form = ReasonForm()
+    status = 200
+    if form.validate_on_submit():
+        try:
+            voting.set_reason(
+                g.group, current_user._get_current_object(), user_id, form.reason.data
+            )
+        except InvalidInput as invalid:
+            flash(invalid.message(), "error")
+            status = 400
+        else:
+            flash(t("voting.reason_saved"), "success")
+    if request.headers.get("HX-Request"):
+        return _render(partial=True), status
+    return redirect(url_for("voting.index", group_id=group_id))
+
+
 def _render(partial: bool = False, show_flashes: bool = True) -> str:
     template = "voting/_ballot.html" if partial else "voting/index.html"
     return render_template(
@@ -51,4 +73,5 @@ def _render(partial: bool = False, show_flashes: bool = True) -> str:
         form=ConfirmForm(),
         partial=partial,
         show_flashes=show_flashes,
+        reason_max_length=REASON_MAX_LENGTH,
     )

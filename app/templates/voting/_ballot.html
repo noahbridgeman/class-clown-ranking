@@ -7,7 +7,8 @@
   {% set period = ballot.period %}
   {% if period %}
     <p>{{ t("voting.intro") }}</p>
-    <p class="muted">{{ t("voting.anonymous") if period.is_anonymous else t("voting.open_mode") }}</p>
+    <p class="muted">{{ t("voting.anonymous") if period.is_anonymous else t("voting.open_mode") }}
+      {% if not period.is_anonymous %}{{ t("voting.reason_hint", max=reason_max_length) }}{% endif %}</p>
     <p class="ballot-status">
       {{ t("voting.closes", at=period.closes_at|local_datetime(group.timezone), remaining=(period.closes_at - ballot.now)|duration) }}
       <span class="muted">{{ t("voting.change_hint") }}</span>
@@ -33,6 +34,18 @@
                       class="vote vote-down" aria-pressed="{{ 'true' if current == -1 else 'false' }}"
                       aria-label="{{ t('voting.down_label', name=name) }}">▼ {{ t("voting.down") }}</button>
             </form>
+            {% if current and not period.is_anonymous %}
+              {% set reason_url = url_for('voting.reason', group_id=group.id, user_id=member.user_id) %}
+              {# hx-preserve keeps what is being typed when the ballot refreshes every minute. #}
+              <form class="reason" method="post" action="{{ reason_url }}" hx-post="{{ reason_url }}" hx-target="#ballot" hx-swap="outerHTML">
+                {{ form.csrf_token }}
+                <label class="visually-hidden" for="reason-{{ member.user_id }}">{{ t("voting.reason_label", name=name) }}</label>
+                <input id="reason-{{ member.user_id }}" name="reason" type="text" maxlength="{{ reason_max_length }}"
+                       value="{{ ballot.reasons.get(member.user_id, '') }}" hx-preserve
+                       placeholder="{{ t('voting.reason_placeholder') }}">
+                {{ ui.link_button(t("voting.reason_save")) }}
+              </form>
+            {% endif %}
           </li>
         {% endfor %}
       </ul>

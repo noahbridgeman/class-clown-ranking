@@ -29,6 +29,18 @@ def clean_name(raw: str, max_length: int) -> str:
     return name
 
 
+def clean_text(raw: str | None, max_length: int) -> str | None:
+    """Optional short text such as a reason (VOT-08): like a name, but empty means None."""
+    text = " ".join((raw or "").split())
+    if not text or not any(_visible(char) for char in text):
+        return None
+    if len(text) > max_length:
+        raise InvalidInput("validation.text_too_long", max=max_length)
+    if any(_forbidden_in_name(char) for char in text):
+        raise InvalidInput("validation.text_invalid")
+    return text
+
+
 def _forbidden_in_name(char: str) -> bool:
     category = unicodedata.category(char)
     return category in _FORBIDDEN_NAME_CATEGORIES and char not in _ALLOWED_FORMAT_CHARS

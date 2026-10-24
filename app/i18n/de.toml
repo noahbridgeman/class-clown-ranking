@@ -44,6 +44,8 @@ name_save = "Speichern"
 name_required = "Bitte gib einen Namen ein."
 name_too_long = "Der Name darf höchstens {max} Zeichen lang sein."
 name_invalid = "Der Name enthält ungültige Zeichen."
+text_too_long = "Höchstens {max} Zeichen."
+text_invalid = "Der Text enthält unsichtbare oder unzulässige Zeichen."
 
 [mail]
 login_subject = "Dein Login-Link für das Spaßvogel-Ranking"
@@ -260,6 +262,13 @@ self_vote = "Dich selbst kannst du nicht bewerten."
 not_a_member = "Diese Person ist kein Mitglied der Gruppe mehr."
 closed = "Das Fenster ist geschlossen. Votes können nicht mehr geändert werden."
 invalid_choice = "Ungültige Auswahl."
+reason_label = "Begründung für {name}"
+reason_placeholder = "Warum? (optional)"
+reason_save = "Speichern"
+reason_saved = "Begründung gespeichert."
+reason_hint = "Zu jedem Vote kannst du kurz begründen, höchstens {max} Zeichen. Auch die Begründungen sehen alle erst danach."
+reason_anonymous = "In anonymen Perioden gibt es keine Begründungen."
+reason_needs_vote = "Gib zuerst ein Up oder Down ab."
 
 [time]
 weekdays = "Mo.,Di.,Mi.,Do.,Fr.,Sa.,So."
