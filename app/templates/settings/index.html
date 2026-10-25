@@ -82,7 +82,7 @@
       {% endcall %}
       <div class="settings-save">
         {{ ui.button(t("settings.save"), attrs={"name": "action", "value": "save"}) }}
-        <p class="hint">{{ t("settings.save_hint", at=next_from|short_datetime(group.timezone)) }}</p>
+        <p class="hint">{{ t("settings.save_hint", at=next_from|short_datetime(pending_timezone)) }}</p>
       </div>
     </form>
   {% else %}

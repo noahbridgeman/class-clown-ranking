@@ -5,6 +5,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  {# Cannot read CSS variables; tests/invariants/test_frontend.py keeps it equal to --color-bg. #}
   <meta name="theme-color" content="#f5f4ef">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   {# Unlike the htmx default, also swap 4xx/5xx responses so error messages become visible. #}

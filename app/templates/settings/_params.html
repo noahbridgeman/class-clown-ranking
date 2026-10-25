@@ -34,7 +34,7 @@
       <figure class="preview">
         <figcaption class="field-label">{{ t("settings.preview_title") }}</figcaption>
         <svg class="preview-chart" viewBox="0 0 320 124" role="img" aria-label="{{ t('settings.preview_label') }}">
-          <line class="preview-start" x1="10" y1="{{ preview.start_y }}" x2="310" y2="{{ preview.start_y }}"/>
+          <line class="preview-start" x1="{{ preview.left }}" y1="{{ preview.start_y }}" x2="{{ preview.right }}" y2="{{ preview.start_y }}"/>
           <line class="preview-pause" x1="{{ preview.pause_x }}" y1="{{ preview.top_y }}" x2="{{ preview.pause_x }}" y2="{{ preview.bottom_y }}"/>
           <text class="preview-axis" x="12" y="{{ preview.top_y + 8 }}">10</text>
           <text class="preview-axis" x="12" y="{{ preview.start_y - 4 }}">{{ 5.0|score }}</text>
@@ -42,8 +42,8 @@
           <text class="preview-axis" x="{{ preview.pause_x + 4 }}" y="{{ preview.top_y + 8 }}">{{ t("settings.preview_pause") }}</text>
           <polyline class="preview-up" points="{{ preview.up }}"/>
           <polyline class="preview-down" points="{{ preview.down }}"/>
-          <text class="preview-axis" x="10" y="122">{{ t("settings.preview_week", week=0) }}</text>
-          <text class="preview-axis preview-axis-end" x="310" y="122">{{ t("settings.preview_week", week=preview.weeks) }}</text>
+          <text class="preview-axis" x="{{ preview.left }}" y="{{ preview.label_y }}">{{ t("settings.preview_week", week=0) }}</text>
+          <text class="preview-axis preview-axis-end" x="{{ preview.right }}" y="{{ preview.label_y }}">{{ t("settings.preview_week", week=preview.weeks) }}</text>
         </svg>
       </figure>
     {% endif %}

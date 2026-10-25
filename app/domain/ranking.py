@@ -149,7 +149,9 @@ def label(facts: LabelFacts) -> Label | None:
     checks = (
         (
             Label.BEST,
-            facts.results >= 2 and shown == round_half_up(facts.best) and facts.score > START_SCORE,
+            facts.results >= 2
+            and shown == round_half_up(facts.best)
+            and shown > round_half_up(START_SCORE),
         ),
         (Label.GAIN, facts.is_gain),
         (Label.DROP, facts.is_drop),

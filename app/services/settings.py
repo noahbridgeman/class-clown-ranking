@@ -171,7 +171,7 @@ def apply_pending(group: Group, period: Period, now: datetime) -> None:
 
 
 def log(group_id: int) -> list[SettingsChange]:
-    """SET-03: every change, newest first, for all members."""
+    """SET-03: every change, newest first. Not shown since M6b; kept for tests and support."""
     return list(
         db.session.scalars(
             select(SettingsChange)

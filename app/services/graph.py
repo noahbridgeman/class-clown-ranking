@@ -15,8 +15,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
 from app.domain.formatting import round_half_up
+from app.domain.types import Cadence
 from app.extensions import db
-from app.i18n import local_date, t
+from app.i18n import day_month, iso_week, local_date, t
 from app.models import (
     Group,
     Membership,
@@ -80,6 +81,7 @@ def parse_range(value: str | None) -> Range | None:
 class _Point:
     period_id: int
     closes_at: datetime
+    cadence: Cadence
     user_id: int
     score: float
     ups: int
@@ -112,6 +114,7 @@ def graph_data(
     period_ids = list(dict.fromkeys(p.period_id for p in points))
     column = {period_id: i for i, period_id in enumerate(period_ids)}
     closes = {p.period_id: p.closes_at for p in points}
+    cadences = {p.period_id: p.cadence for p in points}
     members = _memberships(group.id)
     values: dict[int, list[list[Any] | None]] = {}
     for p in points:
@@ -121,7 +124,12 @@ def graph_data(
         "range": range_.value,
         "cadence": group.cadence.value,
         "periods": [
-            {"t": _ms(closes[i]), "date": local_date(closes[i], group.timezone)} for i in period_ids
+            {
+                "t": _ms(closes[i]),
+                "date": local_date(closes[i], group.timezone),
+                "label": axis_label(closes[i], cadences[i], group.timezone),
+            }
+            for i in period_ids
         ],
         "series": [
             {
@@ -154,11 +162,20 @@ def range_start(range_: Range, now: datetime, timezone: str) -> datetime | None:
     return local.replace(tzinfo=ZoneInfo(timezone)).astimezone(UTC)
 
 
+def axis_label(closes_at: datetime, cadence: Cadence, timezone: str) -> str:
+    """The x axis names each point by its own period: "KW44" for a weekly one (the week of
+    its end, as in the heading), "25.10." for a daily one, in the group's time."""
+    if cadence == Cadence.WEEKLY:
+        return t("graph.week_label", week=iso_week(closes_at, timezone))
+    return day_month(closes_at, timezone)
+
+
 def _points(group_id: int, since: datetime | None) -> list[_Point]:
     query = (
         select(
             Period.id,
             Period.closes_at,
+            Period.cadence,
             PeriodResult.user_id,
             PeriodResult.score,
             PeriodResult.ups,

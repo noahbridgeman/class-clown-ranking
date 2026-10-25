@@ -37,7 +37,7 @@
   {% if is_admin and not board.as_of %}
     {% call ui.status(kind="dark") %}
       <span class="status-stack">
-        <span class="status-title">{{ t("ranking.few_title", count=board.rows|length) }}</span>
+        <span class="status-title">{{ t("ranking.few_title_one") if board.rows|length == 1 else t("ranking.few_title", count=board.rows|length) }}</span>
         <span class="status-note">{{ t("ranking.few_text", max=max_group_size) }}</span>
         {{ ui.text_link(t("ranking.few_link"), url_for('invitations.index', group_id=group.id), kind="on-dark") }}
       </span>

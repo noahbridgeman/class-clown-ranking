@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from statistics import fmean
 
-from app.domain.formatting import format_delta, format_score
+from app.domain.formatting import format_change, format_score
 from app.services.leaderboard import Leaderboard
 from app.services.text import member_name
 
@@ -24,7 +24,7 @@ class Trend(StrEnum):
 class Item:
     label: str  # a name; empty for the group average, whose label the template adds
     score: str
-    change: str  # "▲ +0,4"-style text without the sign, or "" for new members
+    change: str  # "▲0,4", "▼0,4" or "–"; "" for new members
     trend: Trend
 
 
@@ -51,11 +51,6 @@ def _item(label: str, score: float, delta: float | None, is_new: bool) -> Item:
         return Item(label, format_score(score), "", Trend.NEW)
     if delta is None:
         return Item(label, format_score(score), "", Trend.FLAT)
-    text = format_delta(delta)  # "▲ +0,4", "▼ −0,4" or "–"
+    text = format_change(delta, compact=True)  # "▲0,4" (docs/design.md), as everywhere (A13)
     trend = Trend.UP if text.startswith("▲") else Trend.DOWN if text.startswith("▼") else Trend.FLAT
-    return Item(label, format_score(score), _compact(text), trend)
-
-
-def _compact(text: str) -> str:
-    """The ticker shows "▲0,4" (docs/design.md): arrow and number without sign or space."""
-    return text.replace(" +", "").replace(" −", "")
+    return Item(label, format_score(score), text, trend)

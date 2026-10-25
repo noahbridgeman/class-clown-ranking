@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from app.domain.types import Cadence
 from app.i18n import load_texts
 from app.services import graph, membership, settings
 from app.services.graph import Range, graph_data, parse_range
@@ -214,3 +215,14 @@ def test_markers_for_settings_changes(daily, clock):
     next_day(clock)
     texts = [m["text"] for m in data(group, ada, clock)["markers"] if m["kind"] != "member"]
     assert texts == ["Ab hier nicht anonym", "Einstellungen geändert: Name der Gruppe"]
+
+
+def test_axis_labels_follow_each_periods_cadence(daily, clock):
+    """KW of a weekly period's end, the day of a daily one, in the group's time (A22)."""
+    group, ada, _bo = daily
+    next_day(clock)
+    [period] = data(group, ada, clock)["periods"]
+    assert period["label"] == "24.10."
+    end = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)  # Monday 13:00 Berlin
+    assert graph.axis_label(end, Cadence.WEEKLY, "Europe/Berlin") == "KW44"
+    assert graph.axis_label(end, Cadence.DAILY, "Europe/Berlin") == "26.10."

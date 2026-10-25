@@ -165,3 +165,8 @@ def window_dates(opens: datetime, closes: datetime, timezone: str) -> str:
 def day_month(value: datetime, timezone: str) -> str:
     """ "31.10." """
     return _local(value, timezone).strftime("%d.%m.")
+
+
+def iso_week(value: datetime, timezone: str) -> int:
+    """The calendar week of a moment in the group's time."""
+    return _local(value, timezone).isocalendar().week

@@ -24,6 +24,12 @@ a:hover { color: var(--color-muted); }
   outline-offset: var(--focus-ring-offset);
 }
 
+/* On ink areas an ink ring would vanish. */
+.status-dark :focus-visible, .status-dark:focus-visible,
+.segment-option:has(input:checked) input:focus-visible {
+  outline-color: var(--focus-ring-on-dark);
+}
+
 h1 {
   margin: 0;
   font-size: var(--font-size-title);
@@ -503,18 +509,8 @@ p { margin: 0 0 var(--space-md); }
 
 .invitation-actions { display: flex; gap: var(--space-3xs); margin-left: auto; }
 
-.invitation-actions form, .manage form { margin: 0; }
+.invitation-actions form { margin: 0; }
 
-.manage { flex-basis: 100%; }
-
-.manage summary {
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: var(--font-size-meta);
-  font-weight: var(--weight-semibold);
-}
-
-.manage form { margin-top: var(--space-sm); }
 
 /* Status block contents */
 

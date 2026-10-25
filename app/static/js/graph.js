@@ -67,27 +67,22 @@
     return value.toFixed(1).replace(".", texts.decimalSeparator);
   }
 
-  function isoWeek(ms) {
-    const local = new Date(ms);
-    const date = new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate()));
-    date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7)); // the week's Thursday
-    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-    return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
-  }
-
-  function axisLabel(cadence) {
-    if (cadence === "weekly") {
-      // Ticks may fall twice into one week: label each week once.
-      let previous = null;
-      return (value, index) => {
-        const week = isoWeek(value);
-        if (index === 0) previous = null;
-        if (week === previous) return "";
-        previous = week;
-        return texts.week + week;
-      };
-    }
-    return { year: "{yyyy}", month: "{dd}.{MM}.", day: "{dd}.{MM}.", hour: "{dd}.{MM}." };
+  // The server names each period (week or day, in the group's time); ticks sit on them.
+  function xAxis(data, axisText) {
+    const labels = new Map(data.periods.map((period) => [period.t, period.label]));
+    const times = data.periods.map((period) => period.t);
+    return {
+      type: "time",
+      axisLine: { show: false },
+      axisTick: { show: false, customValues: times },
+      axisLabel: {
+        ...axisText,
+        hideOverlap: true,
+        customValues: times,
+        formatter: (value) => labels.get(value) || "",
+      },
+      splitLine: { show: false },
+    };
   }
 
   // GRA-06: the y axis zooms on the data, in whole numbers within 0–10, always with 5.
@@ -236,15 +231,7 @@
         textStyle: { color: theme.ink, fontFamily: theme.mono, fontSize: theme.fontSize + 2 },
         formatter: tooltip,
       },
-      xAxis: {
-        type: "time",
-        // One label per week at most for weekly groups (KW numbers).
-        minInterval: data.cadence === "weekly" ? 7 * 86400000 : 86400000,
-        axisLine: { show: false },
-        axisTick: { show: false },
-        axisLabel: { ...axisText, hideOverlap: true, formatter: axisLabel(data.cadence) },
-        splitLine: { show: false },
-      },
+      xAxis: xAxis(data, axisText),
       yAxis: {
         type: "value",
         min: range.min,
@@ -297,13 +284,23 @@
     });
   });
 
-  // GRA-05: tapping a leaderboard row highlights that person's line; again to undo.
+  // GRA-05: tapping a leaderboard row (or Enter/Space on it) highlights that person's
+  // line; again to undo.
+  function toggle(row) {
+    const id = row.dataset.user;
+    chart.dispatchAction({ type: "downplay" });
+    focused = focused === id ? null : id;
+    if (focused) chart.dispatchAction({ type: "highlight", seriesId: focused });
+    rows.forEach((other) => other.setAttribute("aria-pressed", String(other.dataset.user === focused)));
+  }
+
   rows.forEach((row) => {
-    row.addEventListener("click", () => {
-      const id = row.dataset.user;
-      chart.dispatchAction({ type: "downplay" });
-      focused = focused === id ? null : id;
-      if (focused) chart.dispatchAction({ type: "highlight", seriesId: focused });
+    row.addEventListener("click", () => toggle(row));
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggle(row);
+      }
     });
   });
 

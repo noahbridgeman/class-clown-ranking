@@ -198,6 +198,7 @@ def render_page(
 
 # The preview's drawing area (viewBox 0 0 320 124): x from week 0 to the end, y from 10 to 0.
 PREVIEW_LEFT, PREVIEW_RIGHT, PREVIEW_TOP, PREVIEW_BOTTOM = 10, 310, 6, 112
+PREVIEW_LABEL_Y = 122  # the week labels below the drawing area
 
 
 def _preview_points(preview: settings.Preview) -> dict[str, object]:
@@ -214,6 +215,9 @@ def _preview_points(preview: settings.Preview) -> dict[str, object]:
         return " ".join(f"{x(w)},{y(s)}" for w, s in zip(preview.weeks, scores, strict=True))
 
     return {
+        "left": PREVIEW_LEFT,
+        "right": PREVIEW_RIGHT,
+        "label_y": PREVIEW_LABEL_Y,
         "up": line(preview.up),
         "down": line(preview.down),
         "pause_x": x(preview.pause_week),

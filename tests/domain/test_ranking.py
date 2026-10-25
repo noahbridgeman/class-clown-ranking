@@ -156,6 +156,9 @@ def facts(**overrides):
     ("overrides", "expected"),
     [
         ({"score": 7.0, "best": 7.04}, "best"),  # equal when displayed
+        ({"score": 5.04, "best": 5.04}, None),  # shows as 5,0: not above the start
+        ({"delta": -0.1}, "steady"),
+        ({"delta": -0.2}, None),
         ({"score": 7.0, "best": 7.0, "results": 1}, None),  # one result is no record yet
         ({"score": 4.9, "best": 4.9, "delta": -0.5}, "below_start"),  # a record only above 5
         ({"score": 7.0, "best": 7.0, "is_gain": True}, "best"),  # best goes first

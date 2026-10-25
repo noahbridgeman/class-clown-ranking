@@ -87,4 +87,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M6b (Redesign „Kursblatt“, docs/design.md). M0 bis M6 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M7 (Voting-Übersicht). M0 bis M6b sind abgeschlossen. Details in `docs/plan.md`.

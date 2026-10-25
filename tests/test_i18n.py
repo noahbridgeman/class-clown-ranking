@@ -175,3 +175,17 @@ STOCK_TERMS = re.compile(
 def test_texts_avoid_stock_exchange_terms():
     found = {key: text for key, text in load_texts("de").items() if STOCK_TERMS.search(text)}
     assert found == {}
+
+
+def test_countdown_short_cuts_days_like_the_design(app):
+    """voting-geschlossen.html: 3 T 14:22 h shows as "3 T"; 1 T 23 h as "1 T"."""
+    assert countdown_short(timedelta(days=1, hours=23)) == "1 T"
+
+
+def test_formats_across_the_switch_to_winter_time(app):
+    """The weekly window around 25.10.2026: opens 00:00 CEST, closes 13:00 CET, 38 h apart."""
+    opens = datetime(2026, 10, 24, 22, 0, tzinfo=UTC)
+    closes = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)
+    assert short_datetime(opens, "Europe/Berlin") == "So 25.10., 00:00"
+    assert short_datetime(closes, "Europe/Berlin") == "Mo 26.10., 13:00"
+    assert countdown(closes - opens) == "1 T 14:00 h"

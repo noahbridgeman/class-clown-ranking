@@ -1,5 +1,3 @@
-from zoneinfo import ZoneInfo
-
 from flask import (
     Blueprint,
     Flask,
@@ -17,10 +15,10 @@ from flask_login import current_user, login_required
 from werkzeug.wrappers import Response as BaseResponse
 
 from app.clock import get_clock
-from app.domain.formatting import DECIMAL_SEPARATOR, format_change, format_delta, format_score
+from app.domain.formatting import DECIMAL_SEPARATOR, format_change, format_score
 from app.domain.ranking import Label
 from app.domain.types import Cadence
-from app.i18n import short_date, short_datetime, t
+from app.i18n import day_month, iso_week, short_date, short_datetime, t
 from app.models import Group
 from app.models.group import GROUP_NAME_MAX_LENGTH
 from app.services import graph, groups, leaderboard, membership, ticker, voting
@@ -39,7 +37,6 @@ def register(app: Flask) -> None:
     app.add_template_global(ticker_data)
     # Display rounding lives in domain.formatting only (A13).
     app.add_template_filter(format_score, "score")
-    app.add_template_filter(format_delta, "delta")
     app.add_template_global(DECIMAL_SEPARATOR, "decimal_separator")
     app.add_template_filter(format_change, "change")
     app.add_template_global(RANK_LABELS, "rank_labels")
@@ -109,12 +106,12 @@ def home(group_id: int) -> str:
 
 def _heading(group: Group, board: leaderboard.Leaderboard) -> str:
     """ "Ranking KW 43" (weekly), "Ranking 25.10." (daily), "Ranking" before any result."""
-    if board.as_of is None:
+    if board.as_of is None or board.cadence is None:
         return t("ranking.title")
-    local = board.as_of.astimezone(ZoneInfo(group.timezone))
-    if group.cadence == Cadence.WEEKLY:
-        return t("ranking.title_week", week=local.isocalendar().week)
-    return t("ranking.title_day", date=local.strftime("%d.%m."))
+    # The cadence of the period shown, not a changed setting (SET-01).
+    if board.cadence == Cadence.WEEKLY:
+        return t("ranking.title_week", week=iso_week(board.as_of, group.timezone))
+    return t("ranking.title_day", date=day_month(board.as_of, group.timezone))
 
 
 def _sub(group: Group, board: leaderboard.Leaderboard) -> str:

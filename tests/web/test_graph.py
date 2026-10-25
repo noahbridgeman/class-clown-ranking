@@ -94,7 +94,6 @@ class TestRanking:
         group, _ada, bo, _cleo = daily
         html = login_as(bo).get(f"/g/{group.id}/").get_data(as_text=True)
         [mine] = [row for row in rows(html) if "rank-me" in row]
-        assert 'aria-current="true"' in mine
         assert ">Bo <span" in mine and '<span class="badge badge-ink">Du</span>' in mine
 
     def test_status_block_links_to_the_open_voting(self, daily, login_as):
@@ -104,6 +103,17 @@ class TestRanking:
         assert f'<a class="status-block status-dark" href="/g/{group.id}/vote">' in html
         assert "Voting offen" in html and "1 / 2 bewertet · bis Sa 13:00" in html
         assert "23:00 h ›" in html
+
+
+class TestRowsHighlightTheLine:
+    def test_rows_are_buttons_once_there_is_a_graph(self, daily, clock, login_as):
+        """GRA-05 by keyboard too: graph.js toggles aria-pressed on Enter and Space."""
+        group, ada, *_ = daily
+        client = login_as(ada)
+        assert 'role="button"' not in ranking_html(client.get(f"/g/{group.id}/").get_data(True))
+        next_day(clock)
+        html = ranking_html(client.get(f"/g/{group.id}/").get_data(True))
+        assert html.count('tabindex="0" role="button" aria-pressed="false"') == 3
 
 
 class TestTicker:

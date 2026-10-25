@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 
 from app.domain import ranking, scoring
 from app.domain.formatting import round_half_up
-from app.domain.types import UserId
+from app.domain.types import Cadence, UserId
 from app.extensions import db
 from app.models import Membership, Period, PeriodResult, PeriodStatus
 from app.services import membership, periods
@@ -25,7 +25,9 @@ class Row:
     place: int
     score: float
     delta: float | None  # None without an earlier score
-    place_change: int  # positive = moved up, 0 = unchanged or new
+    # Positive = moved up, 0 = unchanged or new. Not shown since M6b (A22); kept for the
+    # "overtaken" notifications in M8.
+    place_change: int
     is_new: bool  # no result before the latest closed period (INV-06)
     label: ranking.Label | None  # A22
     sparkline: list[float]  # the latest scores scaled to 0…1, oldest first
@@ -36,6 +38,7 @@ class Leaderboard:
     rows: list[Row]
     highlights: ranking.Highlights
     as_of: datetime | None  # end of the latest closed period
+    cadence: Cadence | None  # its cadence, from the period's snapshot
     names: dict[int, Membership]  # user id → membership, for the highlights
 
 
@@ -95,6 +98,7 @@ def leaderboard(group_id: int, members: list[Membership] | None = None) -> Leade
         rows=rows,
         highlights=highlights,
         as_of=latest.closes_at if latest else None,
+        cadence=latest.cadence if latest else None,
         names={m.user_id: m for m in members},
     )
 

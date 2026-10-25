@@ -53,7 +53,7 @@
                 <label class="field-label" for="reason-{{ member.user_id }}">{{ t("voting.reason_label") }}<span class="visually-hidden"> – {{ name }}</span></label>
                 <input id="reason-{{ member.user_id }}" name="reason" type="text" maxlength="{{ reason_max_length }}"
                        value="{{ ballot.reasons.get(member.user_id, '') }}" hx-preserve>
-                <button type="submit" class="visually-hidden">{{ t("voting.reason_save") }}</button>
+                <button type="submit" class="visually-hidden" tabindex="-1">{{ t("voting.reason_save") }}</button>
               </form>
             {% endif %}
           </li>

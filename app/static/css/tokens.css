@@ -161,6 +161,7 @@
   --rule-control: 1.5px;
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
+  --focus-ring-on-dark: var(--color-up);
   --radius-circle: 50%;
   --container-width: 560px;
   --touch-target: 44px;

@@ -1,4 +1,8 @@
-"""Member colours (GRA-02): bright on a dark background, stable per colour index."""
+"""Member colours: bright on a dark background, stable per colour index.
+
+Not used by the interface since the redesign (GRA-02 colours lines by role now). The
+colour index stays in the database (docs/design.md, section 4), so this stays as well.
+"""
 
 import colorsys
 import math
