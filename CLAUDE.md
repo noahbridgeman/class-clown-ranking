@@ -36,6 +36,8 @@ flask --app app db upgrade           # Migrationen anwenden
 python scripts/simulate.py --k 0.5 --d 0.95  # Score-Verläufe für die Kalibrierung von K und d
 python scripts/demo.py [--email <adresse>] [--force]  # Demo-Gruppen in instance/demo.db
 DATABASE_URL=sqlite:///demo.db flask --app app run --debug  # App mit den Demo-Daten (tick genauso)
+python scripts/share_demo.py         # Demo für Freunde: alle sind Jonas, Port 5050, tick jede Minute
+ngrok http 127.0.0.1:5050            # dazu im zweiten Terminal: öffentlicher https-Link
 flask --app app users allow <email>  # Adresse für Kontoanlage ohne Einladung freischalten (E3)
 flask --app app tick                 # Periodenupdate: Perioden schließen, Scores berechnen, Fenster öffnen
 flask --app app push keygen          # VAPID-Schlüsselpaar für die .env (Push, M8)
