@@ -16,6 +16,7 @@ login = "Anmelden"
 logout = "Abmelden"
 account = "Dein Konto"
 ranking = "Ranking"
+groups = "Gruppen"
 
 [ticker]
 label = "Alle Scores im Überblick"

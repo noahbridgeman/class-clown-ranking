@@ -11,12 +11,13 @@
   {% endif %}
 {% endblock %}
 {% block ticker_prefix %}{% if not board.as_of %}{{ t("ticker.new_group", group=group.name) }}{% endif %}{% endblock %}
-{% block masthead_class %} masthead-page{% endblock %}
+{# A25: from the ranking back to the group selection, like "‹ RANKING" on the subpages. #}
 {% block masthead_lead %}
-  {{ ui.page_head(heading, kicker=t("ranking.settings_kicker", group=group.name), sub=sub,
-                  kicker_href=url_for('settings.index', group_id=group.id)) }}
+  {{ ui.text_link(t("nav.groups"), url_for('main.index'), back=true) }}
 {% endblock %}
 {% block content %}
+  {{ ui.page_head(heading, kicker=t("ranking.settings_kicker", group=group.name), sub=sub,
+                  kicker_href=url_for('settings.index', group_id=group.id)) }}
   {% include "groups/_status.html" %}
 
   {% set h = board.highlights %}
