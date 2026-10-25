@@ -1,0 +1,17 @@
+{# NOT-02: the occasions of this group. Saves on change by HTMX, without JavaScript
+   with the button. #}
+{% import "macros/ui.html" as ui %}
+{% set url = url_for('pwa.preferences', group_id=group.id) %}
+<form id="notification-preferences" class="preferences" method="post" action="{{ url }}"
+      hx-post="{{ url }}" hx-trigger="change" hx-target="this" hx-swap="outerHTML">
+  {{ form.csrf_token }}
+  <fieldset class="check-list">
+    <legend class="field-label">{{ t("push.occasions") }}</legend>
+    {% for kind, label in notification_kinds.items() %}
+      {{ ui.checkbox("kind", kind.value, t(label), preferences[kind]) }}
+    {% endfor %}
+  </fieldset>
+  <p class="hint">{{ t("push.occasions_hint") }}</p>
+  {% if saved %}<p class="hint" role="status">{{ t("push.saved") }}</p>{% endif %}
+  <noscript>{{ ui.button(t("push.save"), "secondary") }}</noscript>
+</form>

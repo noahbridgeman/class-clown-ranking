@@ -101,7 +101,7 @@ Keine Leiste unten. Das Ranking ist die Startseite der Gruppe, alles andere geht
 | `/g/<id>/overview` (M7) | `uebersicht.html` | Eine Periode pro Ansicht, Wochen-Umschalter · Matrix · Begründungen |
 | `/g/<id>/overview` (anonym) | `uebersicht-anonym.html` | Volumenbalken pro Person · „Deine Votes, nur für dich sichtbar“ |
 | `/g/<id>/members/<user_id>` (M7) | – (aus `uebersicht.html` abgeleitet) | Name · Score-Verlauf (SVG vom Server) · „Runden“: pro Periode Score, Veränderung, Ups/Downs, Netto, bei nicht anonymen Perioden erhaltene Begründungen und abgegebene Votes (A23) |
-| `/g/<id>/settings` | `einstellungen.html` | Ausstehend-Block · Mitglieder (⋯-Menü) · Einladen + Liste · Name, Rhythmus, Anonymität · K und d mit Erklärung, Grenzen, „↺ Standard wiederherstellen“, Vorschau · Speichern · Gruppe verlassen / löschen |
+| `/g/<id>/settings` | `einstellungen.html` | Ausstehend-Block · Mitglieder (⋯-Menü) · Einladen + Liste · Name, Rhythmus, Anonymität · K und d mit Erklärung, Grenzen, „↺ Standard wiederherstellen“, Vorschau · Speichern · Benachrichtigungen (M8, abgeleitet: „Dieses Gerät“ mit Push-Button, Anlässe als Checkbox-Zeilen) · Gruppe verlassen / löschen |
 
 Nicht entworfen, aus diesem System ableiten: Login, Einladung annehmen, Konto, Gruppenauswahl, Fehlerseiten, E-Mails. Gleiche Kopfzeile, h1, Mono-Labels, primärer Button.
 

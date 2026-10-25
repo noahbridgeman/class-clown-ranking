@@ -20,7 +20,7 @@ from app.domain.scoring import default_params
 from app.domain.types import Cadence
 from app.extensions import db
 from app.models import Period, PeriodResult, PeriodStatus
-from app.services import periods, settings, voting
+from app.services import periods, push, settings, voting
 from tests.factories import (
     IN_WEEK_WINDOW,
     WEEK_CLOSES,
@@ -31,6 +31,7 @@ from tests.factories import (
     tick,
     vote,
 )
+from tests.services.test_push import AUTH, KEY
 
 RACE_WINDOW_SECONDS = 0.5
 
@@ -81,7 +82,11 @@ def test_parallel_runs_compute_once(file_app, monkeypatch):
         other = add_member(group)
         tick()
         vote(group, group.admin, other, "up")
+        for n, user in enumerate((group.admin, other)):
+            push.subscribe(user, f"https://fcm.googleapis.com/fcm/send/{n}", KEY, AUTH)
     file_app.extensions["clock"].set(WEEK_CLOSES)
+    outbox = file_app.extensions["push"].outbox
+    outbox.clear()
 
     barrier = threading.Barrier(2)
     original = periods.open_period
@@ -110,6 +115,9 @@ def test_parallel_runs_compute_once(file_app, monkeypatch):
     assert sum(report.closed for report in reports) == 1
     with file_app.app_context():
         assert counts() == (0, 1, 2)
+    # NOT-03: the flag is set under the same lock, so each gets the scores once.
+    scores = sorted(url for url, m in outbox if m.tag.endswith("-scores"))
+    assert scores == [f"https://fcm.googleapis.com/fcm/send/{n}" for n in (0, 1)]
 
 
 def test_pending_settings_are_taken_over_once(app, clock):

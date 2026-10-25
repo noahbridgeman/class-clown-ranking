@@ -97,6 +97,14 @@
     {% endcall %}
   {% endif %}
 
+  <div id="benachrichtigungen" class="settings-notifications">
+    {% call ui.section(t("push.section")) %}
+      <p class="field-label">{{ t("push.device") }}</p>
+      {% with variant = "device" %}{% include "push/_control.html" %}{% endwith %}
+      {% with preferences = notification_preferences, saved = false %}{% include "push/_preferences.html" %}{% endwith %}
+    {% endcall %}
+  </div>
+
   <div class="group-actions">
     {{ ui.button(t("groups.leave_link"), "secondary", href=url_for('groups.leave', group_id=group.id)) }}
     {% if is_admin %}{{ ui.button(t("groups.delete_link"), "danger", href=url_for('groups.delete', group_id=group.id)) }}{% endif %}

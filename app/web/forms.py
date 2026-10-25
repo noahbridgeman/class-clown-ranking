@@ -28,6 +28,7 @@ class ConfirmForm(FlaskForm):
 
 class LogoutForm(FlaskForm):
     next = HiddenField()
+    endpoint = HiddenField()  # this device's push subscription, filled in by push.js
 
 
 class VoteForm(FlaskForm):

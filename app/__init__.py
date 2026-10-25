@@ -8,7 +8,7 @@ from app import cli, i18n
 from app.clock import Clock, SystemClock
 from app.config import Config, config_from_env, env_overrides
 from app.extensions import csrf, db, migrate
-from app.services import mail
+from app.services import mail, push
 
 
 def create_app(config: type[Config] | None = None, clock: Clock | None = None) -> Flask:
@@ -31,10 +31,11 @@ def create_app(config: type[Config] | None = None, clock: Clock | None = None) -
     csrf.init_app(app)
     i18n.init_app(app)
     mail.init_app(app)
+    push.init_app(app)
     cli.register(app)
 
     from app import models  # noqa: F401  (registers models for migrations)
-    from app.web import auth, errors, groups, invitations, main, overview, settings, voting
+    from app.web import auth, errors, groups, invitations, main, overview, pwa, settings, voting
 
     auth.register(app)
     groups.register(app)
@@ -42,6 +43,7 @@ def create_app(config: type[Config] | None = None, clock: Clock | None = None) -
     app.register_blueprint(main.bp)
     app.register_blueprint(voting.bp)
     overview.register(app)
+    pwa.register(app)
     settings.register(app)
     errors.register(app)
 

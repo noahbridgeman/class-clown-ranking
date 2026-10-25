@@ -97,6 +97,7 @@
   --color-on-dark: #f5f4ef;
   --color-on-dark-muted: #b9b9b1;
   --color-on-dark-line: #3a3a36;
+  --color-ink-soft: #3a3a36; /* text on tinted areas, e.g. the push offer */
   --color-surface: #ffffff;
   --color-up: #12d37a;
   --color-up-text: #0b7a5c;

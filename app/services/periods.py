@@ -17,7 +17,7 @@ from app.domain import schedule, scoring
 from app.domain.types import UserId
 from app.extensions import db
 from app.models import Group, Period, PeriodResult, PeriodStatus, Vote
-from app.services import auth, membership, settings
+from app.services import auth, membership, notifications, push, settings
 from app.services.errors import NotFound
 from app.services.locks import lock_group
 
@@ -30,6 +30,7 @@ class TickReport:
     closed: int = 0
     skipped: int = 0
     tokens_removed: int = 0
+    pushes: int = 0  # devices that accepted a push
     failed: list[int] = field(default_factory=list)
 
 
@@ -39,7 +40,7 @@ def tick() -> TickReport:
     report = TickReport()
     for group_id in db.session.scalars(select(Group.id).order_by(Group.id)).all():
         try:
-            closed, opened = _tick_group(group_id, now)
+            closed, opened, deliveries = _tick_group(group_id, now)
         except Exception:
             db.session.rollback()
             current_app.logger.exception("tick failed for group %s", group_id)
@@ -48,24 +49,34 @@ def tick() -> TickReport:
         report.closed += closed is PeriodStatus.CLOSED
         report.skipped += closed is PeriodStatus.SKIPPED
         report.opened += opened
+        # After the commit: a failure here loses the push, never the update (NOT-03).
+        try:
+            report.pushes += push.deliver(deliveries)
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("pushes failed for group %s", group_id)
     report.tokens_removed = auth.delete_stale_tokens(now)
     db.session.commit()
     return report
 
 
-def _tick_group(group_id: int, now: datetime) -> tuple[PeriodStatus | None, bool]:
+def _tick_group(
+    group_id: int, now: datetime
+) -> tuple[PeriodStatus | None, bool, list[push.Delivery]]:
     group = db.session.get(Group, group_id)
     if group is None:
-        return None, False
+        return None, False, []
     try:
         lock_group(group)
     except NotFound:
-        return None, False  # deleted since the list was read
+        return None, False, []  # deleted since the list was read
     # Read again under the lock: a parallel run may have done the work already (PER-02).
     closed = close_if_due(group_id, now)
     opened = open_period(group_id) is None and _open_current(group, now)
+    # PER-01 step 5: decided and flagged in this commit, sent after it.
+    deliveries = notifications.period_events(group, now)
     db.session.commit()
-    return closed, opened
+    return closed, opened, deliveries
 
 
 def open_period(group_id: int) -> Period | None:

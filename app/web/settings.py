@@ -21,7 +21,7 @@ from app.i18n import t
 from app.models import SettingField
 from app.models.group import GROUP_NAME_MAX_LENGTH
 from app.models.user import EMAIL_MAX_LENGTH
-from app.services import invitations, membership, settings
+from app.services import invitations, membership, push, settings
 from app.services.settings import GroupSettings, InvalidSettings, SettingValue
 from app.web.access import admin_required, member_required
 from app.web.forms import ConfirmForm, EmailForm
@@ -30,14 +30,7 @@ bp = Blueprint("settings", __name__)
 
 Page = tuple[str, int] | BaseResponse
 
-FIELD_LABELS = {
-    SettingField.NAME: "settings.field_name",
-    SettingField.CADENCE: "settings.field_cadence",
-    SettingField.IS_ANONYMOUS: "settings.field_anonymity",
-    SettingField.TIMEZONE: "settings.field_timezone",
-    SettingField.K: "settings.field_k",
-    SettingField.D: "settings.field_d",
-}
+FIELD_LABELS = settings.FIELD_LABELS
 CADENCE_LABELS = {Cadence.WEEKLY: "settings.weekly", Cadence.DAILY: "settings.daily"}
 # What K and d mean, per cadence (docs/design/screens/einstellungen.html).
 HINTS = {
@@ -192,6 +185,7 @@ def render_page(
         invite_error=invite_error,
         email_max_length=EMAIL_MAX_LENGTH,
         live=False,
+        notification_preferences=push.preferences(current_user.id, group.id),
         **_params_context(values, errors or {}, texts or {}),
     )
 

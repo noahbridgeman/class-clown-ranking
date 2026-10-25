@@ -277,6 +277,14 @@ def test_no_fixed_colors_in_templates():
     assert not found
 
 
+def test_manifest_theme_color_matches_the_token():
+    """Like theme-color: the web app manifest cannot read CSS variables (NFA-02)."""
+    from app.web.pwa import THEME_COLOR
+
+    bg = re.search(r"--color-bg:\s*(#[0-9a-f]+)", TOKENS.read_text(), re.I).group(1)
+    assert bg.lower() == THEME_COLOR
+
+
 @pytest.mark.parametrize("css_class", MACRO_CLASSES)
 def test_recurring_elements_come_from_macros(css_class):
     pattern = re.compile(rf'class="(?:[^"]*\s)?{re.escape(css_class)}(?:\s[^"]*)?"')

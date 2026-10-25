@@ -43,3 +43,11 @@ def test_tick_fails_loudly_when_a_group_fails(app, clock, monkeypatch):
     result = app.test_cli_runner().invoke(args=["tick"])
     assert result.exit_code != 0
     assert f"Fehler bei den Gruppen {group.id}" in result.output
+
+
+def test_push_keygen_prints_a_key_pair_for_env(app):
+    result = app.test_cli_runner().invoke(args=["push", "keygen"])
+    assert result.exit_code == 0
+    lines = dict(line.split("=", 1) for line in result.stdout.splitlines())
+    assert set(lines) == {"VAPID_PRIVATE_KEY", "VAPID_PUBLIC_KEY"}
+    assert len(lines["VAPID_PUBLIC_KEY"]) == 87  # 65 bytes, base64url without padding

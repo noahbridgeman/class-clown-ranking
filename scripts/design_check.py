@@ -67,6 +67,7 @@ def render() -> list[Page]:
     clock = FrozenClock(datetime(2026, 9, 12, 10, 0, tzinfo=UTC))
     app = create_app(TestConfig, clock=clock)
     app.test_client_class = IsolatedClient
+    app.config["VAPID_PUBLIC_KEY"] = "BDesignCheckKey"  # shows the push offer
     pages: list[Page] = []
     rng = random.Random(43)
     with app.app_context():
@@ -131,7 +132,7 @@ def render() -> list[Page]:
         pages.append(closed)
         settings.change(group, jonas, replace(settings.upcoming(group), is_anonymous=True))
         pages.append(
-            _page(client, "einstellungen", "einstellungen.html", f"/g/{group.id}/settings", 1700)
+            _page(client, "einstellungen", "einstellungen.html", f"/g/{group.id}/settings", 2300)
         )
 
         stammtisch = make_group(jonas, "Stammtisch Dienstag")

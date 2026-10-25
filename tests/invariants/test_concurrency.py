@@ -20,8 +20,9 @@ from app.clock import FrozenClock
 from app.config import TestConfig
 from app.extensions import db
 from app.models import Group, User
-from app.services import groups, membership, periods, settings
-from tests.factories import WEEK_OPENS, add_member, make_group, make_user
+from app.services import groups, membership, periods, push, settings
+from tests.factories import WEEK_CLOSES, WEEK_OPENS, add_member, make_group, make_user
+from tests.services.test_push import AUTH, KEY
 
 # How long the first thread waits for the second to read the same state.
 RACE_WINDOW_SECONDS = 0.5
@@ -155,3 +156,35 @@ def test_settings_change_racing_the_window_opening_is_all_or_nothing(file_app, m
         applied = snapshot == (False, 0.8)
         assert {c.applied_in_period_id for c in log} == {period.id if applied else None}
         assert group.name == ("Neu" if applied else group.name)
+
+
+def test_a_leave_racing_tick_announces_the_scores_once(file_app, monkeypatch):
+    """NOT-03, plan section 5: a leave after the window's end closes the period itself;
+    whichever comes first, the scores go out exactly once."""
+    with file_app.app_context():
+        clock = file_app.extensions["clock"]
+        clock.set(WEEK_OPENS)
+        admin = make_user()
+        group = make_group(admin)
+        stays, leaves = add_member(group), add_member(group)
+        periods.tick()
+        for n, user in enumerate((admin, stays)):
+            push.subscribe(user, f"https://fcm.googleapis.com/fcm/send/{n}", KEY, AUTH)
+        group_id, leaving_id = group.id, leaves.id
+        clock.set(WEEK_CLOSES)
+    outbox = file_app.extensions["push"].outbox
+    outbox.clear()
+
+    def leave_now() -> object:
+        group = db.session.get(Group, group_id)
+        return membership.leave(group, db.session.get(User, leaving_id))
+
+    outcomes = race(
+        file_app, monkeypatch, leave_now, periods.tick, pause_after=(periods, "open_period")
+    )
+    assert not [o for o in outcomes if isinstance(o, Exception)], outcomes
+    with file_app.app_context():
+        periods.tick()  # announces a period the leave closed
+        periods.tick()
+    scores = sorted(url for url, m in outbox if m.tag.endswith("-scores"))
+    assert scores == [f"https://fcm.googleapis.com/fcm/send/{n}" for n in (0, 1)]

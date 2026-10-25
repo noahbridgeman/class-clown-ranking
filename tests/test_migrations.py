@@ -74,3 +74,42 @@ SEED = [
     "INSERT INTO invitations (group_id, email, invited_by_user_id, nonce_hash, created_at, "
     f"last_sent_at, expires_at, send_count) VALUES (1, 'b@x.org', 1, 'h', {NOW}, {NOW}, {NOW}, 1)",
 ]
+
+
+def test_existing_periods_count_as_notified(tmp_path):
+    """A24: after the deploy, tick sends nothing about periods from before push."""
+    app = _app(tmp_path)
+    with app.app_context():
+        upgrade(revision="83ce590a9c4d")
+        with db.engine.begin() as connection:
+            connection.execute(text(SEED[0]))
+            connection.execute(
+                text(
+                    "INSERT INTO groups (id, name, admin_user_id, created_by_user_id, cadence, "
+                    "is_anonymous, timezone, k, d, created_at) VALUES (1, 'Runde', 1, 1, "
+                    f"'weekly', 1, 'Europe/Berlin', 0.5, 0.95, {NOW})"
+                )
+            )
+            for seq, status, closed in (
+                (1, "closed", NOW),
+                (2, "skipped", NOW),
+                (3, "open", "NULL"),
+            ):
+                connection.execute(
+                    text(
+                        "INSERT INTO periods (group_id, seq, opens_at, closes_at, cadence, "
+                        f"is_anonymous, k, d, status, closed_at) VALUES (1, {seq}, {NOW}, {NOW}, "
+                        f"'weekly', 1, 0.5, 0.95, '{status}', {closed})"
+                    )
+                )
+        upgrade()
+        with db.engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    "SELECT seq, opened_notified_at IS NOT NULL, reminder_sent_at IS NOT NULL, "
+                    "results_notified_at IS NOT NULL FROM periods ORDER BY seq"
+                )
+            ).all()
+        db.engine.dispose()
+    # The running period still gets its reminder.
+    assert [tuple(r) for r in rows] == [(1, 1, 1, 1), (2, 1, 1, 1), (3, 1, 0, 0)]

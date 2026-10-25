@@ -1488,3 +1488,68 @@ p { margin: 0 0 var(--space-md); }
   text-transform: uppercase;
   color: var(--color-ink);
 }
+
+/* Push (docs/design/screens/voting-geschlossen.html, A24). push.js sets data-state;
+   each part shows only for the states listed in its data-when. */
+
+.push { display: flex; flex-direction: column; gap: var(--space-md); }
+
+.push [data-when] { display: none; }
+
+.push[data-state="noscript"] [data-when~="noscript"],
+.push[data-state="off"] [data-when~="off"],
+.push[data-state="on"] [data-when~="on"],
+.push[data-state="denied"] [data-when~="denied"],
+.push[data-state="unsupported"] [data-when~="unsupported"],
+.push[data-state="ios"] [data-when~="ios"],
+.push[data-state="missing"] [data-when~="missing"],
+.push[data-state="failed"] [data-when~="failed"] { display: block; }
+
+.push-offer {
+  margin-top: var(--space-2xl);
+  padding: var(--space-xl);
+  background: var(--color-up-tint);
+}
+
+.push-offer[data-state="on"] { display: none; }
+
+.push-title {
+  margin: 0;
+  font-size: var(--font-size-status);
+  font-weight: var(--weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.push-text, .push-note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-kicker);
+  line-height: var(--line-height-body);
+  color: var(--color-ink-soft);
+}
+
+.push-action .button { width: 100%; }
+
+.push-device { margin-bottom: var(--space-2xl); }
+
+.check-list { margin: 0; padding: 0; border: 0; }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-height: var(--touch-target);
+  border-bottom: var(--rule) solid var(--color-line);
+  font-size: var(--font-size-body);
+  cursor: pointer;
+}
+
+.check:last-child { border-bottom: 0; }
+
+.check input { width: var(--space-2xl); height: var(--space-2xl); margin: 0; accent-color: var(--color-ink); }
+
+.preferences .hint { margin-top: var(--space-xs); }
+
+.preferences noscript .button { margin-top: var(--space-md); }
+
+.settings-notifications { margin-top: var(--space-3xl); }

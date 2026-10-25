@@ -38,6 +38,8 @@ python scripts/demo.py [--email <adresse>] [--force]  # Demo-Gruppen in instance
 DATABASE_URL=sqlite:///demo.db flask --app app run --debug  # App mit den Demo-Daten (tick genauso)
 flask --app app users allow <email>  # Adresse für Kontoanlage ohne Einladung freischalten (E3)
 flask --app app tick                 # Periodenupdate: Perioden schließen, Scores berechnen, Fenster öffnen
+flask --app app push keygen          # VAPID-Schlüsselpaar für die .env (Push, M8)
+python scripts/icons.py              # App-Icons in app/static/icons/ neu erzeugen
 python scripts/screenshots.py capture <dir>          # alle Seiten fotografieren (390 und 1280 px, braucht Chrome)
 python scripts/screenshots.py compare <vorher> <nachher>  # Exit-Code 1, wenn sich ein Screenshot unterscheidet
 python scripts/screenshots.py design-check design-check/<nr>-<name>  # Referenz-Screens und App bei 390 px nebeneinander
@@ -89,4 +91,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M8 (PWA und Push). M0 bis M7 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M9 (Konto löschen, Betrieb, Go-Live). M0 bis M8 sind abgeschlossen. Details in `docs/plan.md`.
