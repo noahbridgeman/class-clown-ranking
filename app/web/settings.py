@@ -21,7 +21,7 @@ from app.i18n import t
 from app.models import SettingField
 from app.models.group import GROUP_NAME_MAX_LENGTH
 from app.models.user import EMAIL_MAX_LENGTH
-from app.services import invitations, membership, settings
+from app.services import invitations, membership, push, settings
 from app.services.settings import GroupSettings, InvalidSettings, SettingValue
 from app.web.access import admin_required, member_required
 from app.web.forms import ConfirmForm, EmailForm
@@ -185,6 +185,7 @@ def render_page(
         invite_error=invite_error,
         email_max_length=EMAIL_MAX_LENGTH,
         live=False,
+        notification_preferences=push.preferences(current_user.id, group.id),
         **_params_context(values, errors or {}, texts or {}),
     )
 

@@ -29,13 +29,14 @@
 {%- endmacro %}
 
 {# kind: primary (ink, green text), up (green area), secondary (ink frame) or danger.
-   With href it is a link styled as a button. attrs: further attributes. #}
-{% macro button(label, kind="primary", href=none, attrs={}) -%}
+   With href it is a link styled as a button. type: submit, or button for scripts.
+   attrs: further attributes. #}
+{% macro button(label, kind="primary", href=none, attrs={}, type="submit") -%}
 {%- set classes = "button button-" ~ kind -%}
 {%- if href -%}
 <a class="{{ classes }}" href="{{ href }}">{{ label }}</a>
 {%- else -%}
-<button type="submit" class="{{ classes }}"{{ _attrs(attrs) }}>{{ label }}</button>
+<button type="{{ type }}" class="{{ classes }}"{{ _attrs(attrs) }}>{{ label }}</button>
 {%- endif -%}
 {%- endmacro %}
 
@@ -181,6 +182,37 @@
   {% if ups %}<rect class="volume-up" x="69" y="0" width="{{ (unit * ups)|round(2) }}" height="16"/>{% endif %}
   <line class="volume-axis" x1="60.5" y1="0" x2="60.5" y2="16"/>
 </svg>
+{%- endmacro %}
+
+{# Push on this device (NOT-01: the browser asks only after the click). push.js sets
+   data-state; each part shows for the states in its data-when. Without JavaScript the
+   noscript note stays. variant: offer (voting page, gone once push is on) or device.
+   texts: from push_texts() in app/web/pwa.py. #}
+{% macro push_control(variant, key, texts, subscribe_url, unsubscribe_url) -%}
+<div class="push push-{{ variant }}" data-push data-state="noscript" data-key="{{ key or '' }}"
+     data-subscribe="{{ subscribe_url }}" data-unsubscribe="{{ unsubscribe_url }}">
+  {% if variant == "offer" %}
+    <p class="push-title">{{ texts.title }}</p>
+    <p class="push-text">{{ texts.text }}</p>
+  {% endif %}
+  {% for state in ("noscript", "on", "denied", "unsupported", "ios", "missing") %}
+    <p class="push-note" data-when="{{ state }}">{{ texts[state] }}</p>
+  {% endfor %}
+  <p class="push-note error" data-when="failed" role="alert">{{ texts.failed }}</p>
+  <div class="push-action" data-when="off failed">{{ button(texts.enable, "primary", type="button", attrs={"data-push-enable": true}) }}</div>
+  <div class="push-action" data-when="on">{{ button(texts.disable, "secondary", type="button", attrs={"data-push-disable": true}) }}</div>
+</div>
+{%- endmacro %}
+
+{# Inside a logout form: push.js puts this device's subscription here, so logging out
+   ends its pushes (A24). #}
+{% macro push_logout_field() -%}
+<input type="hidden" name="endpoint" value="" data-push-endpoint>
+{%- endmacro %}
+
+{# A labelled checkbox row, 44 px high. #}
+{% macro checkbox(name, value, label, checked) -%}
+<label class="check"><input type="checkbox" name="{{ name }}" value="{{ value }}"{% if checked %} checked{% endif %}> <span>{{ label }}</span></label>
 {%- endmacro %}
 
 {# Tiny history line, 44 × 18. points: y values from 0 (bottom) to 1 (top). #}

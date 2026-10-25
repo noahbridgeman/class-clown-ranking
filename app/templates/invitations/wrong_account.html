@@ -9,6 +9,7 @@
   <form method="post" action="{{ url_for('auth.logout') }}" class="form">
     {{ form.csrf_token }}
     {{ form.next() }}
+    {{ ui.push_logout_field() }}
     {{ ui.button(t("invitations.wrong_account_logout")) }}
   </form>
 {% endblock %}

@@ -1,0 +1,3 @@
+{# Push on this device, as offer (voting page) or in the settings. #}
+{% import "macros/ui.html" as ui %}
+{{ ui.push_control(variant, push_public_key(), push_texts(), url_for('pwa.subscribe'), url_for('pwa.unsubscribe')) }}

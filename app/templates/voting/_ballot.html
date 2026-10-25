@@ -88,5 +88,8 @@
         {{ ui.text_link(t("voting.to_overview"), url_for('overview.index', group_id=group.id, seq=last.period.seq), kind="row") }}
       {% endcall %}
     {% endif %}
+    {% if push_public_key() %}
+      {% with variant = "offer" %}{% include "push/_control.html" %}{% endwith %}
+    {% endif %}
   {% endif %}
 </div>

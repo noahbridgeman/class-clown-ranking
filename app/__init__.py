@@ -35,7 +35,7 @@ def create_app(config: type[Config] | None = None, clock: Clock | None = None) -
     cli.register(app)
 
     from app import models  # noqa: F401  (registers models for migrations)
-    from app.web import auth, errors, groups, invitations, main, overview, settings, voting
+    from app.web import auth, errors, groups, invitations, main, overview, pwa, settings, voting
 
     auth.register(app)
     groups.register(app)
@@ -43,6 +43,7 @@ def create_app(config: type[Config] | None = None, clock: Clock | None = None) -
     app.register_blueprint(main.bp)
     app.register_blueprint(voting.bp)
     overview.register(app)
+    pwa.register(app)
     settings.register(app)
     errors.register(app)
 

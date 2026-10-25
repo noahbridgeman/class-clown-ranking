@@ -14,6 +14,7 @@
   {# Logging out lives here, behind the profile button (docs/design.md, section 3). #}
   <form class="page-actions page-actions-rule" method="post" action="{{ url_for('auth.logout') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {{ ui.push_logout_field() }}
     {{ ui.button(t("nav.logout"), "secondary") }}
   </form>
 {% endblock %}

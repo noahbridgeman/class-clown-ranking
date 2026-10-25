@@ -1,5 +1,6 @@
 [app]
 name = "Spaßvogel-Ranking"
+short_name = "Spaßvogel"
 tagline = "Wer ist der Lustigste in eurer Runde?"
 
 [home]
@@ -381,6 +382,7 @@ unsupported = "Dieser Browser kann keine Push-Benachrichtigungen."
 ios_hint = "Auf dem iPhone: Erst über Teilen → „Zum Home-Bildschirm“ hinzufügen und von dort öffnen."
 no_script = "Für Push wird JavaScript benötigt."
 failed = "Push ließ sich nicht einschalten. Versuch es noch einmal."
+not_configured = "Push ist auf diesem Server nicht eingerichtet."
 section = "Benachrichtigungen"
 device = "Dieses Gerät"
 occasions = "Anlässe in dieser Gruppe"

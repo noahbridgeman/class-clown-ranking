@@ -59,6 +59,10 @@ CHROME_CANDIDATES = (
 CSRF_VALUE = re.compile(r'(csrf[-_]token"?\s*(?:content|value)=)"[^"]*"')
 CSRF_HEADER = re.compile(r'"X-CSRFToken": "[^"]*"')
 REMOTE_SCRIPT = re.compile(r'<script src="https://[^>]*></script>')
+# push.js would find no service worker on file:// and say "unsupported"; the shots show
+# the state a first visit has instead.
+PUSH_SCRIPT = re.compile(r'<script src="[^"]*/js/push\.js"[^>]*></script>')
+PUSH_KEY = "BScreenshotKey"
 
 
 class Pages:
@@ -92,6 +96,7 @@ def render_pages() -> dict[str, str]:
     clock = FrozenClock(START)
     app = create_app(TestConfig, clock=clock)
     app.test_client_class = IsolatedClient
+    app.config["VAPID_PUBLIC_KEY"] = PUSH_KEY  # shows the push offer
     pages = Pages(app)
     with app.app_context():
         db.create_all()
@@ -218,6 +223,7 @@ def localize(html: str) -> str:
         'src="/static/', f'src="{static}/'
     )
     html = REMOTE_SCRIPT.sub("", html)
+    html = PUSH_SCRIPT.sub("", html).replace('data-state="noscript"', 'data-state="off"')
     html = CSRF_VALUE.sub(r'\1"x"', html)
     return CSRF_HEADER.sub('"X-CSRFToken": "x"', html)
 

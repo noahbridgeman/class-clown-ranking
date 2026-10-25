@@ -15,7 +15,7 @@ from werkzeug.wrappers import Response as BaseResponse
 from app.extensions import db, login_manager
 from app.models import User
 from app.models.user import DISPLAY_NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
-from app.services import auth
+from app.services import auth, push
 from app.web.forms import ConfirmForm, EmailForm, LogoutForm, NameForm
 
 bp = Blueprint("auth", __name__)
@@ -125,8 +125,12 @@ def redeem(token: str) -> tuple[str, int] | BaseResponse:
 
 @bp.post("/logout")
 def logout() -> BaseResponse:
+    form = LogoutForm()
+    if current_user.is_authenticated:
+        # A24: no more pushes for this account on a device it signed out of.
+        push.unsubscribe(current_user._get_current_object(), form.endpoint.data)
     logout_user()
-    target = LogoutForm().next.data or ""
+    target = form.next.data or ""
     safe = target.startswith(LOGOUT_NEXT_PREFIX) and "//" not in target and "\\" not in target
     return _redirect(target if safe else url_for("main.index"))
 

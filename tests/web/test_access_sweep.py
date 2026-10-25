@@ -32,6 +32,12 @@ PUBLIC_ENDPOINTS = {
     "groups.create",
     "invitations.show",
     "invitations.accept",
+    # PWA (A24): manifest and service worker are static; the subscription routes need a
+    # login and only touch the user's own devices.
+    "pwa.manifest",
+    "pwa.service_worker",
+    "pwa.subscribe",
+    "pwa.unsubscribe",
 }
 
 

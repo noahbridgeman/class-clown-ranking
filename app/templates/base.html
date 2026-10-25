@@ -11,6 +11,12 @@
   {# Unlike the htmx default, also swap 4xx/5xx responses so error messages become visible. #}
   <meta name="htmx-config" content='{"responseHandling": [{"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": true, "error": true}]}'>
   <title>{% block title %}{{ t("app.name") }}{% endblock %}</title>
+  {# NFA-02: installable; iOS reads its own tags. #}
+  <link rel="manifest" href="{{ url_for('pwa.manifest') }}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="{{ t('app.short_name') }}">
   <link rel="preload" href="{{ url_for('static', filename='fonts/archivo-narrow-latin-700.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ url_for('static', filename='fonts/ibm-plex-mono-latin-600.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
@@ -18,6 +24,7 @@
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"
           integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
           crossorigin="anonymous" defer></script>
+  <script src="{{ url_for('static', filename='js/push.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'>
