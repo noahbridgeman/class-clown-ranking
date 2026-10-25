@@ -216,5 +216,8 @@ class TestEdgeCases:
         add_member(group, bo)
         html = login_as(ada).get(f"/g/{group.id}/").get_data(as_text=True)
         [bo_row] = [row for row in rows(html) if ">Bo<" in row or ">Bo " in row]
-        assert '<span class="rank-delta" title="Veränderung zur Vorperiode">–</span>' in bo_row
+        assert (
+            '<span class="rank-delta" title="Veränderung durch das letzte Voting">–</span>'
+            in bo_row
+        )
         assert ">Neu<" not in bo_row

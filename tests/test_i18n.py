@@ -162,3 +162,16 @@ def test_short_formats(app):
 )
 def test_window_dates(opens, closes, text):
     assert window_dates(opens, closes, "Europe/Berlin") == text
+
+
+# docs/design.md section 6: the look of a stock exchange, the language of everyone.
+STOCK_TERMS = re.compile(
+    r"\b(Kurse?|Handel|Order|kaufen|verkaufen|Ordernotiz|Ausgabekurs|Index|Dark Pool|"
+    r"Neuemission|Delisting|Protokoll)\b",
+    re.I,
+)
+
+
+def test_texts_avoid_stock_exchange_terms():
+    found = {key: text for key, text in load_texts("de").items() if STOCK_TERMS.search(text)}
+    assert found == {}
