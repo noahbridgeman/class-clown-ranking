@@ -1,16 +1,14 @@
 {% extends "base.html" %}
 {% import "macros/ui.html" as ui %}
-{% set title = t("groups.delete_title", group=group.name) %}
-{% block title %}{{ title }} – {{ t("app.name") }}{% endblock %}
+{% set title = t("groups.delete_title") %}
+{% block title %}{{ title }} – {{ group.name }}{% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ title }}</h1>
-    <p class="warning">{{ t("groups.delete_text") }}</p>
-    <form method="post" action="{{ url_for('groups.delete', group_id=group.id) }}" class="form">
-      {{ form.csrf_token }}
-      {% include "partials/confirm_name.html" %}
-      {{ ui.button(t("groups.delete_button"), "danger") }}
-      <a href="{{ url_for('groups.home', group_id=group.id) }}">{{ t("groups.cancel") }}</a>
-    </form>
-  {% endcall %}
+  {{ ui.page_head(title, kicker=group.name) }}
+  <p class="page-text warning">{{ t("groups.delete_text") }}</p>
+  <form method="post" action="{{ url_for('groups.delete', group_id=group.id) }}" class="form">
+    {{ form.csrf_token }}
+    {% include "partials/confirm_name.html" %}
+    {{ ui.button(t("groups.delete_button"), "danger") }}
+  </form>
+  <div class="page-actions">{{ ui.text_link(t("groups.cancel"), url_for('settings.index', group_id=group.id), back=true) }}</div>
 {% endblock %}

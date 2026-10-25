@@ -1,5 +1,10 @@
 {% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-  {% include "errors/_message.html" %}
+  <div role="alert">
+    {{ ui.page_head(title, kicker=t("errors.kicker", code=status)) }}
+    <p class="page-text">{{ text }}</p>
+  </div>
+  <div class="page-actions">{{ ui.text_link(t("errors.back_home"), url_for('main.index'), kind="row") }}</div>
 {% endblock %}

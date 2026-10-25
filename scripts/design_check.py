@@ -12,6 +12,7 @@ import hashlib
 import html as html_lib
 import json
 import random
+import re
 import subprocess
 import urllib.request
 from dataclasses import dataclass, field, replace
@@ -26,7 +27,7 @@ from app.extensions import db
 from app.services import invitations, settings
 from app.services import voting as voting_service
 from tests.conftest import IsolatedClient
-from tests.factories import add_member, make_group, make_user, tick, vote
+from tests.factories import add_member, allow, make_group, make_user, tick, vote
 
 ROOT = Path(__file__).resolve().parent.parent
 SCREENS = ROOT / "docs" / "design" / "screens"
@@ -44,6 +45,7 @@ class Page:
     html: str
     height: int
     graph: dict[str, Any] = field(default_factory=dict)  # range → graph.json
+    related: bool = False  # no design of its own: the reference is the closest screen
 
 
 # Who gets how many ups, so the order resembles the reference.
@@ -117,10 +119,46 @@ def render() -> list[Page]:
                 graph=True,
             )
         )
+        # Pages without a design of their own, next to the closest designed screen.
+        guest = app.test_client()
+        derived = [
+            (client, "gruppenauswahl", "ranking.html", "/"),
+            (client, "konto", "einstellungen.html", "/account/name"),
+            (client, "neue-gruppe", "einstellungen.html", "/groups/new"),
+            (client, "gruppe-verlassen", "einstellungen.html", f"/g/{group.id}/leave"),
+            (client, "fehler-404", "voting-geschlossen.html", "/g/9999/"),
+            (guest, "start-gast", "ranking-neue-gruppe.html", "/"),
+            (guest, "login", "einstellungen.html", "/login"),
+        ]
+        for page_client, name, reference, url in derived:
+            page = _page(page_client, name, reference, url, 900)
+            page.related = True
+            pages.append(page)
+        pages.append(_login_sent(app))
+        pages.append(_invitation(app, group, jonas))
         db.session.remove()
         db.drop_all()
         db.engine.dispose()
     return pages
+
+
+def _login_sent(app: Any) -> Page:
+    allow("gast@example.org")
+    client = app.test_client()
+    html = client.post("/login", data={"email": "gast@example.org"}, follow_redirects=True)
+    page = Page("login-gesendet", "voting-geschlossen.html", html.get_data(as_text=True), 900)
+    page.related = True
+    return page
+
+
+def _invitation(app: Any, group: Any, jonas: Any) -> Page:
+    outbox = app.extensions["mail"].outbox
+    invitations.invite(group, jonas, "neu@example.org")
+    link = re.search(r"https?://[^/\s]+(/\S+)", outbox[-1].body).group(1)
+    html = app.test_client().get(link).get_data(as_text=True)
+    page = Page("einladung", "ranking-neue-gruppe.html", html, 900)
+    page.related = True
+    return page
 
 
 def _random_votes(group: Any, users: dict[str, Any], rng: random.Random) -> None:
@@ -185,9 +223,10 @@ def write_index(out: Path, pages: list[Page]) -> Path:
             if page.reference
             else "<p>kein Entwurf</p>"
         )
+        caption = f"verwandt: {page.reference}" if page.related else "Referenz"
         rows.append(
             f"<section><h2>{html_lib.escape(page.name)}</h2><div class='pair'>"
-            f"<figure><figcaption>Referenz</figcaption>{reference}</figure>"
+            f"<figure><figcaption>{html_lib.escape(caption)}</figcaption>{reference}</figure>"
             "<figure><figcaption>Ist</figcaption>"
             f"<img src='{page.name}/ist.png' alt='Ist'></figure>"
             "</div></section>"

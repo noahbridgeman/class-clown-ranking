@@ -375,6 +375,10 @@ p { margin: 0 0 var(--space-md); }
   border-radius: 0;
 }
 
+.form input:focus-visible, .form select:focus-visible, .reason input:focus-visible {
+  outline-offset: 0;
+}
+
 .form input[aria-invalid="true"], .form select[aria-invalid="true"] {
   border-color: var(--color-down-text);
 }
@@ -1057,3 +1061,56 @@ p { margin: 0 0 var(--space-md); }
 }
 
 .group-actions .button { width: 100%; }
+
+/* Pages without their own design (docs/design.md, section 5): the same head, mono labels
+   and one primary button. */
+
+.page-text { font-size: var(--font-size-body-large); }
+
+.page-text + .hint { margin-bottom: var(--space-md); }
+
+.form > .button {
+  width: 100%;
+  min-height: var(--status-height);
+  margin-top: var(--space-xl);
+  font-size: var(--font-size-button-large);
+  letter-spacing: var(--tracking-label);
+}
+
+.page-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin-top: var(--space-2xl);
+}
+
+.page-actions .button { width: 100%; }
+
+.page-actions-rule {
+  margin-top: var(--space-3xl);
+  padding-top: var(--space-xl);
+  border-top: var(--rule-strong) solid var(--color-ink);
+}
+
+.link-list { list-style: none; margin: 0; padding: 0; }
+
+.text-link-row {
+  display: flex;
+  width: 100%;
+  min-height: var(--touch-target);
+  border-bottom: var(--rule) solid var(--color-ink);
+}
+
+.link-list .text-link-row {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-name);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0;
+  text-transform: none;
+  border-bottom-color: var(--color-line);
+}
+
+.link-list li:last-child .text-link-row { border-bottom: 0; }
+
+.section + .page-actions { margin-top: var(--space-xl); }

@@ -1,23 +1,21 @@
 {% extends "base.html" %}
 {% import "macros/ui.html" as ui %}
-{% set title = t("groups.leave_title", group=group.name) %}
-{% block title %}{{ title }} – {{ t("app.name") }}{% endblock %}
+{% set title = t("groups.leave_title") %}
+{% block title %}{{ title }} – {{ group.name }}{% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ title }}</h1>
-    {% if successor is none %}
-      <p class="warning">{{ t("groups.leave_last_member") }}</p>
-    {% else %}
-      <p>{{ t("groups.leave_text") }}</p>
-      {% if is_admin %}
-        <p>{{ t("groups.leave_admin_successor", name=member_name(successor.user)) }}</p>
-      {% endif %}
+  {{ ui.page_head(title, kicker=group.name) }}
+  {% if successor is none %}
+    <p class="page-text warning">{{ t("groups.leave_last_member") }}</p>
+  {% else %}
+    <p class="page-text">{{ t("groups.leave_text") }}</p>
+    {% if is_admin %}
+      <p class="page-text">{{ t("groups.leave_admin_successor", name=member_name(successor.user)) }}</p>
     {% endif %}
-    <form method="post" action="{{ url_for('groups.leave', group_id=group.id) }}" class="form">
-      {{ form.csrf_token }}
-      {% if successor is none %}{% include "partials/confirm_name.html" %}{% endif %}
-      {{ ui.button(t("groups.leave_button"), "danger") }}
-      <a href="{{ url_for('groups.home', group_id=group.id) }}">{{ t("groups.cancel") }}</a>
-    </form>
-  {% endcall %}
+  {% endif %}
+  <form method="post" action="{{ url_for('groups.leave', group_id=group.id) }}" class="form">
+    {{ form.csrf_token }}
+    {% if successor is none %}{% include "partials/confirm_name.html" %}{% endif %}
+    {{ ui.button(t("groups.leave_button"), "danger") }}
+  </form>
+  <div class="page-actions">{{ ui.text_link(t("groups.cancel"), url_for('settings.index', group_id=group.id), back=true) }}</div>
 {% endblock %}

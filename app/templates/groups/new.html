@@ -2,14 +2,12 @@
 {% import "macros/ui.html" as ui %}
 {% block title %}{{ t("groups.new_title") }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ t("groups.new_title") }}</h1>
-    <p>{{ t("groups.new_intro") }}</p>
-    <form method="post" action="{{ url_for('groups.create') }}" class="form">
-      {{ form.csrf_token }}
-      {{ ui.text_field("name", t("groups.name_label"), form.name.data or "", error,
-                       attrs={"required": true, "maxlength": max_length, "autocomplete": "off", "autofocus": true}) }}
-      {{ ui.button(t("groups.create")) }}
-    </form>
-  {% endcall %}
+  {{ ui.page_head(t("groups.new_title")) }}
+  <p class="page-text">{{ t("groups.new_intro") }}</p>
+  <form method="post" action="{{ url_for('groups.create') }}" class="form">
+    {{ form.csrf_token }}
+    {{ ui.text_field("name", t("groups.name_label"), form.name.data or "", error,
+                     attrs={"required": true, "maxlength": max_length, "autocomplete": "off", "autofocus": true}) }}
+    {{ ui.button(t("groups.create")) }}
+  </form>
 {% endblock %}

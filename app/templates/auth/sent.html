@@ -2,10 +2,8 @@
 {% import "macros/ui.html" as ui %}
 {% block title %}{{ t("auth.sent_title") }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ t("auth.sent_title") }}</h1>
-    <p>{{ t("auth.sent_text", minutes=minutes) }}</p>
-    <p class="muted">{{ t("auth.sent_hint") }}</p>
-    <p><a href="{{ url_for('auth.login') }}">{{ t("auth.sent_again") }}</a></p>
-  {% endcall %}
+  {{ ui.page_head(t("auth.sent_title")) }}
+  <p class="page-text">{{ t("auth.sent_text", minutes=minutes) }}</p>
+  <p class="hint">{{ t("auth.sent_hint") }}</p>
+  <div class="page-actions">{{ ui.text_link(t("auth.sent_again"), url_for('auth.login'), kind="row") }}</div>
 {% endblock %}

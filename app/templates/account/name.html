@@ -3,18 +3,16 @@
 {% set title = t("account.name_title_first") if first_time else t("account.name_title") %}
 {% block title %}{{ title }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ title }}</h1>
-    <p>{{ t("account.name_intro_first") if first_time else t("account.name_intro") }}</p>
-    <form method="post" action="{{ url_for('auth.name') }}" class="form">
-      {{ form.csrf_token }}
-      {{ ui.text_field("display_name", t("account.name_label"), form.display_name.data or "", error,
-                       attrs={"required": true, "autocomplete": "nickname", "maxlength": max_length, "autofocus": true}) }}
-      {{ ui.button(t("account.name_save")) }}
-    </form>
-  {% endcall %}
+  {{ ui.page_head(title, kicker=t("nav.account")) }}
+  <p class="page-text">{{ t("account.name_intro_first") if first_time else t("account.name_intro") }}</p>
+  <form method="post" action="{{ url_for('auth.name') }}" class="form">
+    {{ form.csrf_token }}
+    {{ ui.text_field("display_name", t("account.name_label"), form.display_name.data or "", error,
+                     attrs={"required": true, "autocomplete": "nickname", "maxlength": max_length, "autofocus": true}) }}
+    {{ ui.button(t("account.name_save")) }}
+  </form>
   {# Logging out lives here, behind the profile button (docs/design.md, section 3). #}
-  <form class="actions" method="post" action="{{ url_for('auth.logout') }}">
+  <form class="page-actions page-actions-rule" method="post" action="{{ url_for('auth.logout') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {{ ui.button(t("nav.logout"), "secondary") }}
   </form>
