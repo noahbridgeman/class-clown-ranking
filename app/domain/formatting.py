@@ -50,3 +50,12 @@ def format_change(
         return NO_CHANGE
     arrow = UP if rounded > 0 else DOWN
     return f"{arrow}{'' if compact else ' '}{_digits(abs(rounded), decimal_separator)}"
+
+
+def format_net(value: float, decimal_separator: str = DECIMAL_SEPARATOR) -> str:
+    """SCO-01's net (U−D)/(U+D) with sign and two decimals: "+0,60", "−1,00", "0,00" (A23)."""
+    rounded = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if rounded == 0:
+        return _digits(abs(rounded), decimal_separator)
+    sign = "+" if rounded > 0 else MINUS
+    return f"{sign}{_digits(abs(rounded), decimal_separator)}"
