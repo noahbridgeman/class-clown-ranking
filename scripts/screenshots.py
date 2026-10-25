@@ -141,6 +141,7 @@ def render_pages() -> dict[str, str]:
         pages.grab("invitations", pages.client(ada), f"{g}/invitations")
         pages.grab("forbidden", pages.client(bo), f"{g}/invitations")
 
+        pages.grab("overview_empty", pages.client(loner), f"/g/{solo.id}/overview")
         pages.grab("vote_closed", pages.client(ada), f"{g}/vote")
         clock.set(IN_WEEK_WINDOW)
         tick()
@@ -149,6 +150,7 @@ def render_pages() -> dict[str, str]:
         pages.grab("vote_open", pages.client(ada), f"{g}/vote")
         pages.grab("vote_error", pages.client(ada), f"{g}/vote/{ada.id}", "POST", {"choice": "up"})
         pages.grab("vote_alone", pages.client(loner), f"/g/{solo.id}/vote")
+        pages.grab("overview_running", pages.client(ada), f"{g}/overview")
         vote(group, bo, cleo, "up")
         clock.set(WEEK_CLOSES)
         tick()
@@ -162,6 +164,7 @@ def render_pages() -> dict[str, str]:
         tick()
         pages.grab("group_ranking", pages.client(bo), f"{g}/")
         pages.grab("group_ranking_year", pages.client(bo), f"{g}/?range=1y")
+        pages.grab("overview_anonymous", pages.client(bo), f"{g}/overview")
         pages.grab("settings_admin", pages.client(ada), f"{g}/settings")
         settings_form = {
             "name": "Die Spaßvögel",
@@ -186,6 +189,11 @@ def render_pages() -> dict[str, str]:
         vote(group, ada, cleo, "down")
         voting.set_reason(group, ada, bo.id, "Die Geschichte mit der Ente")
         pages.grab("vote_open_mode", pages.client(ada), f"{g}/vote")
+        clock.advance(timedelta(days=1))
+        tick()  # closes the open daily window
+        pages.grab("overview_open", pages.client(bo), f"{g}/overview/3")
+        pages.grab("member", pages.client(bo), f"{g}/members/{ada.id}")
+        pages.grab("member_own", pages.client(bo), f"{g}/members/{bo.id}")
         membership.leave(group, cleo)
         db.session.remove()
         db.drop_all()
