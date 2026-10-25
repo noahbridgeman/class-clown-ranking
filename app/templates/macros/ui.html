@@ -187,10 +187,12 @@
 {# Push on this device (NOT-01: the browser asks only after the click). push.js sets
    data-state; each part shows for the states in its data-when. Without JavaScript the
    noscript note stays. variant: offer (voting page, gone once push is on) or device.
-   texts: from push_texts() in app/web/pwa.py. #}
-{% macro push_control(variant, key, texts, subscribe_url, unsubscribe_url) -%}
-<div class="push push-{{ variant }}" data-push data-state="noscript" data-key="{{ key or '' }}"
-     data-subscribe="{{ subscribe_url }}" data-unsubscribe="{{ unsubscribe_url }}">
+   texts: from push_texts() in app/web/pwa.py; urls: subscribe, unsubscribe, status. #}
+{% macro push_control(variant, key, texts, urls) -%}
+{# hx-preserve: the voting page swaps its block every minute; this keeps state and clicks. #}
+<div id="push-{{ variant }}" class="push push-{{ variant }}" hx-preserve data-push data-state="noscript"
+     data-key="{{ key or '' }}" data-subscribe="{{ urls.subscribe }}"
+     data-unsubscribe="{{ urls.unsubscribe }}" data-status="{{ urls.status }}">
   {% if variant == "offer" %}
     <p class="push-title">{{ texts.title }}</p>
     <p class="push-text">{{ texts.text }}</p>

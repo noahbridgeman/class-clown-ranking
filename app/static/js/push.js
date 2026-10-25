@@ -47,7 +47,17 @@
     if (!supported) return ios && !standalone ? "ios" : "unsupported";
     if (!boxes[0]?.dataset.key) return "missing";
     if (Notification.permission === "denied") return "denied";
-    return (await subscription()) ? "on" : "off";
+    const sub = await subscription();
+    if (!sub) return "off";
+    // On only if the server has it for this account; another account's subscription on
+    // this device is taken over by a click, never silently (NOT-01).
+    const response = await fetch(boxes[0].dataset.status, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    });
+    return response.ok && (await response.json()).subscribed ? "on" : "off";
   };
 
   const enable = async (box) => {
@@ -90,22 +100,30 @@
   });
 
   if (boxes.length) {
-    currentState().then(async (state) => {
-      setState(state);
-      // The server may have dropped it, or another account used this device before.
-      if (state === "on") {
-        const sub = await subscription();
-        post(boxes[0].dataset.subscribe, sub.toJSON()).catch(() => {});
-      }
-    });
+    currentState()
+      .then(setState)
+      .catch(() => setState("failed"));
   }
 
-  // Logging out ends this device's pushes for the account.
+  // Logging out ends this device's pushes: the server forgets the subscription and the
+  // browser drops it, so the next account has to switch push on itself (NOT-01).
   logoutFields.forEach((field) => {
-    subscription()
-      .then((sub) => {
-        if (sub) field.value = sub.endpoint;
-      })
-      .catch(() => {});
+    const form = field.form;
+    let ready = false;
+    form.addEventListener("submit", async (event) => {
+      if (ready) return;
+      event.preventDefault();
+      try {
+        const sub = await subscription();
+        if (sub) {
+          field.value = sub.endpoint;
+          await sub.unsubscribe();
+        }
+      } catch {
+        // Logging out must work even if the browser refuses.
+      }
+      ready = true;
+      form.requestSubmit ? form.requestSubmit() : form.submit();
+    });
   });
 })();

@@ -79,6 +79,17 @@ class TestSubscription:
         assert "nicht anmelden" in response.get_json()["error"]
         assert stored() == []
 
+    def test_status_tells_whether_this_account_has_the_device(self, pair, login_as):
+        """NOT-01: push.js shows "on" only for the own subscription."""
+        _group, a, b = pair
+        push.subscribe(a, ENDPOINT, KEY, AUTH)
+        url = "/push/subscription/status"
+        assert login_as(a).post(url, json={"endpoint": ENDPOINT}).get_json() == {"subscribed": True}
+        assert login_as(b).post(url, json={"endpoint": ENDPOINT}).get_json() == {
+            "subscribed": False
+        }
+        assert login_as(a).post(url, json={}).get_json() == {"subscribed": False}
+
     def test_guests_cannot_subscribe(self, client):
         assert client.post("/push/subscription", json=SUBSCRIPTION).status_code == 302
         assert stored() == []
@@ -147,3 +158,7 @@ class TestOffer:
         html = login_as(a).get(url).text
         assert "Erinnerung aufs Handy?" in html
         assert 'data-key="BPublicKey"' in html and 'data-state="noscript"' in html
+        # The ballot is swapped every minute; the offer keeps its state (review M8).
+        assert 'id="push-offer"' in html and "hx-preserve" in html
+        partial = login_as(a).get(url, headers={"HX-Request": "true"}).text
+        assert 'id="push-offer"' in partial

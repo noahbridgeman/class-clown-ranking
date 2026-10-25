@@ -2,6 +2,7 @@
 
 import base64
 from datetime import timedelta
+from types import MappingProxyType
 
 import pytest
 from sqlalchemy import select
@@ -60,6 +61,15 @@ class TestSubscribe:
             "https://evilfcm.googleapis.com.example.org/x",
             "https://example.org/?fcm.googleapis.com",
             "https://fcm.googleapis.com/" + "x" * 1100,
+            # Parsed differently by urllib.parse and by urllib3, which sends (review M8).
+            "https://169.254.169.254\\@fcm.googleapis.com/x",
+            "https://127.0.0.1:6379\\@fcm.googleapis.com/x",
+            "https://user@fcm.googleapis.com/x",
+            "https://fcm.googleapis.com:22/x",
+            "https://fcm.googleapis.com/x y",
+            "https://fcm.googleapis.com/x\ny",
+            "https://[::1]@fcm.googleapis.com/",
+            "https://[::1/",
         ],
     )
     def test_only_known_push_services(self, app, url):
@@ -77,10 +87,17 @@ class TestSubscribe:
             push.subscribe(user, url, KEY, AUTH)
         assert len(subscriptions()) == 3
 
-    @pytest.mark.parametrize("key", ["", "kein base64!", "a" * 300])
+    @pytest.mark.parametrize("key", ["", "kein base64!", "a" * 300, "AAAA", "A=A" + KEY[3:]])
     def test_keys_are_checked(self, app, key):
+        """RFC 8291: a 65-byte P-256 point and a 16-byte secret."""
         with pytest.raises(InvalidInput):
             push.subscribe(make_user(), endpoint(), key, AUTH)
+        with pytest.raises(InvalidInput):
+            push.subscribe(make_user(), endpoint(), KEY, key)
+
+    def test_the_explicit_https_port_is_fine(self, app):
+        push.subscribe(make_user(), "https://fcm.googleapis.com:443/fcm/send/x", KEY, AUTH)
+        assert len(subscriptions()) == 1
 
     def test_keeps_the_newest_per_account(self, app, clock):
         user = make_user()
@@ -165,3 +182,55 @@ def test_payload_is_what_the_service_worker_reads():
     assert push.payload(message) == (
         '{"title": "Runde", "body": "Äpfel", "url": "/g/1/", "tag": "g1-scores"}'
     )
+
+
+class TestWebPushBackend:
+    """The real sending path, with pywebpush.webpush replaced (plan.md M8)."""
+
+    CONFIG = MappingProxyType(
+        {
+            "VAPID_PRIVATE_KEY": "private",
+            "VAPID_SUBJECT": "mailto:betrieb@example.org",
+            "PUSH_TIMEOUT_SECONDS": 5,
+            "PUSH_TTL_SECONDS": 43200,
+        }
+    )
+    TARGET = push.Target(endpoint(), KEY, AUTH)
+    MESSAGE = Push("Runde", "Die neuen Scores sind da.", "/g/1/", "g1-scores")
+
+    def test_hands_over_payload_keys_claims_timeout_and_ttl(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr("pywebpush.webpush", lambda **kwargs: calls.append(kwargs))
+        push.WebPushBackend(self.CONFIG).send(self.TARGET, self.MESSAGE)
+        (call,) = calls
+        assert call["subscription_info"] == {
+            "endpoint": endpoint(),
+            "keys": {"p256dh": KEY, "auth": AUTH},
+        }
+        assert call["data"] == push.payload(self.MESSAGE)
+        assert call["vapid_private_key"] == "private"
+        assert call["vapid_claims"] == {"sub": "mailto:betrieb@example.org"}
+        assert (call["timeout"], call["ttl"]) == (5.0, 43200)
+
+    @pytest.mark.parametrize(("status", "gone"), [(404, True), (410, True), (500, False)])
+    def test_gone_only_for_404_and_410(self, monkeypatch, status, gone):
+        from pywebpush import WebPushException
+
+        class Answer:
+            status_code = status
+
+        def fail(**_kwargs):
+            raise WebPushException("refused", response=Answer())
+
+        monkeypatch.setattr("pywebpush.webpush", fail)
+        backend = push.WebPushBackend(self.CONFIG)
+        with pytest.raises(push.PushGone if gone else WebPushException):
+            backend.send(self.TARGET, self.MESSAGE)
+
+    def test_network_errors_are_passed_on(self, monkeypatch):
+        def fail(**_kwargs):
+            raise ConnectionError("down")
+
+        monkeypatch.setattr("pywebpush.webpush", fail)
+        with pytest.raises(ConnectionError):
+            push.WebPushBackend(self.CONFIG).send(self.TARGET, self.MESSAGE)

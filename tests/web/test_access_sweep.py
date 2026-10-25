@@ -38,6 +38,7 @@ PUBLIC_ENDPOINTS = {
     "pwa.service_worker",
     "pwa.subscribe",
     "pwa.unsubscribe",
+    "pwa.status",
 }
 
 

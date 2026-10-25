@@ -137,13 +137,14 @@ def _reminder(group: Group, period: Period, members: list[Membership]) -> list[D
     """Only to those who have not rated everyone else yet (section 11)."""
     cast = vote_queries.votes_cast(period)
     total = len(members) - 1
-    hours = int(current_app.config["REMINDER_BEFORE_CLOSE"].total_seconds() // 3600)
+    # The end, not "2 hours left": after downtime the reminder may come later (NOT-03).
+    end = short_datetime(period.closes_at, group.timezone)
     deliveries = []
     for m in members:
         done = cast.get(m.user_id, 0)
         if total < 1 or done >= total:
             continue
-        body = t("push.reminder", hours=hours, done=done, total=total)
+        body = t("push.reminder", end=end, done=done, total=total)
         message = Push(group.name, body, _path(group, "vote"), _tag(group, "voting"))
         deliveries.append(Delivery(m.user_id, group.id, NotificationKind.REMINDER, message))
     return deliveries
@@ -157,15 +158,14 @@ def _scores_published(group: Group, period: Period, members: list[Membership]) -
     deliveries = []
     for m in members:
         result = results.get(m.user_id)
-        if result is None:  # joined after the window
-            body = t("push.scores_published")
-        else:
-            change = ranking.displayed_change(scoring.score(result.rating_before), result.score)
-            body = t(
-                "push.scores_published_own",
-                score=format_score(result.score),
-                change=format_change(change, compact=True),
-            )
+        if result is None:  # joined after the window: no score of their own yet (A24)
+            continue
+        change = ranking.displayed_change(scoring.score(result.rating_before), result.score)
+        body = t(
+            "push.scores_published",
+            score=format_score(result.score),
+            change=format_change(change, compact=True),
+        )
         message = Push(group.name, body, _path(group), _tag(group, "scores"))
         deliveries.append(Delivery(m.user_id, group.id, NotificationKind.SCORES_PUBLISHED, message))
     return deliveries + _overtaken(group, period, results, members)

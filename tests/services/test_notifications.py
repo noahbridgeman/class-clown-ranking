@@ -81,8 +81,8 @@ class TestPeriodUpdate:
         clock.set(REMINDER_AT + timedelta(minutes=30))
         tick()
         assert received(outbox, endpoints) == {
-            "Bo": ["Noch 2 Stunden: Du hast 1 von 2 bewertet."],
-            "Cleo": ["Noch 2 Stunden: Du hast 0 von 2 bewertet."],
+            "Bo": ["Das Voting endet Mo 26.10., 13:00. Du hast 1 von 2 bewertet."],
+            "Cleo": ["Das Voting endet Mo 26.10., 13:00. Du hast 0 von 2 bewertet."],
         }
 
     def test_scores_with_the_own_score_once(self, trio, clock, outbox):
@@ -112,6 +112,18 @@ class TestPeriodUpdate:
         tick()
         got = received(outbox, endpoints)
         assert set(got) == {"Ada", "Bo"}  # Cleo has left
+
+    def test_who_joined_after_the_window_gets_no_scores_push(self, trio, clock, outbox):
+        """A24: only members with a score of their own; the join closes the period first."""
+        group, _a, _b, _c, endpoints = trio
+        clock.set(IN_WEEK_WINDOW)
+        tick()
+        clock.set(WEEK_CLOSES + timedelta(seconds=30))
+        dora = add_member(group, make_user(display_name="Dora"))
+        endpoints["Dora"] = subscribe(dora)
+        outbox.clear()
+        tick()
+        assert set(received(outbox, endpoints)) == {"Ada", "Bo", "Cleo"}
 
     def test_skipped_periods_announce_nothing(self, trio, clock, outbox):
         group, _a, b, c, _endpoints = trio
@@ -189,6 +201,9 @@ class TestNoVotesInPushes:
             clock.set(IN_WEEK_WINDOW)
             tick()
             first, second = ("down", "up") if swap else ("up", "down")
+            # Ada rates everyone, Bo only Cleo: the reminder goes to Bo, Cleo and Dora.
+            vote(group, users["Ada"], users["Bo"], "up")
+            vote(group, users["Ada"], users["Dora"], "down")
             vote(group, users["Ada"], users["Cleo"], first)
             vote(group, users["Bo"], users["Cleo"], second)
             if not anonymous:
@@ -197,6 +212,8 @@ class TestNoVotesInPushes:
                 clock.set(moment)
                 tick()
             assert not any("Ente" in m.body for _, m in outbox)
+            reminded = {url for url, m in outbox if "endet" in m.body}
+            assert len(reminded) == 3
             seen.append(list(outbox))
         assert seen[0] == seen[1]
 

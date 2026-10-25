@@ -1525,7 +1525,7 @@ p { margin: 0 0 var(--space-md); }
   font-family: var(--font-mono);
   font-size: var(--font-size-kicker);
   line-height: var(--line-height-body);
-  color: var(--color-on-dark-line);
+  color: var(--color-ink-soft);
 }
 
 .push-action .button { width: 100%; }

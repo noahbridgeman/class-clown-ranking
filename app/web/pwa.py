@@ -126,6 +126,16 @@ def unsubscribe() -> BaseResponse:
     return jsonify(ok=True)
 
 
+@bp.post("/push/subscription/status")
+@login_required
+def status() -> BaseResponse:
+    """Whether this device's subscription belongs to the signed-in account. push.js shows
+    push as on only then; another account's subscription needs a click (NOT-01)."""
+    data = request.get_json(silent=True) or {}
+    known = push.is_subscribed(current_user._get_current_object(), _text(data.get("endpoint")))
+    return jsonify(subscribed=known)
+
+
 @bp.post("/g/<int:group_id>/notifications")
 @member_required
 def preferences(group_id: int) -> tuple[str, int] | str | BaseResponse:

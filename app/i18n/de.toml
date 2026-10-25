@@ -363,9 +363,8 @@ cast = "Abgegebene Votes"
 
 [push]
 window_open = "Das Voting ist offen, bis {end}."
-reminder = "Noch {hours} Stunden: Du hast {done} von {total} bewertet."
-scores_published = "Die neuen Scores sind da."
-scores_published_own = "Die neuen Scores sind da. Dein Score: {score} {change}"
+reminder = "Das Voting endet {end}. Du hast {done} von {total} bewertet."
+scores_published = "Die neuen Scores sind da. Dein Score: {score} {change}"
 overtook = "Du hast {names} überholt."
 overtaken_by_one = "{names} hat dich überholt."
 overtaken_by_many = "{names} haben dich überholt."
