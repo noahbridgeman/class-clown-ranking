@@ -122,7 +122,7 @@ class TestTicker:
         vote(group, ada, bo, "up")
         next_day(clock)
         html = login_as(ada).get(f"/g/{group.id}/").get_data(as_text=True)
-        ticker = html[html.index('<div class="ticker"') : html.index("</header>")]
+        ticker = html[html.index('<div class="ticker"') : html.index("<header")]
         assert "Gruppenschnitt" in ticker
         for name in ("Ada", "Bo", "Cleo"):
             assert ticker.count(f'<span class="ticker-item">{name} ') == 2  # loops seamlessly

@@ -121,14 +121,6 @@ p { margin: 0 0 var(--space-md); }
 
 .masthead-lead { flex: 1; min-width: 0; }
 
-.masthead-page {
-  align-items: flex-start;
-  padding-left: var(--gutter);
-  padding-bottom: var(--space-md);
-}
-
-.masthead-page .page-head { padding: var(--space-xs) 0 0; }
-
 .brand, .masthead-lead > .text-link {
   min-height: var(--touch-target);
   display: inline-flex;

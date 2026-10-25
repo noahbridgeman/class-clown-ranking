@@ -55,7 +55,7 @@ Regel: `--color-up`/`--color-down` nie als Textfarbe auf Papier (Kontrast zu nie
 | Komponente | Aussehen | Screen |
 |---|---|---|
 | **Ticker** | 32 px schwarzes Band, Mono 12 px, läuft endlos von rechts nach links (CSS, Inhalt doppelt). Zeigt Gruppenschnitt und alle Scores mit ▲/▼-Delta in Grün/Rot. Bei `prefers-reduced-motion` steht er still. | alle Gruppenseiten |
-| **Kopfzeile** | Links Zurück-Link „‹ RANKING“ (Mono 12/600) oder auf der Startseite Kicker „GRUPPENNAME · EINSTELLUNGEN ›“. Rechts runder Profil-Button 44 px, 1.5 px Rahmen, Initial. Button oben bündig mit derselben Höhe auf allen Seiten. | alle |
+| **Kopfzeile** | Links Zurück-Link „‹ RANKING“ (Mono 12/600), auf dem Ranking „‹ GRUPPEN“ zur Gruppenauswahl (A25); der Kicker „GRUPPENNAME · EINSTELLUNGEN ›“ steht dort über der h1. Rechts runder Profil-Button 44 px, 1.5 px Rahmen, Initial. Button oben bündig mit derselben Höhe auf allen Seiten. | alle |
 | **Statusblock** | Schwarze Fläche, Label in `--color-on-dark-muted`, Wert in Papierweiß oder `--color-up`. Für „Voting offen“ (verlinkt), Countdown, ausstehende Einstellungen, Einladen-Hinweis. | ranking, voting |
 | **Highlight-Zellen** | Zwei Felder nebeneinander, Fläche Grün bzw. Rot, Text Ink: „GRÖSSTER ANSTIEG / Name ▲0,6“ und „GRÖSSTER ABSTURZ / Name ▼0,3“. Entfallen, wenn es keine Veränderung gibt (A12). | ranking |
 | **Ranglistenzeile** | Platz (Mono, zweistellig) · Name mit Label darunter (Mono 9 px) · Sparkline 44 × 18 · Score · Delta. Eigene Zeile mit Badge „DU“ und Hintergrund `--color-up-tint` über die volle Breite. | ranking |
@@ -94,7 +94,7 @@ Keine Leiste unten. Das Ranking ist die Startseite der Gruppe, alles andere geht
 
 | Route | Referenz | Inhalt von oben nach unten |
 |---|---|---|
-| `/g/<id>` | `ranking.html` | Ticker · Kopfzeile · h1 „Ranking KW n“ + Stand · Statusblock „Voting offen“ (nur bei offenem Fenster, sonst Zeile „Nächstes Voting So 00:00“) · Highlight-Zellen · „VERLAUF“ + Zeitraum-Tabs · Graph · Rangliste · Link „VOTING-ÜBERSICHT ›“ |
+| `/g/<id>` | `ranking.html` | Ticker · Kopfzeile mit „‹ GRUPPEN“ (A25) · Kicker · h1 „Ranking KW n“ + Stand · Statusblock „Voting offen“ (nur bei offenem Fenster, sonst Zeile „Nächstes Voting So 00:00“) · Highlight-Zellen · „VERLAUF“ + Zeitraum-Tabs · Graph · Rangliste · Link „VOTING-ÜBERSICHT ›“ |
 | `/g/<id>` (ohne Ergebnisse) | `ranking-neue-gruppe.html` | Alle auf 5,0, geteilter Platz 01, Label „NEU“. Graph nur mit Startwert-Linie und Hinweis, wann der erste Score kommt. Admin: Statusblock „Erst n Leute in der Gruppe“ mit Link zum Einladen. |
 | `/g/<id>/vote` | `voting.html` | Statusblock Ende/Countdown · Fortschritt · Liste mit Up/Down · Begründung (nur nicht anonym) · Hinweis zum Ändern/Zurücknehmen |
 | `/g/<id>/vote` (zu) | `voting-geschlossen.html` | Countdown bis zum nächsten Voting · letzte Runde (eigene Votes, eigener Score) · Push-Angebot (NOT-01: Erlaubnis erst nach Klick) |
@@ -127,5 +127,6 @@ Labels in der Rangliste (aus A12 und Verlauf abgeleitet): „Bester Score bisher
 - GRA-02, GRA-06: siehe Abschnitt 4.
 - Zeitzone wird in der Oberfläche nicht mehr angeboten, bleibt `Europe/Berlin` (Feld in DB bleibt).
 - Das Änderungsprotokoll (SET-03) wird nicht mehr angezeigt. Gespeichert und für Graph-Marker genutzt wird es weiter.
+- Gruppen wechseln (A25): „‹ GRUPPEN“ oben links auf dem Ranking; Kicker und h1 stehen dadurch unter der Kopfzeile statt neben dem Profil-Button.
 - Voting-Übersicht (M7, A23): Netto-Spalte bzw. -Fußzeile zusätzlich zum Entwurf (OVW-02); Score Δ ohne Vorzeichen wie überall („▲0,5“).
 - Neu: Button „Standard wiederherstellen“ für K und d (setzt die Standardwerte des aktuellen Takts ins Formular, gespeichert wird erst mit „Speichern“).

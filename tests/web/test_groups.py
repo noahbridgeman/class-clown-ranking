@@ -16,6 +16,19 @@ class TestIndex:
         assert "Fremd" not in html
         assert "Neue Gruppe erstellen" in html
 
+    def test_ranking_leads_back_to_the_group_selection(self, login_as):
+        """A25: switching groups from the ranking; subpages keep "‹ Ranking"."""
+        user = make_user(display_name="Anna")
+        group = make_group(user, "Alpha")
+        make_group(user, "Beta")
+        client = login_as(user)
+        ranking = client.get(f"/g/{group.id}/").get_data(as_text=True)
+        assert 'href="/"' in ranking and "Gruppen</a>" in ranking
+        assert "Alpha · Einstellungen" in ranking
+        settings = client.get(f"/g/{group.id}/settings").get_data(as_text=True)
+        assert f'href="/g/{group.id}/"' in settings and "Gruppen</a>" not in settings
+        assert "Beta" in client.get("/").get_data(as_text=True)
+
     def test_without_groups(self, login_as):
         html = login_as(make_user()).get("/").get_data(as_text=True)
         assert "noch in keiner Gruppe" in html
