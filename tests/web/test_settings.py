@@ -148,7 +148,8 @@ class TestPendingNotice:
         html = login_as(member).get(f"/g/{group.id}/settings").get_data(as_text=True)
         assert "Ausstehend ab So. 25.10.2026 um 00:00 Uhr (America/New_York)" in html
         vote_page = login_as(member).get(f"/g/{group.id}/vote").get_data(as_text=True)
-        assert "So. 25.10.2026 um 00:00 Uhr (America/New_York)" in vote_page
+        assert "Nächstes Voting in (America/New_York)" in vote_page
+        assert "So 25.10., 00:00 – Mo 26.10., 13:00" in vote_page
 
 
 class TestParams:

@@ -8,6 +8,7 @@ from app.services import voting
 from app.services.errors import InvalidInput
 from app.web.access import member_required
 from app.web.forms import ConfirmForm, ReasonForm, VoteForm
+from app.web.groups import current_board
 
 bp = Blueprint("voting", __name__)
 
@@ -69,10 +70,15 @@ def reason(group_id: int, user_id: int) -> Page:
 
 def _render(partial: bool = False, show_flashes: bool = True) -> str:
     template = "voting/_ballot.html" if partial else "voting/index.html"
+    user = current_user._get_current_object()
+    ballot = voting.ballot(g.group, user)
     return render_template(
         template,
         group=g.group,
-        ballot=voting.ballot(g.group, current_user._get_current_object()),
+        ballot=ballot,
+        # Scores and changes next to the names, and "your score" once it is closed.
+        rows={row.member.user_id: row for row in current_board().rows},
+        last=None if ballot.period else voting.last_round(g.group, user),
         form=ConfirmForm(),
         partial=partial,
         show_flashes=show_flashes,

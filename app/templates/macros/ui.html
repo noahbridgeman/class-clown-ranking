@@ -85,18 +85,21 @@
 </span>
 {%- endmacro %}
 
-{# Black status area. kind: dark (default) or outline. With href the whole block links. #}
-{% macro status(href=none, kind="dark") -%}
-{%- set classes = "status-block status-" ~ kind -%}
+{# Black status area. kind: dark (default) or outline; layout: none or split (two cells
+   side by side). With href the whole block links. #}
+{% macro status(href=none, kind="dark", layout=none) -%}
+{%- set classes = "status-block status-" ~ kind ~ (" status-" ~ layout if layout else "") -%}
 {% if href %}<a class="{{ classes }}" href="{{ href }}">{{ caller() }}</a>
 {% else %}<div class="{{ classes }}">{{ caller() }}</div>{% endif %}
 {%- endmacro %}
 
-{# A labelled value cell: highlight cells (kind up/down) and the boxes on the voting page. #}
-{% macro cell(label, value, kind="frame") -%}
+{# A labelled value cell: highlight cells (kind up/down), the boxes on the voting page
+   (frame) and cells inside a dark status block (dark, dark-figure). change: a smaller
+   ▲/▼ text after the value, trend: up or down for its color. #}
+{% macro cell(label, value, kind="frame", change=none, trend=none) -%}
 <div class="cell cell-{{ kind }}">
   <span class="cell-label">{{ label }}</span>
-  <span class="cell-value">{{ value }}</span>
+  <span class="cell-value">{{ value }}{% if change %} <span class="cell-change{% if trend %} trend-text-{{ trend }}{% endif %}">{{ change }}</span>{% endif %}</span>
 </div>
 {%- endmacro %}
 

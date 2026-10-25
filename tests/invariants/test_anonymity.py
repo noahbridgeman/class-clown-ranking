@@ -13,7 +13,7 @@ from flask import Flask
 from app.services import voting
 from tests.factories import IN_WEEK_WINDOW, add_member, make_group, make_user, tick, vote
 
-VOTER_COUNT = re.compile(r"\d+ von \d+ Mitgliedern haben schon abgestimmt")
+VOTER_COUNT = re.compile(r"\d+ von \d+ haben abgestimmt")
 CSRF = re.compile(r'(csrf[-_]token"?\s*(?:content|value)=)"[^"]*"|"X-CSRFToken": "[^"]*"')
 HTMX = {"HX-Request": "true"}
 
@@ -73,6 +73,6 @@ def test_the_count_is_the_only_difference(app, clock, login_as):
     tick()
     client = login_as(observer)
     url = f"/g/{group.id}/vote"
-    assert "0 von 3 Mitgliedern" in client.get(url).get_data(True)
+    assert "0 von 3 haben abgestimmt" in client.get(url).get_data(True)
     vote(group, a, b, "up")
-    assert "1 von 3 Mitgliedern" in client.get(url).get_data(True)
+    assert "1 von 3 haben abgestimmt" in client.get(url).get_data(True)

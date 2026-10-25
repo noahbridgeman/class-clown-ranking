@@ -9,7 +9,7 @@ from sqlalchemy import delete, or_, select
 from app.clock import get_clock
 from app.domain import schedule
 from app.extensions import db
-from app.models import Group, Membership, Period, User, Vote
+from app.models import Group, Membership, Period, PeriodResult, PeriodStatus, User, Vote
 from app.models.period import REASON_MAX_LENGTH
 from app.services import membership, periods, settings, vote_queries
 from app.services.errors import InvalidInput
@@ -75,6 +75,31 @@ def ballot(group: Group, user: User) -> Ballot:
     return Ballot(
         now, None, others, {}, {}, 0, len(active), next_opens_at, upcoming.timezone, window
     )
+
+
+@dataclass(frozen=True)
+class LastRound:
+    """What the closed voting page shows about the latest closed period."""
+
+    period: Period
+    votes: int  # own votes cast in it
+    possible: int  # members one could rate in it
+
+
+def last_round(group: Group, user: User) -> LastRound | None:
+    period = db.session.scalar(
+        select(Period)
+        .where(Period.group_id == group.id, Period.status == PeriodStatus.CLOSED)
+        .order_by(Period.seq.desc())
+        .limit(1)
+    )
+    if period is None:
+        return None
+    rated = db.session.scalars(
+        select(PeriodResult.user_id).where(PeriodResult.period_id == period.id)
+    ).all()
+    possible = len(rated) - 1 if user.id in rated else 0
+    return LastRound(period, len(vote_queries.own_votes(period, user.id)), possible)
 
 
 def set_vote(group: Group, voter: User, target_id: int, choice: Choice) -> None:

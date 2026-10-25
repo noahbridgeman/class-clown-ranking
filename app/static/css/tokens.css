@@ -115,6 +115,7 @@
   --font-size-title: 44px;
   --font-size-countdown: 44px;
   --font-size-cell: 22px;
+  --font-size-figure: 24px;
   --font-size-name: 20px;
   --font-size-status: 19px;
   --font-size-score: 18px;
@@ -130,6 +131,8 @@
   --font-size-input: 17px; /* at least 16px, or iOS Safari zooms on focus */
   --line-height-title: 1;
   --line-height-tight: 1.1;
+  --line-height-normal: normal;
+  --line-height-countdown: 1.05;
   --line-height-body: 1.5;
   --tracking-title: -0.01em;
   --tracking-label: 0.08em;
@@ -150,6 +153,7 @@
   --gutter: 24px;
   --header-gutter: 12px;
   --header-gutter-end: 16px;
+  --space-status-x: 16px;
 
   /* Lines and sizes. No rounded corners except the profile button (a circle). */
   --rule: 1px;

@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 import pytest
@@ -41,10 +42,14 @@ class TestPage:
         html = page(login_as(a), group)
         assert "Bo" in html and "Cleo" in html
         assert f"/vote/{a.id}" not in html  # no buttons for oneself (VOT-03)
-        assert "Du hast 0 von 2 bewertet." in html
-        assert "1 von 3 Mitgliedern haben schon abgestimmt." in html
-        assert "Mo. 26.10.2026 um 13:00 Uhr (noch 1 T. 0 Std.)" in html
-        assert "Diese Periode ist anonym" in html
+        assert "Du hast 0 von 2 bewertet" in html
+        assert "1 von 3 haben abgestimmt" in html
+        assert "<h1>Voting offen</h1>" in html
+        assert "Voting · Runde · 25./26.10." in html
+        assert '<span class="cell-value">Mo 26.10., 13:00</span>' in html
+        assert '<span class="cell-value">1 T 0:00 h</span>' in html
+        assert "Anonym: Niemand sieht" in html
+        assert html.count('class="progress-segment"') == 2
 
     def test_marks_own_votes(self, trio, login_as):
         group, a, b, c = trio
@@ -52,7 +57,8 @@ class TestPage:
         vote(group, a, c, "down")
         html = page(login_as(a), group)
         assert html.count('aria-pressed="true"') == 2
-        assert "Du hast 2 von 2 bewertet." in html
+        assert "Du hast 2 von 2 bewertet" in html
+        assert html.count("progress-segment progress-done") == 2
         # Pressing a selected button again takes the vote back.
         assert html.count('value="none"') == 2
 
@@ -63,13 +69,17 @@ class TestPage:
         vote(group, b, c, "down")
         html = page(login_as(c), group)
         assert 'aria-pressed="true"' not in html
-        assert "1 von 3 Mitgliedern" in html
+        assert "1 von 3 haben abgestimmt" in html
 
     def test_outside_the_window_names_the_next_one(self, app, login_as):
         """VOT-10."""
         group = make_group()
         html = page(login_as(group.admin), group)
-        assert "Das nächste öffnet So. 25.10.2026 um 00:00 Uhr." in html
+        assert "<h1>Voting geschlossen</h1>" in html
+        assert "Noch gibt es keine Scores" in html
+        assert "Nächstes Voting in" in html
+        assert "So 25.10., 00:00 – Mo 26.10., 13:00" in html
+        assert '<span class="status-countdown">1 T 10:00 h</span>' in html
         assert 'name="choice"' not in html
 
     def test_alone_in_the_group(self, app, clock, login_as):
@@ -89,6 +99,33 @@ class TestPage:
         assert f"/g/{group.id}/vote" in login_as(a).get(f"/g/{group.id}/").get_data(True)
 
 
+class TestClosedPage:
+    def test_last_round_with_own_votes_and_score(self, trio, clock, login_as):
+        group, a, b, c = trio
+        vote(group, a, b, "up")
+        vote(group, c, a, "up")
+        clock.set(WEEK_CLOSES)
+        tick()
+        html = page(login_as(a), group)
+        assert "Die neuen Scores sind seit Mo 26.10., 13:00 da" in html
+        assert "Letzte Runde" in html
+        assert '<span class="cell-value">1 / 2</span>' in html
+        # Cleo rated Ada up, but it is her first result: a score without a change yet.
+        assert re.search(r'Dein Score</span>\s*<span class="cell-value">\d,\d</span>', html)
+
+    def test_shows_the_scores_next_to_the_names(self, trio, clock, login_as):
+        group, a, b, _c = trio
+        vote(group, a, b, "up")
+        clock.set(WEEK_CLOSES)
+        tick()
+        clock.set(IN_WEEK_WINDOW + timedelta(days=7))
+        tick()
+        html = page(login_as(a), group)
+        assert re.search(
+            r'<span class="ballot-name">Bo</span>\s*<span class="ballot-score">\d,\d', html
+        )
+
+
 class TestCast:
     def test_htmx_vote_swaps_the_ballot(self, trio, login_as):
         group, a, b, _ = trio
@@ -98,7 +135,7 @@ class TestCast:
         assert response.status_code == 200
         html = response.get_data(as_text=True)
         assert "<html" not in html
-        assert "Du hast 1 von 2 bewertet." in html
+        assert "Du hast 1 von 2 bewertet" in html
         assert db.session.scalar(select(Vote.value)) == 1
 
     def test_without_javascript_redirects_back(self, trio, login_as):
@@ -133,7 +170,7 @@ class TestCast:
             f"/g/{group.id}/vote/{b.id}", data={"choice": "up"}, headers=HTMX
         )
         assert response.status_code == 400
-        assert "Das Fenster ist geschlossen" in response.get_data(True)
+        assert "Das Voting ist zu Ende" in response.get_data(True)
         assert db.session.scalars(select(Vote)).all() == []
 
 

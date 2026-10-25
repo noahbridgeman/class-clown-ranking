@@ -15,6 +15,7 @@ from app.i18n import (
     short_datetime,
     t,
     weekday_time,
+    window_dates,
 )
 
 APP_DIR = Path(__file__).parent.parent / "app"
@@ -137,3 +138,27 @@ def test_short_formats(app):
     assert short_datetime(at, "Europe/Berlin") == "Mo 19.10., 13:00"
     assert short_date(at, "Europe/Berlin") == "Mo 19.10."
     assert weekday_time(at, "Europe/Berlin") == "Mo 13:00"
+
+
+@pytest.mark.parametrize(
+    ("opens", "closes", "text"),
+    [
+        (
+            datetime(2026, 10, 24, 22, tzinfo=UTC),
+            datetime(2026, 10, 26, 12, tzinfo=UTC),
+            "25./26.10.",
+        ),
+        (
+            datetime(2026, 10, 31, 23, tzinfo=UTC),
+            datetime(2026, 11, 2, 12, tzinfo=UTC),
+            "01./02.11.",
+        ),
+        (
+            datetime(2026, 10, 30, 12, tzinfo=UTC),
+            datetime(2026, 11, 1, 12, tzinfo=UTC),
+            "30.10./01.11.",
+        ),
+    ],
+)
+def test_window_dates(opens, closes, text):
+    assert window_dates(opens, closes, "Europe/Berlin") == text
