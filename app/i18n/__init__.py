@@ -64,6 +64,13 @@ def init_app(app: Flask) -> None:
     app.jinja_env.filters["local_date"] = local_date
     app.jinja_env.filters["local_datetime"] = local_datetime
     app.jinja_env.filters["duration"] = duration
+    app.jinja_env.filters["short_datetime"] = short_datetime
+    app.jinja_env.filters["short_date"] = short_date
+    app.jinja_env.filters["weekday_time"] = weekday_time
+    app.jinja_env.filters["window_dates"] = window_dates
+    app.jinja_env.filters["day_month"] = day_month
+    app.jinja_env.filters["countdown"] = countdown
+    app.jinja_env.filters["countdown_short"] = countdown_short
 
 
 def t(key: str, **params: Any) -> str:
@@ -97,3 +104,69 @@ def duration(value: timedelta) -> str:
     if hours:
         return t("time.hours_minutes", hours=hours, minutes=minutes)
     return t("time.minutes", minutes=minutes)
+
+
+def _local(value: datetime, timezone: str) -> datetime:
+    return value.astimezone(ZoneInfo(timezone))
+
+
+def _weekday(local: datetime) -> str:
+    return t("time.weekdays_short").split(",")[local.weekday()]
+
+
+def short_datetime(value: datetime, timezone: str) -> str:
+    """Kursblatt style: "Mo 19.10., 13:00"."""
+    local = _local(value, timezone)
+    return t(
+        "time.short_datetime",
+        weekday=_weekday(local),
+        date=local.strftime("%d.%m."),
+        time=local.strftime("%H:%M"),
+    )
+
+
+def short_date(value: datetime, timezone: str) -> str:
+    """ "Mi 28.10." """
+    local = _local(value, timezone)
+    return t("time.short_date", weekday=_weekday(local), date=local.strftime("%d.%m."))
+
+
+def weekday_time(value: datetime, timezone: str) -> str:
+    """ "Mo 13:00" """
+    local = _local(value, timezone)
+    return t("time.weekday_time", weekday=_weekday(local), time=local.strftime("%H:%M"))
+
+
+def countdown(value: timedelta) -> str:
+    """Remaining time rounded up to minutes: "20:47 h", "3 T 14:22 h"."""
+    minutes = max(0, -(-int(value.total_seconds()) // 60))
+    days, minutes = divmod(minutes, 24 * 60)
+    hours, minutes = divmod(minutes, 60)
+    clock = t("time.countdown", hours=hours, minutes=f"{minutes:02d}")
+    return t("time.countdown_days", days=days, clock=clock) if days else clock
+
+
+def countdown_short(value: timedelta) -> str:
+    """Whole days if at least one is left ("3 T"), else like countdown."""
+    days = max(0, int(value.total_seconds() // (24 * 3600)))
+    return t("time.days_short", days=days) if days else countdown(value)
+
+
+def window_dates(opens: datetime, closes: datetime, timezone: str) -> str:
+    """The days of a window: "25./26.10.", across a month "31.10./01.11."."""
+    start, end = _local(opens, timezone), _local(closes, timezone)
+    if start.date() == end.date():
+        return end.strftime("%d.%m.")
+    if (start.month, start.year) == (end.month, end.year):
+        return f"{start:%d}./{end:%d.%m.}"
+    return f"{start:%d.%m.}/{end:%d.%m.}"
+
+
+def day_month(value: datetime, timezone: str) -> str:
+    """ "31.10." """
+    return _local(value, timezone).strftime("%d.%m.")
+
+
+def iso_week(value: datetime, timezone: str) -> int:
+    """The calendar week of a moment in the group's time."""
+    return _local(value, timezone).isocalendar().week

@@ -2,10 +2,11 @@
 
 import pytest
 
-from app.domain import scoring
+from app.domain import ranking, scoring
 from app.domain.formatting import round_half_up
+from app.domain.types import Cadence
 from app.services import membership
-from app.services.leaderboard import leaderboard
+from app.services.leaderboard import _previous_delta, leaderboard
 from tests.factories import add_member, make_daily, make_group, make_user, next_day, tick, vote
 
 
@@ -183,3 +184,36 @@ def test_open_votes_change_nothing(daily, clock):
     vote(group, ada, cleo, "up")
     vote(group, bo, ada, "down")
     assert leaderboard(group.id) == before
+
+
+class TestLabelsFromStoredResults:
+    """A22 with real periods: best score, recovering, below the start, sparklines."""
+
+    def test_best_so_far_and_sparkline(self, daily, clock):
+        group, ada, bo, cleo = daily
+        for _ in range(3):
+            vote(group, ada, bo, "up")
+            vote(group, cleo, bo, "up")
+            next_day(clock)
+        row = row_of(leaderboard(group.id), bo)
+        assert row.label == ranking.Label.BEST
+        assert row.sparkline[0] == 0.0 and row.sparkline[-1] == 1.0
+        assert len(row.sparkline) == 3
+
+    def test_change_of_the_period_before(self):
+        """Feeds "recovering" (A22): the shown change one period before the latest."""
+        assert _previous_delta([5.0, 4.54, 4.8]) == pytest.approx(-0.5)  # 4,5 − 5,0 as shown
+        assert _previous_delta([5.0, 4.8]) is None
+
+    def test_sparkline_shows_at_most_six_periods(self, daily, clock):
+        group, *_ = daily
+        for _ in range(8):
+            next_day(clock)
+        assert {len(row.sparkline) for row in leaderboard(group.id).rows} == {6}
+
+    def test_cadence_comes_from_the_period_not_the_setting(self, daily, clock):
+        """SET-01: a later cadence change does not rename the period shown."""
+        group, *_ = daily
+        next_day(clock)
+        group.cadence = Cadence.WEEKLY
+        assert leaderboard(group.id).cadence == Cadence.DAILY

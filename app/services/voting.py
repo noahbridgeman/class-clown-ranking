@@ -9,7 +9,7 @@ from sqlalchemy import delete, or_, select
 from app.clock import get_clock
 from app.domain import schedule
 from app.extensions import db
-from app.models import Group, Membership, Period, User, Vote
+from app.models import Group, Membership, Period, PeriodResult, PeriodStatus, User, Vote
 from app.models.period import REASON_MAX_LENGTH
 from app.services import membership, periods, settings, vote_queries
 from app.services.errors import InvalidInput
@@ -39,6 +39,7 @@ class Ballot:
     members: int
     next_opens_at: datetime | None  # outside a window; None if one opens any moment
     timezone: str  # of the next window; differs from the group's while a change is pending
+    next_window: schedule.Window | None = None  # outside a window: the one that opens next
 
     @property
     def rated(self) -> int:
@@ -65,12 +66,40 @@ def ballot(group: Group, user: User) -> Ballot:
     # Between the window's start and the next tick no period exists yet.
     # The next window follows the upcoming settings (SET-01, PER-05).
     upcoming = settings.upcoming(group)
-    pending = schedule.window_at(now, upcoming.cadence, upcoming.timezone)
+    window = schedule.window_at(now, upcoming.cadence, upcoming.timezone)
     next_opens_at = None
     # An expired period not yet closed is the latest one too, so had_period sees it.
-    if pending is None or periods.had_period(group.id, pending):
-        next_opens_at = schedule.next_window(now, upcoming.cadence, upcoming.timezone).opens_at
-    return Ballot(now, None, others, {}, {}, 0, len(active), next_opens_at, upcoming.timezone)
+    if window is None or periods.had_period(group.id, window):
+        window = schedule.next_window(now, upcoming.cadence, upcoming.timezone)
+        next_opens_at = window.opens_at
+    return Ballot(
+        now, None, others, {}, {}, 0, len(active), next_opens_at, upcoming.timezone, window
+    )
+
+
+@dataclass(frozen=True)
+class LastRound:
+    """What the closed voting page shows about the latest closed period."""
+
+    period: Period
+    votes: int  # own votes cast in it
+    possible: int  # members one could rate in it
+
+
+def last_round(group: Group, user: User) -> LastRound | None:
+    period = db.session.scalar(
+        select(Period)
+        .where(Period.group_id == group.id, Period.status == PeriodStatus.CLOSED)
+        .order_by(Period.seq.desc())
+        .limit(1)
+    )
+    if period is None:
+        return None
+    rated = db.session.scalars(
+        select(PeriodResult.user_id).where(PeriodResult.period_id == period.id)
+    ).all()
+    possible = len(rated) - 1 if user.id in rated else 0
+    return LastRound(period, len(vote_queries.own_votes(period, user.id)), possible)
 
 
 def set_vote(group: Group, voter: User, target_id: int, choice: Choice) -> None:

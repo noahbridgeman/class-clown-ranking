@@ -2,25 +2,22 @@
 {% import "macros/ui.html" as ui %}
 {% block content %}
   {% if current_user.is_authenticated %}
-    {% call ui.card() %}
-      <h1>{{ t("home.greeting", name=current_user.display_name) }}</h1>
-      <h2>{{ t("home.your_groups") }}</h2>
+    {{ ui.page_head(t("home.greeting", name=current_user.display_name)) }}
+    {% call ui.section(t("home.your_groups")) %}
       {% if groups %}
-        <ul class="list">
+        <ul class="link-list">
           {% for group in groups %}
-            <li><a href="{{ url_for('groups.home', group_id=group.id) }}">{{ group.name }}</a></li>
+            <li>{{ ui.text_link(group.name, url_for('groups.home', group_id=group.id), kind="row") }}</li>
           {% endfor %}
         </ul>
       {% else %}
-        <p class="muted">{{ t("home.no_groups") }}</p>
+        <p class="page-text">{{ t("home.no_groups") }}</p>
       {% endif %}
-      <p>{{ ui.button(t("home.create_group"), href=url_for('groups.create')) }}</p>
     {% endcall %}
+    <div class="page-actions">{{ ui.button(t("home.create_group"), href=url_for('groups.create')) }}</div>
   {% else %}
-    {% call ui.card() %}
-      <h1>{{ t("app.tagline") }}</h1>
-      <p>{{ t("home.intro") }}</p>
-      <p>{{ ui.button(t("home.login_cta"), href=url_for('auth.login')) }}</p>
-    {% endcall %}
+    {{ ui.page_head(t("app.tagline")) }}
+    <p class="page-text">{{ t("home.intro") }}</p>
+    <div class="page-actions">{{ ui.button(t("home.login_cta"), href=url_for('auth.login')) }}</div>
   {% endif %}
 {% endblock %}

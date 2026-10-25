@@ -211,3 +211,15 @@ def test_parse_number(text, value):
 def test_format_param():
     assert settings.format_param(0.5) == "0,5"
     assert settings.format_param(0.123456789, settings.INPUT_DECIMALS) == "0,123456789"
+
+
+@pytest.mark.parametrize(("cadence", "points"), [(Cadence.WEEKLY, 13), (Cadence.DAILY, 85)])
+def test_preview_up_and_down_then_pause(cadence, points):
+    """SET-05: six weeks of only ups (or downs) from 5,0, then six without votes."""
+    preview = settings.preview(scoring.default_params(cadence), cadence)
+    assert len(preview.weeks) == len(preview.up) == len(preview.down) == points
+    assert preview.up[0] == preview.down[0] == 5.0
+    peak = preview.weeks.index(6.0)
+    assert max(preview.up) == preview.up[peak] and preview.up[-1] < preview.up[peak]
+    assert min(preview.down) == preview.down[peak] and preview.down[-1] > preview.down[peak]
+    assert preview.pause_week == 6.0

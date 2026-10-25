@@ -14,10 +14,10 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
-from app.domain.colors import color_for
 from app.domain.formatting import round_half_up
+from app.domain.types import Cadence
 from app.extensions import db
-from app.i18n import local_date, t
+from app.i18n import day_month, iso_week, local_date, t
 from app.models import (
     Group,
     Membership,
@@ -29,6 +29,7 @@ from app.models import (
     SettingField,
 )
 from app.services import settings
+from app.services.leaderboard import Leaderboard
 from app.services.text import member_name
 
 
@@ -80,23 +81,40 @@ def parse_range(value: str | None) -> Range | None:
 class _Point:
     period_id: int
     closes_at: datetime
+    cadence: Cadence
     user_id: int
     score: float
     ups: int
     downs: int
 
 
-def graph_data(group: Group, viewer_id: int, range_: Range, now: datetime) -> dict[str, Any]:
+class Role(StrEnum):
+    """GRA-02: lines are colored by role, not per person (docs/design.md, section 4)."""
+
+    LEADER = "leader"
+    GAIN = "gain"
+    DROP = "drop"
+
+
+def graph_data(
+    group: Group,
+    viewer_id: int,
+    range_: Range,
+    now: datetime,
+    roles: dict[int, Role] | None = None,
+) -> dict[str, Any]:
     """The JSON for graph.js. Timestamps are milliseconds since the epoch.
 
     A point is [score, ups, downs] with the score already rounded for display (A13),
-    so the client only swaps the decimal point.
+    so the client only swaps the decimal point. `roles` come from the current leaderboard.
     """
+    roles = roles or {}
     since = range_start(range_, now, group.timezone)
     points = _points(group.id, since)
     period_ids = list(dict.fromkeys(p.period_id for p in points))
     column = {period_id: i for i, period_id in enumerate(period_ids)}
     closes = {p.period_id: p.closes_at for p in points}
+    cadences = {p.period_id: p.cadence for p in points}
     members = _memberships(group.id)
     values: dict[int, list[list[Any] | None]] = {}
     for p in points:
@@ -104,14 +122,20 @@ def graph_data(group: Group, viewer_id: int, range_: Range, now: datetime) -> di
         row[column[p.period_id]] = [float(round_half_up(p.score)), p.ups, p.downs]
     return {
         "range": range_.value,
+        "cadence": group.cadence.value,
         "periods": [
-            {"t": _ms(closes[i]), "date": local_date(closes[i], group.timezone)} for i in period_ids
+            {
+                "t": _ms(closes[i]),
+                "date": local_date(closes[i], group.timezone),
+                "label": axis_label(closes[i], cadences[i], group.timezone),
+            }
+            for i in period_ids
         ],
         "series": [
             {
                 "id": m.user_id,
                 "name": member_name(m.user),
-                "color": color_for(m.color_index),
+                "role": roles.get(m.user_id),
                 "me": m.user_id == viewer_id,
                 "former": not m.is_active,
                 "points": values[m.user_id],
@@ -138,11 +162,20 @@ def range_start(range_: Range, now: datetime, timezone: str) -> datetime | None:
     return local.replace(tzinfo=ZoneInfo(timezone)).astimezone(UTC)
 
 
+def axis_label(closes_at: datetime, cadence: Cadence, timezone: str) -> str:
+    """The x axis names each point by its own period: "KW44" for a weekly one (the week of
+    its end, as in the heading), "25.10." for a daily one, in the group's time."""
+    if cadence == Cadence.WEEKLY:
+        return t("graph.week_label", week=iso_week(closes_at, timezone))
+    return day_month(closes_at, timezone)
+
+
 def _points(group_id: int, since: datetime | None) -> list[_Point]:
     query = (
         select(
             Period.id,
             Period.closes_at,
+            Period.cadence,
             PeriodResult.user_id,
             PeriodResult.score,
             PeriodResult.ups,
@@ -193,7 +226,6 @@ def _member_markers(
                 group,
                 "member",
                 t(MEMBER_MARKERS[event.kind], name=member_name(member.user)),
-                color_for(member.color_index),
             )
         )
     return markers
@@ -218,13 +250,12 @@ def _mode_markers(group: Group, since: datetime | None) -> list[dict[str, Any]]:
             group,
             "mode",
             t("graph.marker_anonymous" if anonymous else "graph.marker_open"),
-            None,
         )
         for opens_at, anonymous in db.session.execute(query.order_by(periods.c.opens_at))
     ]
 
 
-# The switch between anonymous and open has its own marker (_mode_markers).
+# The switch between anonymous and not anonymous has its own marker (_mode_markers).
 SETTINGS_IN_MARKERS = {
     SettingField.NAME: "settings.field_name",
     SettingField.CADENCE: "settings.field_cadence",
@@ -241,19 +272,25 @@ def _settings_markers(group: Group, since: datetime | None) -> list[dict[str, An
         names = [t(key) for field, key in SETTINGS_IN_MARKERS.items() if field in changed]
         if names:
             text = t("graph.marker_settings", fields=", ".join(names))
-            markers.append(_marker(at, group, "settings", text, None))
+            markers.append(_marker(at, group, "settings", text))
     return markers
 
 
-def _marker(at: datetime, group: Group, kind: str, text: str, color: str | None) -> dict[str, Any]:
-    return {
-        "t": _ms(at),
-        "date": local_date(at, group.timezone),
-        "kind": kind,
-        "text": text,
-        "color": color,
-    }
+def _marker(at: datetime, group: Group, kind: str, text: str) -> dict[str, Any]:
+    return {"t": _ms(at), "date": local_date(at, group.timezone), "kind": kind, "text": text}
 
 
 def _ms(value: datetime) -> int:
     return int(value.timestamp() * 1000)
+
+
+def roles(board: Leaderboard) -> dict[int, Role]:
+    """Biggest gain and drop of the latest period win over place 1 (GRA-02)."""
+    found: dict[int, Role] = {
+        row.member.user_id: Role.LEADER for row in board.rows if row.place == 1
+    }
+    h = board.highlights
+    for movement, role in ((h.biggest_gain, Role.GAIN), (h.biggest_drop, Role.DROP)):
+        if movement is not None:
+            found.update(dict.fromkeys(movement.user_ids, role))
+    return found

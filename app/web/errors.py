@@ -57,4 +57,4 @@ def _render(title: str, text: str, error: HTTPException | None = None) -> tuple[
     if fragment:
         # Show the error in the message area instead of replacing the target, e.g. a list.
         headers += [("HX-Retarget", "#messages"), ("HX-Reswap", "innerHTML")]
-    return render_template(template, title=title, text=text), status, headers
+    return render_template(template, title=title, text=text, status=status), status, headers

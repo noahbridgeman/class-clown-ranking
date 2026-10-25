@@ -9,10 +9,11 @@ someone joining or returning afterwards changes nobody's movement until the next
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.domain import ranking, scoring
-from app.domain.types import UserId
+from app.domain.formatting import round_half_up
+from app.domain.types import Cadence, UserId
 from app.extensions import db
 from app.models import Membership, Period, PeriodResult, PeriodStatus
 from app.services import membership, periods
@@ -24,8 +25,12 @@ class Row:
     place: int
     score: float
     delta: float | None  # None without an earlier score
-    place_change: int  # positive = moved up, 0 = unchanged or new
+    # Positive = moved up, 0 = unchanged or new. Not shown since M6b (A22); kept for the
+    # "overtaken" notifications in M8.
+    place_change: int
     is_new: bool  # no result before the latest closed period (INV-06)
+    label: ranking.Label | None  # A22
+    sparkline: list[float]  # the latest scores scaled to 0…1, oldest first
 
 
 @dataclass(frozen=True)
@@ -33,6 +38,7 @@ class Leaderboard:
     rows: list[Row]
     highlights: ranking.Highlights
     as_of: datetime | None  # end of the latest closed period
+    cadence: Cadence | None  # its cadence, from the period's snapshot
     names: dict[int, Membership]  # user id → membership, for the highlights
 
 
@@ -58,23 +64,93 @@ def leaderboard(group_id: int, members: list[Membership] | None = None) -> Leade
     in_latest = {u: score for u, score in curr.items() if u in results}
     highlights = ranking.highlights(prev, in_latest)
     changes = ranking.deltas(prev, curr)
-    rows = [
-        Row(
-            member=by_id[entry.user_id],
-            place=entry.place,
+    recent = _recent_scores(group_id, list(by_id))
+    best = _best_scores(group_id, list(by_id))
+    gain = set(highlights.biggest_gain.user_ids) if highlights.biggest_gain else set()
+    drop = set(highlights.biggest_drop.user_ids) if highlights.biggest_drop else set()
+    rows = []
+    for entry in ranking.rank(curr):
+        user_id = entry.user_id
+        scores = recent.get(user_id, [])
+        facts = ranking.LabelFacts(
             score=entry.score,
-            delta=changes[entry.user_id],
-            place_change=highlights.place_changes.get(entry.user_id, 0),
-            is_new=entry.user_id not in with_history,
+            best=best.get(user_id, (entry.score, 0))[0],
+            results=best.get(user_id, (entry.score, 0))[1],
+            delta=changes[user_id],
+            previous_delta=_previous_delta(scores) if user_id in results else None,
+            is_gain=user_id in gain,
+            is_drop=user_id in drop,
+            is_new=user_id not in with_history,
         )
-        for entry in ranking.rank(curr)
-    ]
+        rows.append(
+            Row(
+                member=by_id[user_id],
+                place=entry.place,
+                score=entry.score,
+                delta=changes[user_id],
+                place_change=highlights.place_changes.get(user_id, 0),
+                is_new=user_id not in with_history,
+                label=ranking.label(facts),
+                sparkline=ranking.sparkline(scores[-SPARKLINE_PERIODS:]),
+            )
+        )
     return Leaderboard(
         rows=rows,
         highlights=highlights,
         as_of=latest.closes_at if latest else None,
+        cadence=latest.cadence if latest else None,
         names={m.user_id: m for m in members},
     )
+
+
+SPARKLINE_PERIODS = 6
+
+
+def _previous_delta(scores: list[float]) -> float | None:
+    """The displayed change of the period before the latest (scores oldest first)."""
+    if len(scores) < 3:
+        return None
+    return float(round_half_up(scores[-2]) - round_half_up(scores[-3]))
+
+
+def _recent_scores(group_id: int, user_ids: list[UserId]) -> dict[UserId, list[float]]:
+    """Each member's latest scores in the group, oldest first, one more than the sparkline
+    shows so the change before the latest can be told."""
+    if not user_ids:
+        return {}
+    newest_first = (
+        func.row_number()
+        .over(partition_by=PeriodResult.user_id, order_by=Period.seq.desc())
+        .label("n")
+    )
+    ranked = (
+        select(PeriodResult.user_id, PeriodResult.score, Period.seq, newest_first)
+        .join(Period, Period.id == PeriodResult.period_id)
+        .where(Period.group_id == group_id, PeriodResult.user_id.in_(user_ids))
+        .subquery()
+    )
+    rows = db.session.execute(
+        select(ranked.c.user_id, ranked.c.score)
+        .where(ranked.c.n <= SPARKLINE_PERIODS + 1)
+        .order_by(ranked.c.user_id, ranked.c.seq)
+    )
+    scores: dict[UserId, list[float]] = {}
+    for user_id, score in rows:
+        scores.setdefault(UserId(user_id), []).append(score)
+    return scores
+
+
+def _best_scores(group_id: int, user_ids: list[UserId]) -> dict[UserId, tuple[float, int]]:
+    """Highest own score and number of results per member (A22)."""
+    if not user_ids:
+        return {}
+    rows = db.session.execute(
+        select(PeriodResult.user_id, func.max(PeriodResult.score), func.count())
+        .join(Period, Period.id == PeriodResult.period_id)
+        .where(Period.group_id == group_id, PeriodResult.user_id.in_(user_ids))
+        .group_by(PeriodResult.user_id)
+    )
+    return {UserId(user_id): (best, count) for user_id, best, count in rows}
 
 
 def latest_closed_period(group_id: int) -> Period | None:

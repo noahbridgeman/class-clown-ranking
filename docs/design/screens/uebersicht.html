@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kursblatt – Handelsprotokoll</title>
+<!-- Statische Design-Referenz, 390 px breit. Keine Produktionsvorlage: Texte und Zahlen sind Beispieldaten. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:#111}a:hover{color:#444}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tk{display:inline-flex;gap:26px;padding-right:26px;animation:tick 26s linear infinite}
+.mx{border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px}
+.mx th,.mx td{padding:0;height:32px;text-align:center}
+.mx th[scope=row]{text-align:left;font-family:'Archivo Narrow',sans-serif;font-size:16px;font-weight:500}
+.c{display:inline-flex;width:28px;height:26px;align-items:center;justify-content:center;font-size:10px;color:#111}
+</style>
+<style>@media (prefers-reduced-motion: reduce){.tk{animation:none}}</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F5F4EF; color: #111; font-family: 'Archivo Narrow', sans-serif; overflow: hidden">
+
+  <div style="height: 32px; background: #111; color: #F5F4EF; font-family: 'IBM Plex Mono', monospace; font-size: 12px; display: flex; align-items: center; overflow: hidden; white-space: nowrap" aria-label="Kursticker">
+    <div class="tk">
+      <span>GRUPPENSCHNITT 5,6 <span style="color: #12D37A">▲0,25</span></span><span>FELIX 7,2 <span style="color: #12D37A">▲0,5</span></span><span>LENA 6,9 <span style="color: #12D37A">▲0,1</span></span><span>JONAS 5,8 <span style="color: #12D37A">▲0,6</span></span><span>SOPHIE 5,3 <span style="color: #12D37A">▲0,4</span></span><span>ALI 4,6 <span style="color: #12D37A">▲0,2</span></span><span>TIM 3,8 <span style="color: #FF4A1C">▼0,3</span></span>
+      <span>GRUPPENSCHNITT 5,6 <span style="color: #12D37A">▲0,25</span></span><span>FELIX 7,2 <span style="color: #12D37A">▲0,5</span></span><span>LENA 6,9 <span style="color: #12D37A">▲0,1</span></span><span>JONAS 5,8 <span style="color: #12D37A">▲0,6</span></span><span>SOPHIE 5,3 <span style="color: #12D37A">▲0,4</span></span><span>ALI 4,6 <span style="color: #12D37A">▲0,2</span></span><span>TIM 3,8 <span style="color: #FF4A1C">▼0,3</span></span>
+    </div>
+  </div>
+
+  <div style="padding: 10px 16px 0 12px; display: flex; justify-content: space-between; align-items: center">
+    <a href="ranking.html" style="min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-decoration: none">‹ RANKING</a>
+    <button aria-label="Dein Konto" style="width: 44px; height: 44px; border: 1.5px solid #111; border-radius: 50%; background: #F5F4EF; color: #111; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">J</button>
+  </div>
+
+  <div style="padding: 4px 24px 14px; display: flex; flex-direction: column; gap: 6px">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #55554F">WG HINTERHOF · VOTING-ÜBERSICHT</div>
+    <h1 style="margin: 0; font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.01em">Übersicht</h1>
+  </div>
+
+  <div style="margin: 0 24px; border-top: 2px solid #111; border-bottom: 1px solid #111; display: flex; align-items: center; gap: 8px; padding: 6px 0">
+    <a href="uebersicht-anonym.html" aria-label="Vorherige Woche" style="width: 44px; height: 44px; box-sizing: border-box; border: 1.5px solid #111; display: flex; align-items: center; justify-content: center; text-decoration: none; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">‹</a>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px">
+      <span style="font-size: 21px; font-weight: 700; line-height: 1">KW 43 · 18./19.10.</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; background: #111; color: #F5F4EF; padding: 2px 6px">NICHT ANONYM</span>
+    </div>
+    <button aria-label="Nächste Woche" disabled style="width: 44px; height: 44px; border: 1.5px solid #C2C1B9; background: transparent; color: #A3A39B; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">›</button>
+  </div>
+
+  <div style="padding: 10px 24px 0">
+    <table class="mx" style="width: 342px">
+      <caption style="caption-side: top; text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #55554F; padding-bottom: 4px">Zeile hat Spalte gevotet · gestrichelt = ausgelassen</caption>
+      <thead>
+        <tr style="border-bottom: 1px solid #111">
+          <th scope="col" style="width: 72px"></th>
+          <th scope="col" style="font-weight: 500">FEL</th><th scope="col" style="font-weight: 500">LEN</th><th scope="col" style="font-weight: 700; box-shadow: inset 0 -3px 0 #12D37A">JON</th><th scope="col" style="font-weight: 500">SOP</th><th scope="col" style="font-weight: 500">ALI</th><th scope="col" style="font-weight: 500">TIM</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #DEDDD5">
+          <th scope="row">Felix</th>
+          <td style="color: #B9B9B1">—</td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #FF4A1C">▼</span></td><td><span class="c" style="background: #FF4A1C">▼</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #DEDDD5">
+          <th scope="row">Lena</th>
+          <td><span class="c" style="background: #12D37A">▲</span></td><td style="color: #B9B9B1">—</td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #FF4A1C">▼</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #DEDDD5; background: #EAF7EF">
+          <th scope="row" style="font-weight: 700">Jonas (du)</th>
+          <td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #FF4A1C">▼</span></td><td style="color: #B9B9B1">—</td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #FF4A1C">▼</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #DEDDD5">
+          <th scope="row">Sophie</th>
+          <td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td style="color: #B9B9B1">—</td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #FF4A1C">▼</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #DEDDD5">
+          <th scope="row">Ali</th>
+          <td><span class="c" style="background: #FF4A1C">▼</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #FF4A1C">▼</span></td><td style="color: #B9B9B1">—</td><td><span class="c" style="background: #12D37A">▲</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #111">
+          <th scope="row">Tim</th>
+          <td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="background: #FF4A1C">▼</span></td><td><span class="c" style="background: #12D37A">▲</span></td><td><span class="c" style="border: 1px dashed #8A8A82; box-sizing: border-box" aria-label="ausgelassen"></span></td><td><span class="c" style="background: #FF4A1C">▼</span></td><td style="color: #B9B9B1">—</td>
+        </tr>
+        <tr>
+          <th scope="row" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #55554F">UP/DOWN</th>
+          <td>4/1</td><td>3/2</td><td style="font-weight: 600">5/0</td><td>3/1</td><td>3/2</td><td>1/4</td>
+        </tr>
+        <tr>
+          <th scope="row" style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #55554F">SCORE Δ</th>
+          <td style="color: #0B7A5C; font-weight: 600">+0,5</td><td style="color: #0B7A5C; font-weight: 600">+0,1</td><td style="color: #0B7A5C; font-weight: 600">+0,6</td><td style="color: #0B7A5C; font-weight: 600">+0,4</td><td style="color: #0B7A5C; font-weight: 600">+0,2</td><td style="color: #B32D0B; font-weight: 600">−0,3</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin: 14px 24px 0; padding-top: 10px; border-top: 2px solid #111; display: flex; flex-direction: column; gap: 10px">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #55554F">BEGRÜNDUNGEN (3)</div>
+    <div style="display: flex; flex-direction: column; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid #DEDDD5">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em">LENA → FELIX <span style="background: #12D37A; padding: 1px 4px">▲</span></span>
+      <span style="font-size: 17px">„Die Pfandautomat-Story. Legendär.“</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid #DEDDD5">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em">FELIX → TIM <span style="background: #FF4A1C; padding: 1px 4px">▼</span></span>
+      <span style="font-size: 17px">„Wieder der Mensa-Witz. Wir kennen ihn.“</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em">ALI → TIM <span style="background: #12D37A; padding: 1px 4px">▲</span></span>
+      <span style="font-size: 17px">„Mitleidskauf.“</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -2,12 +2,10 @@
 {% import "macros/ui.html" as ui %}
 {% block title %}{{ t("auth.confirm_title") }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ t("auth.confirm_title") }}</h1>
-    <p>{{ t("auth.confirm_text", days=days) }}</p>
-    <form method="post" class="form">
-      {{ form.csrf_token }}
-      {{ ui.button(t("auth.confirm_button")) }}
-    </form>
-  {% endcall %}
+  {{ ui.page_head(t("auth.confirm_title")) }}
+  <p class="page-text">{{ t("auth.confirm_text", days=days) }}</p>
+  <form method="post" class="form">
+    {{ form.csrf_token }}
+    {{ ui.button(t("auth.confirm_button")) }}
+  </form>
 {% endblock %}

@@ -6,14 +6,23 @@ Walks app.url_map, so pages added later (graph, overview) are covered automatica
 """
 
 import re
+from datetime import timedelta
 
 import pytest
 from flask import Flask
 
 from app.services import voting
-from tests.factories import IN_WEEK_WINDOW, add_member, make_group, make_user, tick, vote
+from tests.factories import (
+    IN_WEEK_WINDOW,
+    WEEK_CLOSES,
+    add_member,
+    make_group,
+    make_user,
+    tick,
+    vote,
+)
 
-VOTER_COUNT = re.compile(r"\d+ von \d+ Mitgliedern haben schon abgestimmt")
+VOTER_COUNT = re.compile(r"\d+ von \d+ haben abgestimmt")
 CSRF = re.compile(r'(csrf[-_]token"?\s*(?:content|value)=)"[^"]*"|"X-CSRFToken": "[^"]*"')
 HTMX = {"HX-Request": "true"}
 
@@ -38,13 +47,22 @@ def snapshot(client, urls: list[str]) -> dict[tuple[str, bool], str]:
 
 
 @pytest.mark.parametrize("anonymous", [True, False])
-def test_open_window_shows_nothing_of_others_votes(app, clock, login_as, anonymous):
+@pytest.mark.parametrize("with_history", [False, True])
+def test_open_window_shows_nothing_of_others_votes(app, clock, login_as, anonymous, with_history):
     """Holds in the open mode too, as long as the window is open (VOT-07)."""
     a, b, observer = make_user(), make_user(), make_user()
     group = make_group(a)
     group.is_anonymous = anonymous
     add_member(group, b)
     add_member(group, observer)
+    if with_history:
+        # A closed period first, so ticker, labels, sparklines and scores are drawn too.
+        clock.set(IN_WEEK_WINDOW - timedelta(days=7))
+        tick()
+        vote(group, a, b, "up")
+        vote(group, b, observer, "down")
+        clock.set(WEEK_CLOSES - timedelta(days=7))
+        tick()
     clock.set(IN_WEEK_WINDOW)
     tick()
     client = login_as(observer)
@@ -73,6 +91,6 @@ def test_the_count_is_the_only_difference(app, clock, login_as):
     tick()
     client = login_as(observer)
     url = f"/g/{group.id}/vote"
-    assert "0 von 3 Mitgliedern" in client.get(url).get_data(True)
+    assert "0 von 3 haben abgestimmt" in client.get(url).get_data(True)
     vote(group, a, b, "up")
-    assert "1 von 3 Mitgliedern" in client.get(url).get_data(True)
+    assert "1 von 3 haben abgestimmt" in client.get(url).get_data(True)

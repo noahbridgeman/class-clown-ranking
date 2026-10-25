@@ -1,48 +1,60 @@
-// Score history (GRA-01…08). Data comes from graph.json, colors, fonts and sizes from
-// tokens.css, texts from the data attributes of #graph. No fixed values here either.
+// Score history (GRA-01…08) in the "Kursblatt" style (docs/design.md, section 4).
+// Data from graph.json, colors, fonts and sizes from tokens.css, texts from the data
+// attributes of #graph. No fixed values here either.
 (function () {
   "use strict";
 
   const container = document.getElementById("graph");
   if (!container) return;
   const status = document.getElementById("graph-status");
-  const links = document.querySelectorAll(".graph-range");
+  const links = document.querySelectorAll(".tab[data-range]");
+  const rows = document.querySelectorAll(".rank[data-user]");
   const texts = JSON.parse(container.dataset.texts);
+
+  function showStatus(text) {
+    status.textContent = text || "";
+    status.hidden = !text;
+  }
+
   if (!window.echarts) {
     // CDN unreachable, blocked, or the SRI check failed.
     container.hidden = true;
-    status.textContent = texts.loadFailed;
-    status.hidden = false;
+    showStatus(texts.loadFailed);
     return;
   }
+
   const style = getComputedStyle(document.documentElement);
   const token = (name) => style.getPropertyValue(name).trim();
   const number = (name) => parseFloat(token(name));
   const theme = {
-    text: token("--color-text"),
-    muted: token("--color-muted"),
-    border: token("--color-border"),
-    surface: token("--color-surface"),
-    accent: token("--color-accent"),
-    font: token("--font-sans"),
+    ink: token("--color-ink"),
+    faint: token("--color-faint"),
+    line: token("--color-line"),
+    series: token("--color-series"),
+    up: token("--color-up"),
+    down: token("--color-down"),
+    bg: token("--color-bg"),
+    mono: token("--font-mono"),
+    semibold: token("--weight-semibold"),
     fontSize: number("--graph-font-size"),
-    legendSpace: number("--graph-legend-space"),
-    line: number("--graph-line-width"),
+    lineWidth: number("--graph-line-width"),
+    lineRole: number("--graph-line-width-role"),
     lineMe: number("--graph-line-width-me"),
-    lineEmphasis: number("--graph-line-width-emphasis"),
-    glow: number("--graph-glow"),
-    markerWidth: number("--graph-marker-width"),
-    symbol: number("--graph-symbol-size"),
+    endDot: number("--graph-end-dot"),
+    endDotBorder: number("--graph-end-dot-border"),
     blur: number("--graph-blur-opacity"),
-    duration: number("--graph-animation-ms"),
+    markerHeight: number("--graph-marker-height"),
   };
+  const ROLE_COLORS = { leader: theme.ink, gain: theme.up, drop: theme.down };
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const duration = reducedMotion ? 0 : number("--graph-animation-ms");
 
   const chart = echarts.init(container, null, { renderer: "canvas" });
   new ResizeObserver(() => chart.resize()).observe(container);
-  chart.setOption(baseOption());
 
   let names = {};
   let request = 0;
+  let focused = null;
 
   function escapeHtml(value) {
     const div = document.createElement("div");
@@ -50,65 +62,40 @@
     return div.innerHTML;
   }
 
-  function showStatus(text) {
-    status.textContent = text || "";
-    status.hidden = !text;
+  // Scores arrive rounded for display (A13); only the decimal point is swapped.
+  function formatScore(value) {
+    return value.toFixed(1).replace(".", texts.decimalSeparator);
   }
 
-  function baseOption() {
-    const axisText = { color: theme.muted, fontFamily: theme.font, fontSize: theme.fontSize };
+  // The server names each period (week or day, in the group's time); ticks sit on them.
+  function xAxis(data, axisText) {
+    const labels = new Map(data.periods.map((period) => [period.t, period.label]));
+    const times = data.periods.map((period) => period.t);
     return {
-      backgroundColor: "transparent",
-      textStyle: { fontFamily: theme.font, color: theme.text },
-      animationDuration: theme.duration,
-      animationDurationUpdate: theme.duration,
-      animationEasing: "cubicOut",
-      grid: { left: 0, right: theme.fontSize, top: theme.legendSpace, bottom: 0, containLabel: true },
-      legend: {
-        type: "scroll",
-        top: 0,
-        textStyle: axisText,
-        pageTextStyle: axisText,
-        pageIconColor: theme.text,
-        pageIconInactiveColor: theme.border,
-        inactiveColor: theme.border,
-        icon: "circle",
-        formatter: (id) => names[id] || id,
+      type: "time",
+      axisLine: { show: false },
+      axisTick: { show: false, customValues: times },
+      axisLabel: {
+        ...axisText,
+        hideOverlap: true,
+        customValues: times,
+        formatter: (value) => labels.get(value) || "",
       },
-      tooltip: {
-        trigger: "item",
-        confine: true,
-        backgroundColor: theme.surface,
-        borderColor: theme.border,
-        textStyle: { color: theme.text, fontFamily: theme.font },
-        formatter: tooltip,
-      },
-      xAxis: {
-        type: "time",
-        axisLine: { lineStyle: { color: theme.border } },
-        axisLabel: {
-          ...axisText,
-          hideOverlap: true,
-          formatter: { year: "{yyyy}", month: "{dd}.{MM}.", day: "{dd}.{MM}.", hour: "{dd}.{MM}." },
-        },
-        splitLine: { show: false },
-      },
-      yAxis: {
-        type: "value",
-        min: 0,
-        max: 10,
-        interval: 2,
-        axisLabel: axisText,
-        splitLine: { lineStyle: { color: theme.border } },
-      },
-      // GRA-08: pinch and drag on the phone, wheel and drag on the desktop.
-      dataZoom: [{ type: "inside", filterMode: "none" }],
+      splitLine: { show: false },
     };
   }
 
+  // GRA-06: the y axis zooms on the data, in whole numbers within 0–10, always with 5.
+  function yRange(data) {
+    const values = data.series.flatMap((s) => s.points.filter(Boolean).map((p) => p[0]));
+    const low = Math.min(4.5, ...values);
+    const high = Math.max(5.5, ...values);
+    return { min: Math.max(0, Math.floor(low - 0.3)), max: Math.min(10, Math.ceil(high + 0.3)) };
+  }
+
   function tooltip(params) {
-    if (params.componentType === "markLine") {
-      return `${escapeHtml(params.data.date)}<br>${escapeHtml(params.name)}`;
+    if (params.seriesId === "markers") {
+      return `${escapeHtml(params.data.date)}<br>${escapeHtml(params.data.text)}`;
     }
     const point = params.data;
     if (!point || point.text === undefined) return "";
@@ -120,80 +107,158 @@
     );
   }
 
-  function memberSeries(data) {
-    return data.series.map((member) => ({
-      id: String(member.id),
-      name: String(member.id), // display names may repeat, ids do not
-      type: "line",
-      smooth: 0.35,
-      symbol: "circle",
-      symbolSize: theme.symbol,
-      showAllSymbol: "auto",
-      connectNulls: false, // a gap where someone was not a member (MEM-03)
-      triggerLineEvent: true,
-      z: member.me ? 3 : 2,
-      color: member.color,
-      lineStyle: {
-        width: member.me ? theme.lineMe : theme.line,
-        shadowBlur: theme.glow,
-        shadowColor: member.color,
-      },
-      emphasis: { focus: "series", lineStyle: { width: theme.lineEmphasis } },
-      blur: { lineStyle: { opacity: theme.blur }, itemStyle: { opacity: theme.blur } },
-      data: member.points.map((point, i) => {
-        const period = data.periods[i];
-        if (!point) return { value: [period.t, "-"] };
-        return {
-          value: [period.t, point[0]],
-          text: point[0].toFixed(1).replace(".", texts.decimalSeparator),
-          ups: point[1],
-          downs: point[2],
-          date: period.date,
-        };
-      }),
-    }));
+  function lastIndex(points) {
+    for (let i = points.length - 1; i >= 0; i -= 1) if (points[i]) return i;
+    return -1;
   }
 
-  function markerSeries(data) {
+  function memberSeries(data) {
+    return data.series.map((member) => {
+      const color = ROLE_COLORS[member.role] || (member.me ? theme.ink : theme.series);
+      const strong = Boolean(member.role) || member.me;
+      const end = lastIndex(member.points);
+      const label = names[member.id];
+      return {
+        id: String(member.id),
+        type: "line",
+        symbol: "circle",
+        symbolSize: theme.endDot,
+        connectNulls: false, // a gap where someone was not a member (MEM-03)
+        triggerLineEvent: true,
+        z: member.me ? 4 : strong ? 3 : 2,
+        color,
+        lineStyle: { width: member.me ? theme.lineMe : strong ? theme.lineRole : theme.lineWidth },
+        // Points stay invisible but catch the tap for the tooltip; only "you" get an end dot.
+        itemStyle: { opacity: 0 },
+        emphasis: { focus: "series" },
+        blur: { lineStyle: { opacity: theme.blur }, endLabel: { opacity: theme.blur } },
+        // GRA-05: the name next to each line instead of a legend.
+        endLabel: {
+          show: end >= 0,
+          formatter: () => `${label.toUpperCase()} ${formatScore(member.points[end][0])}`,
+          color: strong ? theme.ink : theme.faint,
+          fontFamily: theme.mono,
+          fontSize: theme.fontSize,
+          fontWeight: theme.semibold,
+          distance: theme.fontSize / 2,
+        },
+        labelLayout: { moveOverlap: "shiftY" },
+        data: member.points.map((point, i) => {
+          const period = data.periods[i];
+          if (!point) return { value: [period.t, "-"] };
+          const item = {
+            value: [period.t, point[0]],
+            text: formatScore(point[0]),
+            ups: point[1],
+            downs: point[2],
+            date: period.date,
+          };
+          if (member.me && i === end) {
+            item.itemStyle = {
+              opacity: 1,
+              color,
+              borderColor: theme.ink,
+              borderWidth: theme.endDotBorder,
+            };
+          }
+          return item;
+        }),
+      };
+    });
+  }
+
+  // The starting value as a dashed line with its label (GRA-06).
+  function startSeries(range) {
     return {
-      id: "markers",
+      id: "start",
       type: "line",
       data: [],
+      silent: true,
       markLine: {
+        silent: true,
         symbol: ["none", "none"],
-        label: { show: false },
-        emphasis: { label: { show: false }, lineStyle: { width: theme.line } },
-        data: data.markers.map((marker) => ({
-          xAxis: marker.t,
-          name: marker.text,
-          date: marker.date,
-          lineStyle: {
-            color: marker.color || theme.accent,
-            type: "dashed",
-            width: theme.markerWidth,
-            opacity: 1,
-          },
-        })),
+        animation: false,
+        lineStyle: { color: theme.ink, type: [3, 3], width: 1 },
+        label: {
+          position: "insideStartTop",
+          formatter: texts.start,
+          color: theme.faint,
+          fontFamily: theme.mono,
+          fontSize: theme.fontSize,
+        },
+        data: range.min < 5 && range.max > 5 ? [{ yAxis: 5 }] : [],
       },
+    };
+  }
+
+  // GRA-07: joins, departures, settings and anonymity as small ink ticks on the x axis.
+  function markerSeries(data, range) {
+    return {
+      id: "markers",
+      type: "scatter",
+      symbol: "rect",
+      symbolSize: [1, theme.markerHeight],
+      symbolOffset: [0, -theme.markerHeight / 2],
+      color: theme.ink,
+      z: 5,
+      data: data.markers.map((marker) => ({
+        value: [marker.t, range.min],
+        date: marker.date,
+        text: marker.text,
+      })),
+    };
+  }
+
+  function option(data) {
+    const range = yRange(data);
+    const axisText = { color: theme.faint, fontFamily: theme.mono, fontSize: theme.fontSize };
+    return {
+      backgroundColor: "transparent",
+      animation: !reducedMotion,
+      animationDuration: duration,
+      animationDurationUpdate: duration,
+      textStyle: { fontFamily: theme.mono, color: theme.ink },
+      // Room on the right for the names at the line ends.
+      grid: { left: 0, right: theme.fontSize * 9, top: theme.fontSize, bottom: 0, containLabel: true },
+      tooltip: {
+        trigger: "item",
+        confine: true,
+        backgroundColor: theme.bg,
+        borderColor: theme.ink,
+        borderWidth: 1,
+        borderRadius: 0,
+        extraCssText: "box-shadow: none",
+        textStyle: { color: theme.ink, fontFamily: theme.mono, fontSize: theme.fontSize + 2 },
+        formatter: tooltip,
+      },
+      xAxis: xAxis(data, axisText),
+      yAxis: {
+        type: "value",
+        min: range.min,
+        max: range.max,
+        interval: 1,
+        // 5 carries the "Startwert 5,0" label of the dashed line instead.
+        axisLabel: { ...axisText, formatter: (value) => (value === 5 ? "" : String(value)) },
+        splitLine: { lineStyle: { color: theme.line } },
+      },
+      // GRA-08: pinch and drag on the phone, wheel and drag on the desktop.
+      dataZoom: [{ type: "inside", filterMode: "none" }],
+      series: [...memberSeries(data), startSeries(range), markerSeries(data, range)],
     };
   }
 
   function render(data) {
     names = {};
     for (const member of data.series) {
-      names[member.id] = member.former ? texts.former.replace("{name}", () => member.name) : member.name;
+      names[member.id] = member.former
+        ? texts.former.replace("{name}", () => member.name)
+        : member.name;
     }
     const empty = data.series.length === 0;
     container.hidden = empty;
     showStatus(empty ? texts.empty : "");
-    chart.setOption(
-      {
-        legend: { data: data.series.map((member) => String(member.id)) },
-        series: [...memberSeries(data), markerSeries(data)],
-        dataZoom: [{ start: 0, end: 100 }],
-      },
-      { replaceMerge: ["series"] },
-    );
+    focused = null;
+    chart.setOption(option(data), { notMerge: true });
   }
 
   async function load(range) {
@@ -212,11 +277,30 @@
   links.forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();
-      const range = link.dataset.range;
       links.forEach((other) => other.removeAttribute("aria-current"));
       link.setAttribute("aria-current", "true");
       history.replaceState(null, "", link.href);
-      load(range);
+      load(link.dataset.range);
+    });
+  });
+
+  // GRA-05: tapping a leaderboard row (or Enter/Space on it) highlights that person's
+  // line; again to undo.
+  function toggle(row) {
+    const id = row.dataset.user;
+    chart.dispatchAction({ type: "downplay" });
+    focused = focused === id ? null : id;
+    if (focused) chart.dispatchAction({ type: "highlight", seriesId: focused });
+    rows.forEach((other) => other.setAttribute("aria-pressed", String(other.dataset.user === focused)));
+  }
+
+  rows.forEach((row) => {
+    row.addEventListener("click", () => toggle(row));
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggle(row);
+      }
     });
   });
 

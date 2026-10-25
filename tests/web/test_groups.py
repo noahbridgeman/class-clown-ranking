@@ -43,27 +43,27 @@ class TestCreate:
         assert client.get("/groups/new").location == "/login"
 
 
-class TestHome:
+class TestMembersInSettings:
+    """The member list and its management live on the settings page (docs/design.md)."""
+
     def test_shows_members_with_admin_badge_and_self(self, login_as):
         admin = make_user(display_name="Ada")
         group = make_group(admin, "Runde")
         bo = add_member(group, make_user(display_name="Bo"))
-        html = login_as(bo).get(f"/g/{group.id}/").get_data(as_text=True)
-        assert "Mitglieder (2)" in html
-        assert "Ada" in html and "Bo" in html
-        assert "Admin</span>" in html
-        assert "(du)" in html
-        assert 'fill="#' in html
-        assert "Verwalten" not in html
-        assert "Einladungen" not in html
+        html = login_as(bo).get(f"/g/{group.id}/settings").get_data(as_text=True)
+        assert "Mitglieder · 2 / 30" in html
+        assert "Ada" in html and "Bo (du)" in html
+        assert '<span class="badge badge-ink">Admin</span>' in html
+        assert "Optionen für" not in html
+        assert 'id="invitations"' not in html
 
     def test_admin_sees_management(self, login_as):
         admin = make_user()
         group = make_group(admin)
         add_member(group)
-        html = login_as(admin).get(f"/g/{group.id}/").get_data(as_text=True)
-        assert html.count("Verwalten") == 1  # not for the admin's own row
-        assert f"/g/{group.id}/invitations" in html
+        html = login_as(admin).get(f"/g/{group.id}/settings").get_data(as_text=True)
+        assert html.count("Optionen für") == 1  # not for the admin's own row
+        assert 'id="invitations"' in html
         assert f"/g/{group.id}/delete" in html
 
     def test_former_members_are_not_listed(self, login_as):
@@ -71,7 +71,16 @@ class TestHome:
         group = make_group(admin)
         gone = add_member(group, make_user(display_name="Weg"))
         membership.leave(group, gone)
-        assert "Weg" not in login_as(admin).get(f"/g/{group.id}/").get_data(as_text=True)
+        html = login_as(admin).get(f"/g/{group.id}/settings").get_data(as_text=True)
+        assert "Weg" not in html
+
+    def test_ranking_page_has_no_management(self, login_as):
+        admin = make_user()
+        group = make_group(admin)
+        add_member(group)
+        html = login_as(admin).get(f"/g/{group.id}/").get_data(as_text=True)
+        assert "Optionen für" not in html
+        assert f'href="/g/{group.id}/settings"' in html  # the kicker leads there
 
 
 class TestManageMembers:
@@ -81,7 +90,7 @@ class TestManageMembers:
         bo = add_member(group, make_user(display_name="Bo"))
         client = login_as(admin)
         response = client.post(f"/g/{group.id}/members/{bo.id}/remove")
-        assert response.location == f"/g/{group.id}/"
+        assert response.location == f"/g/{group.id}/settings"
         assert "Bo wurde aus der Gruppe entfernt." in client.get(response.location).get_data(True)
         assert membership.active_membership(group.id, bo.id) is None
 

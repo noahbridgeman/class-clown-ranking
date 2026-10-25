@@ -1,84 +1,104 @@
 {% extends "base.html" %}
 {% import "macros/ui.html" as ui %}
+{# docs/design/screens/einstellungen.html: members, invitations, the voting settings and
+   the score parameters on one page. Members see everything, only the admin can change it. #}
 {% block title %}{{ t("settings.title") }} – {{ group.name }}{% endblock %}
-{% block scripts %}
-  {% if is_admin %}
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"
-            integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR"
-            crossorigin="anonymous" defer></script>
-    <script src="{{ url_for('static', filename='js/preview.js') }}" defer></script>
-  {% endif %}
-{% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ t("settings.title") }}</h1>
-    <p class="muted">{{ t("settings.intro") }}</p>
-    {% if pending %}
-      <div class="pending" role="status">
-        <p><strong>
-          {% if pending_from <= now %}
-            {{ t("settings.pending_soon") }}
-          {% elif pending_timezone != group.timezone %}
-            {# A timezone change: the new window is defined in the new zone. #}
-            {{ t("settings.pending_from_zone", at=pending_from|local_datetime(pending_timezone), timezone=pending_timezone) }}
-          {% else %}
-            {{ t("settings.pending_from", at=pending_from|local_datetime(group.timezone)) }}
-          {% endif %}
-        </strong></p>
-        <ul class="list">
-          {% for field, value in pending.items() %}
-            <li>{{ t(setting_labels[field]) }}: {{ setting_value(field, value) }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
+  {{ ui.page_head(t("settings.title"), kicker=t("settings.kicker_admin" if is_admin else "settings.kicker", group=group.name)) }}
 
-    {% if is_admin %}
-      <form class="form" method="post" action="{{ url_for('settings.save', group_id=group.id) }}" novalidate>
-        {{ form.csrf_token }}
+  {% if pending %}
+    {% call ui.status(kind="dark") %}
+      <span class="status-stack status-pending">
+        <span class="status-label status-label-up">
+          {%- if pending_from <= now %}{{ t("settings.pending_soon") }}
+          {%- else %}{{ t("settings.pending_from", at=pending_from|short_datetime(pending_timezone)) }}{% endif -%}
+        </span>
+        {% for field, old, new in pending %}
+          <span class="status-title">{{ t("settings.pending_line", field=t(setting_labels[field]), old=pending_value(field, old), new=pending_value(field, new)) }}</span>
+        {% endfor %}
+      </span>
+    {% endcall %}
+  {% endif %}
+
+  {% call ui.section(t("settings.section_members"), members|length ~ " / " ~ max_group_size) %}
+    <ul class="members">
+      {% for member in members %}
+        {% set is_me = member.user_id == current_user.id %}
+        {% set name = member_name(member.user) %}
+        <li class="member{% if is_me %} member-me{% endif %}">
+          <span class="member-name">{{ name }}{% if is_me %} ({{ t("groups.you") }}){% endif %}</span>
+          {% if member.user_id == group.admin_user_id %}
+            {{ ui.badge(t("groups.admin_badge"), "ink") }}
+          {% else %}
+            <span class="member-since">{{ t("settings.member_since", date=member.first_joined_at|day_month(group.timezone)) }}</span>
+          {% endif %}
+          {% if is_admin and not is_me %}
+            <details class="member-menu">
+              <summary aria-label="{{ t('settings.member_options', name=name) }}">⋯</summary>
+              <div class="member-menu-panel">
+                <form method="post" action="{{ url_for('groups.transfer_admin', group_id=group.id, user_id=member.user_id) }}">
+                  {{ form.csrf_token }}
+                  <p class="hint">{{ t("groups.make_admin_hint") }}</p>
+                  {{ ui.button(t("groups.make_admin"), "secondary") }}
+                </form>
+                <form method="post" action="{{ url_for('groups.remove_member', group_id=group.id, user_id=member.user_id) }}">
+                  {{ form.csrf_token }}
+                  <p class="hint">{{ t("groups.remove_hint", name=name) }}</p>
+                  {{ ui.button(t("groups.remove"), "danger") }}
+                </form>
+              </div>
+            </details>
+          {% elif is_admin %}
+            <span class="member-menu-spacer" aria-hidden="true"></span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endcall %}
+
+  {% if is_admin %}
+    <div id="einladen">
+      {% call ui.section(t("settings.section_invite")) %}
+        {% include "invitations/_list.html" %}
+      {% endcall %}
+    </div>
+
+    <form class="form settings-form" method="post" action="{{ url_for('settings.save', group_id=group.id) }}" novalidate>
+      {{ form.csrf_token }}
+      {% call ui.section(t("settings.section_voting")) %}
         {{ ui.text_field("name", t("settings.field_name"), values.name, errors.get("name"),
              attrs={"maxlength": name_max_length, "required": true}) }}
-        {{ ui.select_field("cadence", t("settings.field_cadence"),
-             {"weekly": t(cadences["weekly"]), "daily": t(cadences["daily"])}, values.cadence.value, errors.get("cadence")) }}
-        <p class="muted hint">{{ t("settings.cadence_hint") }}</p>
-        {{ ui.select_field("is_anonymous", t("settings.field_anonymity"),
-             {"true": t("settings.anonymous"), "false": t("settings.open")},
-             "true" if values.is_anonymous else "false", errors.get("is_anonymous")) }}
-        <p class="muted hint">{{ t("settings.anonymity_hint") }}</p>
-        {{ ui.select_field("timezone", t("settings.field_timezone"), timezones, values.timezone, errors.get("timezone")) }}
+        {{ ui.segment("cadence", t("settings.field_cadence"),
+             {"weekly": t(cadences["weekly"]), "daily": t(cadences["daily"])}, values.cadence.value,
+             hint={"weekly": t("settings.cadence_hint_weekly"), "daily": t("settings.cadence_hint_daily")},
+             error=errors.get("cadence")) }}
+        {{ ui.segment("is_anonymous", t("settings.field_anonymity"),
+             {"false": t("settings.open"), "true": t("settings.anonymous")},
+             "true" if values.is_anonymous else "false",
+             hint=t("settings.anonymity_hint"), error=errors.get("is_anonymous")) }}
+      {% endcall %}
+      {% call ui.section(t("settings.section_score")) %}
         {% include "settings/_params.html" %}
-        <p>{{ ui.button(t("settings.save")) }}</p>
-      </form>
-    {% else %}
+      {% endcall %}
+      <div class="settings-save">
+        {{ ui.button(t("settings.save"), attrs={"name": "action", "value": "save"}) }}
+        <p class="hint">{{ t("settings.save_hint", at=next_from|short_datetime(pending_timezone)) }}</p>
+      </div>
+    </form>
+  {% else %}
+    {% call ui.section(t("settings.section_voting")) %}
       <dl class="settings">
-        {% for field in fields %}
+        {% for field in read_fields %}
           <dt>{{ t(setting_labels[field]) }}</dt>
           <dd>{{ setting_value(field, effective.value(field)) }}</dd>
         {% endfor %}
       </dl>
-      <p class="muted">{{ t("settings.admin_only") }}</p>
-    {% endif %}
-  {% endcall %}
+      <p class="hint">{{ t("settings.admin_only") }}</p>
+    {% endcall %}
+  {% endif %}
 
-  {% call ui.card() %}
-    <h2>{{ t("settings.log_title") }}</h2>
-    {% if log %}
-      <ul class="settings-log">
-        {% for change in log %}
-          <li class="settings-change">
-            <span class="muted">{{ change.changed_at|local_datetime(group.timezone) }} · {{ member_name(change.changed_by) }}</span>
-            <span>{{ t(setting_labels[change.field]) }}: {{ setting_value(change.field, change.old_value) }} → {{ setting_value(change.field, change.new_value) }}</span>
-            {% if change.applied_at %}
-              {{ ui.badge(t("settings.applied", date=change.applied_at|local_date(group.timezone))) }}
-            {% else %}
-              {{ ui.badge(t("settings.pending"), "open") }}
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="muted">{{ t("settings.log_empty") }}</p>
-    {% endif %}
-    <p class="actions"><a href="{{ url_for('groups.home', group_id=group.id) }}">{{ t("settings.back") }}</a></p>
-  {% endcall %}
+  <div class="group-actions">
+    {{ ui.button(t("groups.leave_link"), "secondary", href=url_for('groups.leave', group_id=group.id)) }}
+    {% if is_admin %}{{ ui.button(t("groups.delete_link"), "danger", href=url_for('groups.delete', group_id=group.id)) }}{% endif %}
+  </div>
 {% endblock %}

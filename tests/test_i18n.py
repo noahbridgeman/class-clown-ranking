@@ -1,10 +1,22 @@
 import re
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from string import Formatter
 
 import pytest
 
-from app.i18n import Translator, _flatten, load_texts, t
+from app.i18n import (
+    Translator,
+    _flatten,
+    countdown,
+    countdown_short,
+    load_texts,
+    short_date,
+    short_datetime,
+    t,
+    weekday_time,
+    window_dates,
+)
 
 APP_DIR = Path(__file__).parent.parent / "app"
 KEY_USAGE = re.compile(r"""\bt\(\s*["']([\w.]+)["']""")
@@ -105,3 +117,75 @@ def test_duration(app, seconds, text):
     from app.i18n import duration
 
     assert duration(timedelta(seconds=seconds)) == text
+
+
+@pytest.mark.parametrize(
+    ("remaining", "full", "short"),
+    [
+        (timedelta(hours=20, minutes=46, seconds=1), "20:47 h", "20:47 h"),
+        (timedelta(days=3, hours=14, minutes=22), "3 T 14:22 h", "3 T"),
+        (timedelta(minutes=5), "0:05 h", "0:05 h"),
+        (timedelta(seconds=-3), "0:00 h", "0:00 h"),
+    ],
+)
+def test_countdown(app, remaining, full, short):
+    assert countdown(remaining) == full
+    assert countdown_short(remaining) == short
+
+
+def test_short_formats(app):
+    at = datetime(2026, 10, 19, 11, 0, tzinfo=UTC)  # Monday 13:00 in Berlin
+    assert short_datetime(at, "Europe/Berlin") == "Mo 19.10., 13:00"
+    assert short_date(at, "Europe/Berlin") == "Mo 19.10."
+    assert weekday_time(at, "Europe/Berlin") == "Mo 13:00"
+
+
+@pytest.mark.parametrize(
+    ("opens", "closes", "text"),
+    [
+        (
+            datetime(2026, 10, 24, 22, tzinfo=UTC),
+            datetime(2026, 10, 26, 12, tzinfo=UTC),
+            "25./26.10.",
+        ),
+        (
+            datetime(2026, 10, 31, 23, tzinfo=UTC),
+            datetime(2026, 11, 2, 12, tzinfo=UTC),
+            "01./02.11.",
+        ),
+        (
+            datetime(2026, 10, 30, 12, tzinfo=UTC),
+            datetime(2026, 11, 1, 12, tzinfo=UTC),
+            "30.10./01.11.",
+        ),
+    ],
+)
+def test_window_dates(opens, closes, text):
+    assert window_dates(opens, closes, "Europe/Berlin") == text
+
+
+# docs/design.md section 6: the look of a stock exchange, the language of everyone.
+STOCK_TERMS = re.compile(
+    r"\b(Kurse?|Handel|Order|kaufen|verkaufen|Ordernotiz|Ausgabekurs|Index|Dark Pool|"
+    r"Neuemission|Delisting|Protokoll)\b",
+    re.I,
+)
+
+
+def test_texts_avoid_stock_exchange_terms():
+    found = {key: text for key, text in load_texts("de").items() if STOCK_TERMS.search(text)}
+    assert found == {}
+
+
+def test_countdown_short_cuts_days_like_the_design(app):
+    """voting-geschlossen.html: 3 T 14:22 h shows as "3 T"; 1 T 23 h as "1 T"."""
+    assert countdown_short(timedelta(days=1, hours=23)) == "1 T"
+
+
+def test_formats_across_the_switch_to_winter_time(app):
+    """The weekly window around 25.10.2026: opens 00:00 CEST, closes 13:00 CET, 38 h apart."""
+    opens = datetime(2026, 10, 24, 22, 0, tzinfo=UTC)
+    closes = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)
+    assert short_datetime(opens, "Europe/Berlin") == "So 25.10., 00:00"
+    assert short_datetime(closes, "Europe/Berlin") == "Mo 26.10., 13:00"
+    assert countdown(closes - opens) == "1 T 14:00 h"

@@ -39,14 +39,13 @@ class TestAdminPage:
         invitations.revoke(group, admin, old.id)
         html = login_as(admin).get(f"/g/{group.id}/invitations").get_data(True)
         assert "offen@example.org" in html
-        assert "offen bis 30.10.2026" in html
-        assert "zurückgezogen" in html
-        assert "7 Tage gültig" in html
+        assert "OFFEN · läuft ab 30.10." in html
+        assert "ZURÜCKGEZOGEN" in html
 
     def test_invite_without_javascript_redirects(self, group, admin, login_as, outbox):
         client = login_as(admin)
         response = client.post(f"/g/{group.id}/invitations", data={"email": "neu@example.org"})
-        assert response.location == f"/g/{group.id}/invitations"
+        assert response.location == f"/g/{group.id}/settings#einladen"
         html = client.get(response.location).get_data(True)
         assert html.count("Einladung an neu@example.org verschickt.") == 1
         assert [mail.to for mail in outbox] == ["neu@example.org"]
@@ -121,7 +120,7 @@ class TestAdminPage:
         clock.set(datetime(2026, 10, 24, 23, 30, tzinfo=UTC))
         invitations.invite(group, admin, "neu@example.org")
         html = login_as(admin).get(f"/g/{group.id}/invitations").get_data(True)
-        assert "offen bis 01.11.2026" in html
+        assert "OFFEN · läuft ab 01.11." in html
 
     def test_lost_admin_role_shows_error_without_replacing_the_list(self, group, admin, login_as):
         from app.services import groups

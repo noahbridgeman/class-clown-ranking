@@ -2,15 +2,13 @@
 {% import "macros/ui.html" as ui %}
 {% block title %}{{ t("auth.login_title") }} – {{ t("app.name") }}{% endblock %}
 {% block content %}
-  {% call ui.card() %}
-    <h1>{{ t("auth.login_title") }}</h1>
-    <p>{{ t("auth.login_intro") }}</p>
-    <form method="post" action="{{ url_for('auth.login') }}" class="form">
-      {{ form.csrf_token }}
-      {{ ui.text_field("email", t("auth.email_label"), form.email.data or "", error, type="email",
-                       attrs={"required": true, "autocomplete": "email", "inputmode": "email", "autocapitalize": "off",
-                              "spellcheck": "false", "maxlength": max_length, "autofocus": true}) }}
-      {{ ui.button(t("auth.send_link")) }}
-    </form>
-  {% endcall %}
+  {{ ui.page_head(t("auth.login_title")) }}
+  <p class="page-text">{{ t("auth.login_intro") }}</p>
+  <form method="post" action="{{ url_for('auth.login') }}" class="form">
+    {{ form.csrf_token }}
+    {{ ui.text_field("email", t("auth.email_label"), form.email.data or "", error, type="email",
+                     attrs={"required": true, "autocomplete": "email", "inputmode": "email", "autocapitalize": "off",
+                            "spellcheck": "false", "maxlength": max_length, "autofocus": true}) }}
+    {{ ui.button(t("auth.send_link")) }}
+  </form>
 {% endblock %}

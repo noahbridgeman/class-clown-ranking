@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kursblatt – Graph und Rangliste</title>
+<!-- Statische Design-Referenz, 390 px breit. Keine Produktionsvorlage: Texte und Zahlen sind Beispieldaten. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:#111}a:hover{color:#444}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tk{display:inline-flex;gap:26px;padding-right:26px;animation:tick 26s linear infinite}
+.grid{stroke:#DEDDD5;stroke-width:1px}
+.ax{font-family:'IBM Plex Mono',monospace;font-size:9px;fill:#6B6B64}
+.lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;fill:#6B6B64}
+.ln{fill:none;stroke:#C2C1B9;stroke-width:1.5px;stroke-linejoin:round}
+.hl{fill:none;stroke-width:2.5px;stroke-linejoin:round;stroke-linecap:round}
+.sp{fill:none;stroke-width:1.5px;stroke-linejoin:round;stroke-linecap:round}
+</style>
+<style>@media (prefers-reduced-motion: reduce){.tk{animation:none}}</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F5F4EF; color: #111; font-family: 'Archivo Narrow', sans-serif; overflow: hidden">
+
+  <div style="height: 32px; background: #111; color: #F5F4EF; font-family: 'IBM Plex Mono', monospace; font-size: 12px; display: flex; align-items: center; overflow: hidden; white-space: nowrap" aria-label="Kursticker">
+    <div class="tk">
+      <span>GRUPPENSCHNITT 5,6 <span style="color: #12D37A">▲0,25</span></span><span>FELIX 7,2 <span style="color: #12D37A">▲0,5</span></span><span>LENA 6,9 <span style="color: #12D37A">▲0,1</span></span><span>JONAS 5,8 <span style="color: #12D37A">▲0,6</span></span><span>SOPHIE 5,3 <span style="color: #12D37A">▲0,4</span></span><span>ALI 4,6 <span style="color: #12D37A">▲0,2</span></span><span>TIM 3,8 <span style="color: #FF4A1C">▼0,3</span></span>
+      <span>GRUPPENSCHNITT 5,6 <span style="color: #12D37A">▲0,25</span></span><span>FELIX 7,2 <span style="color: #12D37A">▲0,5</span></span><span>LENA 6,9 <span style="color: #12D37A">▲0,1</span></span><span>JONAS 5,8 <span style="color: #12D37A">▲0,6</span></span><span>SOPHIE 5,3 <span style="color: #12D37A">▲0,4</span></span><span>ALI 4,6 <span style="color: #12D37A">▲0,2</span></span><span>TIM 3,8 <span style="color: #FF4A1C">▼0,3</span></span>
+    </div>
+  </div>
+
+  <div style="padding: 10px 16px 10px 24px; display: flex; align-items: flex-start; gap: 12px">
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 6px">
+      <a href="einstellungen.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #55554F; text-decoration: none">WG HINTERHOF · EINSTELLUNGEN ›</a>
+      <h1 style="margin: 0; font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.01em">Ranking KW 43</h1>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #55554F">Stand Mo 19.10., 13:00</div>
+    </div>
+    <button aria-label="Dein Konto" style="width: 44px; height: 44px; border: 1.5px solid #111; border-radius: 50%; background: #F5F4EF; color: #111; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">J</button>
+  </div>
+
+  <a href="voting.html" style="margin: 0 24px 10px; height: 52px; padding: 0 14px; background: #111; color: #F5F4EF; display: flex; align-items: center; gap: 10px; text-decoration: none">
+    <span style="width: 8px; height: 8px; border-radius: 50%; background: #12D37A" aria-hidden="true"></span>
+    <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 19px; font-weight: 700; line-height: 1.1">Voting offen</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #B9B9B1">3 / 5 BEWERTET · BIS MO 13:00</span></span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: #12D37A">20:47 h ›</span>
+  </a>
+
+  <div style="padding: 0 24px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <div style="background: #12D37A; color: #111; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em">GRÖSSTER ANSTIEG</span>
+      <span style="font-size: 22px; font-weight: 700; line-height: 1.1">Jonas ▲0,6</span>
+    </div>
+    <div style="background: #FF4A1C; color: #111; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em">GRÖSSTER ABSTURZ</span>
+      <span style="font-size: 22px; font-weight: 700; line-height: 1.1">Tim ▼0,3</span>
+    </div>
+  </div>
+
+  <div style="padding: 0 24px; display: flex; align-items: center; justify-content: space-between">
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #55554F">VERLAUF</span>
+    <div style="display: flex; gap: 2px; font-family: 'IBM Plex Mono', monospace; font-size: 12px">
+      <button style="height: 32px; padding: 0 7px; border: 0; background: transparent; color: #6B6B64; font: inherit">1W</button>
+      <button style="height: 32px; padding: 0 7px; border: 0; border-bottom: 2px solid #12D37A; background: transparent; color: #111; font: inherit; font-weight: 600">4W</button>
+      <button style="height: 32px; padding: 0 7px; border: 0; background: transparent; color: #6B6B64; font: inherit">3M</button>
+      <button style="height: 32px; padding: 0 7px; border: 0; background: transparent; color: #6B6B64; font: inherit">1J</button>
+      <button style="height: 32px; padding: 0 7px; border: 0; background: transparent; color: #6B6B64; font: inherit">MAX</button>
+    </div>
+  </div>
+
+  <div style="padding: 4px 24px 6px">
+    <svg width="342" height="193" viewBox="0 0 340 192" role="img" aria-label="Kursverlauf der letzten sechs Wochen">
+      <line class="grid" x1="8" y1="42" x2="268" y2="42"></line>
+      <line class="grid" x1="8" y1="74" x2="268" y2="74"></line>
+      <line class="grid" x1="8" y1="138" x2="268" y2="138"></line>
+      <line x1="8" y1="106" x2="268" y2="106" style="stroke: #111; stroke-width: 1px; stroke-dasharray: 3 3"></line>
+      <text class="ax" x="8" y="39">7</text>
+      <text class="ax" x="8" y="71">6</text>
+      <text class="ax" x="8" y="103">Startwert 5,0</text>
+      <text class="ax" x="8" y="135">4</text>
+      <polyline class="ln" points="8,106 60,96.4 112,90 164,109.2 216,125.2 268,118.8"></polyline>
+      <polyline class="ln" points="8,106 60,99.6 112,112.4 164,122 216,109.2 268,96.4"></polyline>
+      <polyline class="ln" points="8,106 60,93.2 112,99.6 164,64.4 216,48.4 268,45.2"></polyline>
+      <polyline class="hl" style="stroke: #111" points="8,106 60,86.8 112,70.8 164,74 216,51.6 268,35.6"></polyline>
+      <polyline class="hl" style="stroke: #FF4A1C" points="8,106 60,115.6 112,128.4 164,118.8 216,134.8 268,144.4"></polyline>
+      <polyline class="hl" style="stroke: #12D37A; stroke-width: 3.5px" points="8,106 60,118.8 112,102.8 164,90 216,99.6 268,80.4"></polyline>
+      <circle cx="268" cy="80.4" r="4.5" style="fill: #12D37A; stroke: #111; stroke-width: 1.5px"></circle>
+      <text class="lbl" x="274" y="38" style="fill: #111">FELIX 7,2</text>
+      <text class="lbl" x="274" y="50">LENA 6,9</text>
+      <text class="lbl" x="276" y="84" style="fill: #111">JONAS 5,8</text>
+      <text class="lbl" x="274" y="99">SOPHIE 5,3</text>
+      <text class="lbl" x="274" y="122">ALI 4,6</text>
+      <text class="lbl" x="274" y="147" style="fill: #111">TIM 3,8</text>
+      <text class="ax" x="8" y="188">KW38</text>
+      <text class="ax" x="112" y="188">40</text>
+      <text class="ax" x="216" y="188">42</text>
+      <text class="ax" x="256" y="188">43</text>
+    </svg>
+  </div>
+
+  <ol style="list-style: none; margin: 0; padding: 0 24px; display: flex; flex-direction: column; border-top: 1px solid #111; margin: 0 24px; padding: 0">
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">01</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 700; line-height: 1.1">Felix</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #55554F">BESTER SCORE BISHER</span></span>
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true"><polyline class="sp" style="stroke: #111" points="0,16 8.8,12.18 17.6,9 26.4,9.64 35.2,5.18 44,2"></polyline></svg>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600">7,2</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0B7A5C">▲ 0,5</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">02</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 500; line-height: 1.1">Lena</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #55554F">KAUM VERÄNDERT</span></span>
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true"><polyline class="sp" style="stroke: #111" points="0,16 8.8,13.05 17.6,14.53 26.4,6.42 35.2,2.74 44,2"></polyline></svg>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500">6,9</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0B7A5C">▲ 0,1</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 1px solid #DEDDD5; background: #EAF7EF; margin: 0 -24px; padding: 0 24px">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">03</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="display: flex; align-items: center; gap: 6px; font-size: 20px; font-weight: 700; line-height: 1.1">Jonas <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; background: #111; color: #F5F4EF; padding: 2px 4px">DU</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #0B7A5C">GRÖSSTER ANSTIEG</span></span>
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true"><polyline class="sp" style="stroke: #0B7A5C; stroke-width: 2px" points="0,11.33 8.8,16 17.6,10.17 26.4,5.5 35.2,9 44,2"></polyline></svg>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600">5,8</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0B7A5C">▲ 0,6</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">04</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 500; line-height: 1.1">Sophie</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #55554F">ERHOLT SICH</span></span>
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true"><polyline class="sp" style="stroke: #111" points="0,7.25 8.8,3.75 17.6,10.75 26.4,16 35.2,9 44,2"></polyline></svg>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500">5,3</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0B7A5C">▲ 0,4</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px; border-bottom: 1px solid #DEDDD5">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">05</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 500; line-height: 1.1">Ali</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #55554F">UNTER STARTWERT</span></span>
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true"><polyline class="sp" style="stroke: #111" points="0,8.36 8.8,4.55 17.6,2 26.4,9.64 35.2,16 44,13.45"></polyline></svg>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500">4,6</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #0B7A5C">▲ 0,2</span>
+    </li>
+    <li style="display: flex; align-items: center; gap: 10px; height: 44px">
+      <span style="width: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #55554F">06</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 500; line-height: 1.1">Tim</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #B32D0B">GRÖSSTER ABSTURZ</span></span>
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true"><polyline class="sp" style="stroke: #B32D0B; stroke-width: 2px" points="0,2 8.8,5.5 17.6,10.17 26.4,6.67 35.2,12.5 44,16"></polyline></svg>
+      <span style="width: 34px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500">3,8</span>
+      <span style="width: 48px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #B32D0B">▼ 0,3</span>
+    </li>
+  </ol>
+
+  <a href="uebersicht.html" style="margin: 0 24px; height: 44px; border-top: 1px solid #111; display: flex; align-items: center; justify-content: space-between; text-decoration: none; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.06em">
+    <span>VOTING-ÜBERSICHT</span><span>›</span>
+  </a>
+</div>
+</body>
+</html>

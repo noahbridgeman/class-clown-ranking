@@ -7,6 +7,7 @@ Daraus ergibt sich pro Person ein Humor-Score von 0 bis 10 mit Verlaufsgraph.
 
 - `docs/anforderungen.md` – Quelle der Wahrheit. Alle Anforderungen haben IDs (z. B. VOT-03).
 - `docs/plan.md` – Datenmodell, Projektstruktur, Meilensteine, aktueller Stand.
+- `docs/design.md` – verbindliche Gestaltung, Referenz-Screens in `docs/design/screens/`.
 
 Bei Widerspruch zwischen Code und Anforderungen: nachfragen, nicht selbst entscheiden.
 
@@ -37,6 +38,7 @@ flask --app app users allow <email>  # Adresse für Kontoanlage ohne Einladung f
 flask --app app tick                 # Periodenupdate: Perioden schließen, Scores berechnen, Fenster öffnen
 python scripts/screenshots.py capture <dir>          # alle Seiten fotografieren (390 und 1280 px, braucht Chrome)
 python scripts/screenshots.py compare <vorher> <nachher>  # Exit-Code 1, wenn sich ein Screenshot unterscheidet
+python scripts/screenshots.py design-check design-check/<nr>-<name>  # Referenz-Screens und App bei 390 px nebeneinander
 ```
 
 Bei reinen Frontend-Umbauten vorher und nachher `capture` laufen lassen und `compare` muss sauber sein.
@@ -85,4 +87,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M7 (Voting-Übersicht). M0 bis M6 sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M7 (Voting-Übersicht). M0 bis M6b sind abgeschlossen. Details in `docs/plan.md`.

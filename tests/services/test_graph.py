@@ -6,10 +6,11 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.domain.colors import color_for
+from app.domain.types import Cadence
 from app.i18n import load_texts
 from app.services import graph, membership, settings
 from app.services.graph import Range, graph_data, parse_range
+from app.services.leaderboard import leaderboard
 from tests.factories import add_member, make_daily, make_group, make_user, next_day, tick, vote
 
 
@@ -55,9 +56,9 @@ def test_contains_only_results_never_voters(daily, clock):
     vote(group, bo, ada, "down")
     next_day(clock)
     result = data(group, ada, clock)
-    assert set(result) == {"range", "periods", "series", "markers"}
+    assert set(result) == {"range", "cadence", "periods", "series", "markers"}
     for series in result["series"]:
-        assert set(series) == {"id", "name", "color", "me", "former", "points"}
+        assert set(series) == {"id", "name", "role", "me", "former", "points"}
         assert all(len(point) == 3 for point in series["points"])
     assert {m["kind"] for m in result["markers"]} == {"member"}
 
@@ -69,17 +70,34 @@ def test_open_period_does_not_appear(daily, clock):
     assert data(group, ada, clock)["series"] == []
 
 
-def test_colors_names_and_own_series(daily, clock):
-    """GRA-02: the same color as everywhere else in the group."""
+def test_roles_names_and_own_series(daily, clock):
+    """GRA-02: lines carry their role from the leaderboard instead of a color per person."""
     group, ada, bo = daily
     next_day(clock)
-    result = data(group, bo, clock)
+    roles = {ada.id: graph.Role.LEADER}
+    result = graph_data(group, bo.id, Range.FOUR_WEEKS, clock.now(), roles)
     ada_series = series_of(result, ada)
     assert ada_series["name"] == "Ada"
-    assert ada_series["color"] == color_for(
-        membership.active_membership(group.id, ada.id).color_index
-    )
+    assert (ada_series["role"], series_of(result, bo)["role"]) == ("leader", None)
     assert (ada_series["me"], series_of(result, bo)["me"]) == (False, True)
+    assert result["cadence"] == "daily"
+
+
+def test_roles_from_the_leaderboard(daily, clock):
+    """Biggest gain and drop win over place 1; ties share the role."""
+    group, ada, bo = daily
+    cleo = add_member(group, make_user(display_name="Cleo"))
+    next_day(clock)
+    vote(group, bo, ada, "up")
+    vote(group, cleo, ada, "up")
+    vote(group, ada, bo, "up")
+    vote(group, cleo, bo, "down")  # Bo: net 0, no change
+    vote(group, ada, cleo, "down")
+    next_day(clock)
+    found = graph.roles(leaderboard(group.id))
+    assert found[ada.id] == graph.Role.GAIN
+    assert found[cleo.id] == graph.Role.DROP
+    assert bo.id not in found
 
 
 @pytest.mark.parametrize(
@@ -149,10 +167,10 @@ def test_members_without_points_are_left_out(daily, clock):
 
 
 def test_markers_for_joins_and_departures(daily, clock):
-    """GRA-07: with the member's color, only inside the range."""
+    """GRA-07: only inside the range."""
     group, ada, bo = daily
     next_day(clock)
-    cleo = add_member(group, make_user(display_name="Cleo"))
+    add_member(group, make_user(display_name="Cleo"))
     membership.leave(group, bo)
     texts = [m["text"] for m in data(group, ada, clock)["markers"]]
     assert texts == [
@@ -161,8 +179,7 @@ def test_markers_for_joins_and_departures(daily, clock):
         "Cleo ist beigetreten",
         "Bo ist ausgetreten",
     ]
-    marker = data(group, ada, clock)["markers"][2]
-    assert marker["color"] == color_for(membership.active_membership(group.id, cleo.id).color_index)
+    assert set(data(group, ada, clock)["markers"][2]) == {"t", "date", "kind", "text"}
     for _ in range(8):
         next_day(clock)
     assert data(group, ada, clock, Range.WEEK)["markers"] == []
@@ -186,7 +203,7 @@ def test_markers_for_switching_between_anonymous_and_open(daily, clock):
     group.is_anonymous = True
     next_day(clock)
     modes = [m for m in data(group, ada, clock)["markers"] if m["kind"] == "mode"]
-    assert [m["text"] for m in modes] == ["Ab hier offen", "Ab hier anonym"]
+    assert [m["text"] for m in modes] == ["Ab hier nicht anonym", "Ab hier anonym"]
     assert modes[1]["t"] - modes[0]["t"] == timedelta(days=2) / timedelta(milliseconds=1)
 
 
@@ -197,4 +214,15 @@ def test_markers_for_settings_changes(daily, clock):
     settings.change(group, ada, wanted)
     next_day(clock)
     texts = [m["text"] for m in data(group, ada, clock)["markers"] if m["kind"] != "member"]
-    assert texts == ["Ab hier offen", "Einstellungen geändert: Gruppenname"]
+    assert texts == ["Ab hier nicht anonym", "Einstellungen geändert: Name der Gruppe"]
+
+
+def test_axis_labels_follow_each_periods_cadence(daily, clock):
+    """KW of a weekly period's end, the day of a daily one, in the group's time (A22)."""
+    group, ada, _bo = daily
+    next_day(clock)
+    [period] = data(group, ada, clock)["periods"]
+    assert period["label"] == "24.10."
+    end = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)  # Monday 13:00 Berlin
+    assert graph.axis_label(end, Cadence.WEEKLY, "Europe/Berlin") == "KW44"
+    assert graph.axis_label(end, Cadence.DAILY, "Europe/Berlin") == "26.10."

@@ -192,7 +192,7 @@ def render_pages() -> dict[str, str]:
         db.engine.dispose()
 
     html = pages.html
-    html["group_home_admin_open"] = html["group_home_admin"].replace("<details ", "<details open ")
+    html["settings_admin_open"] = html["settings_admin"].replace("<details ", "<details open ", 1)
     return html
 
 
@@ -234,6 +234,8 @@ def capture(out: Path, chrome: str) -> int:
 
 
 def _shoot(chrome: str, source: Path, png: Path, width: int, height: int) -> None:
+    """Ticker and chart animations stand still (reduced motion), and scripts get time to
+    draw the graph before the shot."""
     target = source
     if width < MIN_WINDOW_WIDTH:
         target = png.with_suffix(".frame.html")
@@ -249,6 +251,8 @@ def _shoot(chrome: str, source: Path, png: Path, width: int, height: int) -> Non
             "--disable-gpu",
             "--hide-scrollbars",
             "--force-device-scale-factor=1",
+            "--force-prefers-reduced-motion",
+            "--virtual-time-budget=5000",
             f"--window-size={max(width, MIN_WINDOW_WIDTH)},{height}",
             f"--screenshot={png}",
             # Same origin for the iframe, or Chrome ignores autofocus inside it.
@@ -286,12 +290,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     shoot = commands.add_parser("capture", help="Alle Seiten rendern und fotografieren")
     shoot.add_argument("out", type=Path)
     shoot.add_argument("--chrome", help="Pfad zu Chrome oder Chromium")
+    design = commands.add_parser("design-check", help="Referenz-Screens neben der App (390 px)")
+    design.add_argument("out", type=Path)
+    design.add_argument("--pages", help="nur diese Seiten, kommagetrennt")
+    design.add_argument("--chrome", help="Pfad zu Chrome oder Chromium")
     check = commands.add_parser("compare", help="Zwei Aufnahmen vergleichen")
     check.add_argument("before", type=Path)
     check.add_argument("after", type=Path)
     args = parser.parse_args(argv)
     if args.command == "capture":
         return capture(args.out, find_chrome(args.chrome))
+    if args.command == "design-check":
+        import design_check  # next to this script, loaded only for this command
+
+        only = set(args.pages.split(",")) if args.pages else None
+        index = design_check.run(args.out, find_chrome(args.chrome), localize, only)
+        print(f"Design-Check: {index}")
+        return 0
     return compare(args.before, args.after)
 
 

@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from app.domain.formatting import format_delta, format_score
+from app.domain.formatting import format_change, format_delta, format_score
 
 
 @pytest.mark.parametrize(
@@ -55,3 +55,18 @@ def test_non_finite_values_are_rejected(value):
         format_score(value)
     with pytest.raises(ValueError):
         format_delta(value)
+
+
+@pytest.mark.parametrize(
+    ("value", "compact", "text"),
+    [
+        (0.44, False, "▲ 0,4"),
+        (-0.25, False, "▼ 0,3"),
+        (0.6, True, "▲0,6"),
+        (0.04, False, "–"),
+        (None, False, "–"),
+    ],
+)
+def test_format_change(value, compact, text):
+    """Kursblatt style (docs/design.md): arrow and amount, no sign."""
+    assert format_change(value, compact) == text

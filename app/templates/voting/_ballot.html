@@ -1,64 +1,91 @@
-{# Swapped in by HTMX after every vote and refreshed every minute; without JavaScript the forms reload the page. #}
+{# The voting page (docs/design/screens/voting*.html). Swapped in by HTMX after every vote
+   and refreshed every minute; without JavaScript the forms reload the page. #}
 {% import "macros/ui.html" as ui %}
 {% set vote_url = url_for('voting.index', group_id=group.id) %}
+{% set period = ballot.period %}
 <div id="ballot" hx-get="{{ vote_url }}" hx-trigger="every 60s" hx-swap="outerHTML">
   {# A full page shows flashes at the top already; HTMX swaps only this block. #}
   {% if partial and show_flashes %}{% include "partials/flashes.html" %}{% endif %}
-  {% set period = ballot.period %}
   {% if period %}
-    <p>{{ t("voting.intro") }}</p>
-    <p class="muted">{{ t("voting.anonymous") if period.is_anonymous else t("voting.open_mode") }}
-      {% if not period.is_anonymous %}{{ t("voting.reason_hint", max=reason_max_length) }}{% endif %}</p>
-    <p class="ballot-status">
-      {{ t("voting.closes", at=period.closes_at|local_datetime(group.timezone), remaining=(period.closes_at - ballot.now)|duration) }}
-      <span class="muted">{{ t("voting.change_hint") }}</span>
-    </p>
+    {{ ui.page_head(t("voting.title_open"),
+                    kicker=t("voting.kicker_window", group=group.name, dates=period.opens_at|window_dates(period.closes_at, group.timezone)),
+                    sub=t("voting.mode_anonymous" if period.is_anonymous else "voting.mode_open")) }}
+    {% call ui.status(layout="split") %}
+      {{ ui.cell(t("voting.end"), period.closes_at|short_datetime(group.timezone), "dark") }}
+      {{ ui.cell(t("voting.remaining"), (period.closes_at - ballot.now)|countdown, "dark-figure") }}
+    {% endcall %}
     {% if ballot.others %}
-      <p class="ballot-progress"><strong>{{ t("voting.progress", done=ballot.rated, total=ballot.others|length) }}</strong>
-        <span class="muted">{{ t("voting.voters", count=ballot.voters, members=ballot.members) }}</span></p>
-      <ul class="members ballot">
+      <div class="ballot-progress">
+        <p class="ballot-progress-text">
+          <span class="ballot-progress-own">{{ t("voting.progress", done=ballot.rated, total=ballot.others|length) }}</span>
+          <span class="ballot-progress-all">{{ t("voting.voters", count=ballot.voters, members=ballot.members) }}</span>
+        </p>
+        {{ ui.progress(ballot.rated, ballot.others|length) }}
+      </div>
+      <ul class="ballot">
         {% for member in ballot.others %}
           {% set name = member_name(member.user) %}
           {% set current = ballot.own.get(member.user_id) %}
+          {% set row = rows.get(member.user_id) %}
           {% set url = url_for('voting.cast', group_id=group.id, user_id=member.user_id) %}
-          <li class="member">
-            {{ ui.color_dot(member.color_index) }}
-            <span class="member-name">{{ name }}</span>
-            <form class="vote-buttons" method="post" action="{{ url }}" hx-post="{{ url }}" hx-target="#ballot" hx-swap="outerHTML">
-              {{ form.csrf_token }}
-              {# Pressing the selected button again takes the vote back (VOT-05). #}
-              <button type="submit" name="choice" value="{{ 'none' if current == 1 else 'up' }}"
-                      class="vote vote-up" aria-pressed="{{ 'true' if current == 1 else 'false' }}"
-                      aria-label="{{ t('voting.up_label', name=name) }}">▲ {{ t("voting.up") }}</button>
-              <button type="submit" name="choice" value="{{ 'none' if current == -1 else 'down' }}"
-                      class="vote vote-down" aria-pressed="{{ 'true' if current == -1 else 'false' }}"
-                      aria-label="{{ t('voting.down_label', name=name) }}">▼ {{ t("voting.down") }}</button>
-            </form>
+          <li class="ballot-row">
+            <div class="ballot-line">
+              <span class="ballot-who">
+                <span class="ballot-name">{{ name }}</span>
+                {% if row %}
+                  <span class="ballot-score">{{ row.score|score }}{% if row.delta %} · <span class="{{ 'trend-text-up' if row.delta > 0 else 'trend-text-down' }}">{{ row.delta|change(true) }}</span>{% endif %}</span>
+                {% endif %}
+              </span>
+              <form class="vote-buttons" method="post" action="{{ url }}" hx-post="{{ url }}" hx-target="#ballot" hx-swap="outerHTML">
+                {{ form.csrf_token }}
+                {# Pressing the selected button again takes the vote back (VOT-05). #}
+                {{ ui.vote_button("up", "▲ " ~ t("voting.up"), "none" if current == 1 else "up", current == 1, t("voting.up_label", name=name)) }}
+                {{ ui.vote_button("down", "▼ " ~ t("voting.down"), "none" if current == -1 else "down", current == -1, t("voting.down_label", name=name)) }}
+              </form>
+            </div>
             {% if current and not period.is_anonymous %}
               {% set reason_url = url_for('voting.reason', group_id=group.id, user_id=member.user_id) %}
-              {# hx-preserve keeps what is being typed when the ballot refreshes every minute. #}
-              <form class="reason" method="post" action="{{ reason_url }}" hx-post="{{ reason_url }}" hx-target="#ballot" hx-swap="outerHTML">
+              {# Saved on change, or with Enter without JavaScript. hx-preserve keeps what is
+                 being typed when the ballot refreshes every minute. #}
+              <form class="reason" method="post" action="{{ reason_url }}"
+                    hx-post="{{ reason_url }}" hx-trigger="change, submit" hx-target="#ballot" hx-swap="outerHTML">
                 {{ form.csrf_token }}
-                <label class="visually-hidden" for="reason-{{ member.user_id }}">{{ t("voting.reason_label", name=name) }}</label>
+                <label class="field-label" for="reason-{{ member.user_id }}">{{ t("voting.reason_label") }}<span class="visually-hidden"> – {{ name }}</span></label>
                 <input id="reason-{{ member.user_id }}" name="reason" type="text" maxlength="{{ reason_max_length }}"
-                       value="{{ ballot.reasons.get(member.user_id, '') }}" hx-preserve
-                       placeholder="{{ t('voting.reason_placeholder') }}">
-                {{ ui.link_button(t("voting.reason_save")) }}
+                       value="{{ ballot.reasons.get(member.user_id, '') }}" hx-preserve>
+                <button type="submit" class="visually-hidden" tabindex="-1">{{ t("voting.reason_save") }}</button>
               </form>
             {% endif %}
           </li>
         {% endfor %}
       </ul>
+      <p class="ballot-hint">{{ t("voting.change_hint") }}</p>
     {% else %}
-      <p class="muted">{{ t("voting.alone") }}</p>
-    {% endif %}
-  {% elif ballot.next_opens_at %}
-    {% if ballot.timezone != group.timezone %}
-      <p>{{ t("voting.next_window_zone", at=ballot.next_opens_at|local_datetime(ballot.timezone), timezone=ballot.timezone) }}</p>
-    {% else %}
-      <p>{{ t("voting.next_window", at=ballot.next_opens_at|local_datetime(group.timezone)) }}</p>
+      <p class="hint">{{ t("voting.alone") }}</p>
     {% endif %}
   {% else %}
-    <p>{{ t("voting.opens_soon") }}</p>
+    {{ ui.page_head(t("voting.title_closed"), kicker=t("voting.kicker", group=group.name),
+                    sub=t("voting.scores_since", at=last.period.closes_at|short_datetime(group.timezone)) if last else t("voting.no_scores_yet")) }}
+    {% set window = ballot.next_window %}
+    {% call ui.status(kind="dark") %}
+      <span class="status-stack">
+        <span class="status-label">{{ t("voting.next_in_zone", timezone=ballot.timezone) if ballot.timezone != group.timezone else t("voting.next_in") }}</span>
+        <span class="status-countdown">{% if ballot.next_opens_at %}{{ (window.opens_at - ballot.now)|countdown }}{% else %}{{ t("voting.opens_soon") }}{% endif %}</span>
+        {% if window %}<span class="status-window">{{ t("voting.window", start=window.opens_at|short_datetime(ballot.timezone), end=window.closes_at|short_datetime(ballot.timezone)) }}</span>{% endif %}
+      </span>
+    {% endcall %}
+    {% if last and last.possible %}
+      {% set mine = rows.get(current_user.id) %}
+      {% call ui.section(t("voting.last_round")) %}
+        <div class="cells">
+          {{ ui.cell(t("voting.your_votes"), t("voting.your_votes_value", done=last.votes, total=last.possible), "frame") }}
+          {% if mine %}
+            {{ ui.cell(t("voting.your_score"), mine.score|score, "frame",
+                       change=mine.delta|change(true) if mine.delta else none,
+                       trend="up" if mine.delta and mine.delta > 0 else "down") }}
+          {% endif %}
+        </div>
+      {% endcall %}
+    {% endif %}
   {% endif %}
 </div>

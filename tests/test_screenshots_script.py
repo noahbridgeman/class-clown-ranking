@@ -34,10 +34,10 @@ def test_only_the_intended_pages_are_errors(pages):
 
 
 def test_states_are_visible(pages):
-    assert "Du hast 1 von 2 bewertet." in pages["vote_open"]
-    assert "Das nächste öffnet" in pages["vote_closed"]
-    assert "<details open " in pages["group_home_admin_open"]
-    assert "zurückgezogen" in pages["invitations"]
+    assert "Du hast 1 von 2 bewertet" in pages["vote_open"]
+    assert "Nächstes Voting in" in pages["vote_closed"]
+    assert "<details open " in pages["settings_admin_open"]
+    assert "ZURÜCKGEZOGEN" in pages["invitations"]
 
 
 def test_localize_points_to_the_working_copy(script):
@@ -64,3 +64,27 @@ def test_compare(script, tmp_path, capsys):
     assert script.main(["compare", str(before), str(after)]) == 1
     assert "1 von 3 Screenshots gleich." in capsys.readouterr().out
     assert script.main(["compare", str(before), str(before)]) == 0
+
+
+def test_design_check_renders_every_reference():
+    """The design check seeds its own data and maps each page to a reference screen."""
+    path = ROOT / "scripts" / "design_check.py"
+    spec = importlib.util.spec_from_file_location("design_check", path)
+    design_check = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(design_check)
+    pages = design_check.render()
+    designed = {page.name for page in pages if not page.related}
+    assert designed == {
+        "ranking",
+        "ranking-neue-gruppe",
+        "voting",
+        "voting-geschlossen",
+        "einstellungen",
+    }
+    derived = {page.name for page in pages if page.related}
+    assert derived >= {"login", "gruppenauswahl", "fehler-404", "einladung"}
+    for page in pages:
+        assert (design_check.SCREENS / page.reference).exists()
+        assert "<html" in page.html
+    ranking = next(page for page in pages if page.name == "ranking")
+    assert set(ranking.graph) == set(design_check.RANGES)
