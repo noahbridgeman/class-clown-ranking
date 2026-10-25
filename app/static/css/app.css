@@ -303,7 +303,7 @@ p { margin: 0 0 var(--space-md); }
 
 .badge-ink { background: var(--color-ink); color: var(--color-on-dark); border-color: var(--color-ink); }
 
-.badge-open { color: var(--color-ink); border-color: var(--color-ink); }
+.badge-open, .badge-frame { color: var(--color-ink); border-color: var(--color-ink); }
 
 .badge-new, .badge-up { color: var(--color-up-text); border-color: var(--color-up-text); }
 
@@ -1115,3 +1115,376 @@ p { margin: 0 0 var(--space-md); }
 .link-list li:last-child .text-link-row { border-bottom: 0; }
 
 .section + .page-actions { margin-top: var(--space-xl); }
+
+/* Voting overview (docs/design/screens/uebersicht*.html, A23) */
+
+.ranking + .text-link-row {
+  border-top: var(--rule) solid var(--color-ink);
+  border-bottom: 0;
+}
+
+.switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--switcher-gap);
+  padding: var(--space-xs) 0;
+  border-top: var(--rule-strong) solid var(--color-ink);
+  border-bottom: var(--rule) solid var(--color-ink);
+}
+
+.switcher-step {
+  flex: none;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  border: var(--rule-control) solid var(--color-ink);
+}
+
+.switcher-step-off { color: var(--color-disabled); border-color: var(--color-series); }
+
+.switcher-current {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.switcher-label {
+  font-size: var(--font-size-switcher);
+  font-weight: var(--weight-bold);
+  line-height: var(--line-height-title);
+}
+
+.switcher .badge { font-size: var(--font-size-label); }
+
+.overview-hint {
+  margin: var(--space-md) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-body);
+  color: var(--color-muted);
+}
+
+/* Matrix: rows vote, columns are rated (OVW-03). Scrolls sideways in big groups. */
+
+.matrix-scroll { margin-top: var(--space-md); overflow-x: auto; }
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-kicker);
+}
+
+.matrix-caption {
+  caption-side: top;
+  padding-bottom: var(--space-2xs);
+  text-align: left;
+  font-size: var(--font-size-label);
+  color: var(--color-muted);
+}
+
+.matrix th, .matrix td { height: var(--matrix-row-height); padding: 0; text-align: center; }
+
+.matrix thead tr { border-bottom: var(--rule) solid var(--color-ink); }
+
+.matrix-corner { width: var(--matrix-name-width); }
+
+.matrix-col { font-weight: var(--weight-medium); }
+
+.matrix-col a, .matrix-name a { text-decoration: none; }
+
+.matrix-col abbr { text-decoration: none; }
+
+.matrix-col-me { font-weight: var(--weight-bold); box-shadow: inset 0 calc(-1 * var(--rule-strong) - var(--rule)) 0 var(--color-up); }
+
+.matrix-row { border-bottom: var(--rule) solid var(--color-line); }
+
+.matrix-row:last-child { border-bottom-color: var(--color-ink); }
+
+.matrix-row-me { background: var(--color-up-tint); }
+
+.matrix-name {
+  max-width: var(--matrix-name-width);
+  padding-right: var(--space-2xs);
+  text-align: left;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.matrix .matrix-name { text-align: left; }
+
+.matrix-row-me .matrix-name { font-weight: var(--weight-bold); }
+
+.matrix-self { color: var(--color-on-dark-muted); }
+
+.matrix-foot {
+  text-align: left;
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-button);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.matrix .matrix-foot { text-align: left; }
+
+.matrix-figure-me { font-weight: var(--weight-semibold); }
+
+.matrix-delta { font-weight: var(--weight-semibold); }
+
+.vote-mark {
+  position: relative;
+  display: inline-flex;
+  width: var(--matrix-mark-width);
+  height: var(--matrix-mark-height);
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-label);
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.vote-mark-up { background: var(--color-up); }
+
+.vote-mark-down { background: var(--color-down); }
+
+.vote-mark-skipped { border: var(--rule) dashed var(--color-skipped); }
+
+/* A corner dot: this vote has a reason; the square jumps to it. */
+.vote-mark-reason::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--matrix-reason-dot);
+  height: var(--matrix-reason-dot);
+  background: var(--color-ink);
+}
+
+.reason-who .vote-mark {
+  width: auto;
+  height: auto;
+  padding: 0 var(--space-2xs);
+  font-size: var(--font-size-label);
+}
+
+.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-md); }
+
+.reason-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding-bottom: var(--space-md);
+  border-bottom: var(--rule) solid var(--color-line);
+  scroll-margin-top: var(--space-4xl);
+}
+
+.reason-item:last-child { padding-bottom: 0; border-bottom: 0; }
+
+.reason-item:target { background: var(--color-up-tint); }
+
+.reason-who {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-button);
+  text-transform: uppercase;
+}
+
+.reason-text { font-size: var(--font-size-body-large); overflow-wrap: anywhere; }
+
+.matrix-scroll + .section { margin-top: var(--space-xl); }
+
+/* Anonymous periods: only counts (OVW-02) */
+
+/* Separate borders on the cells: Chrome paints no box-shadow on collapsed cells. */
+.volume {
+  width: 100%;
+  margin-top: var(--space-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-meta);
+}
+
+.volume thead th {
+  padding: 0 0 var(--space-2xs);
+  border-bottom: var(--rule) solid var(--color-ink);
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-button);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.volume td, .volume tbody th { height: var(--volume-row-height); padding: 0; }
+
+.volume-row > * { border-bottom: var(--rule) solid var(--color-line); }
+
+.volume-row:last-child > * { border-bottom: 0; }
+
+.volume-row-me td, .volume-row-me th { background: var(--color-up-tint); }
+
+/* The tint runs into the page gutter on both sides, as on the ranking. */
+.volume-row-me > :first-child { box-shadow: calc(-1 * var(--gutter)) 0 0 var(--color-up-tint); }
+
+.volume-row-me > :last-child { box-shadow: var(--gutter) 0 0 var(--color-up-tint); }
+
+.volume .volume-name {
+  max-width: var(--volume-name-width);
+  padding-right: var(--space-2xs);
+  text-align: left;
+  font-family: var(--font-ui);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.volume tbody .volume-name { font-size: var(--font-size-name-small); font-weight: var(--weight-medium); }
+
+.volume-name a { text-decoration: none; }
+
+.volume tbody .volume-row-me .volume-name, .volume tbody .volume-row:first-child .volume-name { font-weight: var(--weight-bold); }
+
+.volume-bars { width: var(--volume-bar-width); }
+
+.volume thead .volume-bars { display: flex; }
+
+.volume-head-down, .volume-head-up { flex: 1; }
+
+.volume-head-down { padding-right: var(--space-sm); text-align: right; }
+
+.volume-head-up { padding-left: var(--space-lg); text-align: left; }
+
+.volume-bar { display: block; width: var(--volume-bar-width); height: var(--volume-bar-height); }
+
+.volume-down { fill: var(--color-down); }
+
+.volume-up { fill: var(--color-up); }
+
+.volume-axis { stroke: var(--color-ink); stroke-width: var(--rule); }
+
+.volume .volume-figure { padding-left: var(--space-sm); text-align: right; white-space: nowrap; }
+
+.volume-delta { font-weight: var(--weight-semibold); }
+
+/* The viewer's own votes (OVW-07) */
+
+.own-votes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-md);
+  border-top: var(--rule-strong) solid var(--color-ink);
+}
+
+.own-votes-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.own-votes-note { color: var(--color-muted); text-align: right; }
+
+.vote-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+
+.vote-chip {
+  display: inline-block;
+  padding: var(--chip-padding-y) var(--chip-padding-x);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-meta);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+
+.vote-chip-up { background: var(--color-up); }
+
+.vote-chip-down { background: var(--color-down); }
+
+.vote-chip-skipped { border: var(--rule) dashed var(--color-skipped); }
+
+/* Member detail (OVW-05) */
+
+.score-chart { display: block; width: 100%; height: var(--score-chart-height); margin-bottom: var(--space-2xl); }
+
+.score-chart-start { stroke: var(--color-ink); stroke-width: var(--rule); stroke-dasharray: 3 3; }
+
+.score-chart-axis { font-family: var(--font-mono); font-size: var(--font-size-tag); fill: var(--color-faint); }
+
+.score-chart-line { fill: none; stroke: var(--color-ink); stroke-width: var(--score-chart-line); }
+
+.score-chart-end { fill: var(--color-bg); stroke: var(--color-ink); stroke-width: var(--sparkline-stroke); }
+
+.history { list-style: none; margin: 0; padding: 0; }
+
+.history-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md) 0;
+  border-bottom: var(--rule) solid var(--color-line);
+}
+
+.history-item:first-child { padding-top: 0; }
+
+.history-item:last-child { border-bottom: 0; }
+
+.history-head { display: flex; align-items: center; gap: var(--space-sm); }
+
+.history-period {
+  font-size: var(--font-size-name-small);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+}
+
+.history-score {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-score);
+  font-weight: var(--weight-medium);
+}
+
+.history-delta {
+  width: var(--rank-delta-width);
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-meta);
+  font-weight: var(--weight-semibold);
+  color: var(--color-faint);
+}
+
+.history-figures, .history-label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  color: var(--color-muted);
+}
+
+.history-label {
+  margin-top: var(--space-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink);
+}

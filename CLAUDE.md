@@ -34,6 +34,8 @@ pytest                               # Tests
 ruff check . && ruff format --check . # Lint/Format
 flask --app app db upgrade           # Migrationen anwenden
 python scripts/simulate.py --k 0.5 --d 0.95  # Score-Verläufe für die Kalibrierung von K und d
+python scripts/demo.py [--email <adresse>] [--force]  # Demo-Gruppen in instance/demo.db
+DATABASE_URL=sqlite:///demo.db flask --app app run --debug  # App mit den Demo-Daten (tick genauso)
 flask --app app users allow <email>  # Adresse für Kontoanlage ohne Einladung freischalten (E3)
 flask --app app tick                 # Periodenupdate: Perioden schließen, Scores berechnen, Fenster öffnen
 python scripts/screenshots.py capture <dir>          # alle Seiten fotografieren (390 und 1280 px, braucht Chrome)
@@ -87,4 +89,4 @@ Diese Regeln dürfen nie verletzt werden. Jede gehört durch Tests abgesichert.
 
 ## Aktueller Stand
 
-Meilenstein: M7 (Voting-Übersicht). M0 bis M6b sind abgeschlossen. Details in `docs/plan.md`.
+Meilenstein: M8 (PWA und Push). M0 bis M7 sind abgeschlossen. Details in `docs/plan.md`.

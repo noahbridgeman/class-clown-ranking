@@ -100,6 +100,7 @@ Keine Leiste unten. Das Ranking ist die Startseite der Gruppe, alles andere geht
 | `/g/<id>/vote` (zu) | `voting-geschlossen.html` | Countdown bis zum nächsten Voting · letzte Runde (eigene Votes, eigener Score) · Push-Angebot (NOT-01: Erlaubnis erst nach Klick) |
 | `/g/<id>/overview` (M7) | `uebersicht.html` | Eine Periode pro Ansicht, Wochen-Umschalter · Matrix · Begründungen |
 | `/g/<id>/overview` (anonym) | `uebersicht-anonym.html` | Volumenbalken pro Person · „Deine Votes, nur für dich sichtbar“ |
+| `/g/<id>/members/<user_id>` (M7) | – (aus `uebersicht.html` abgeleitet) | Name · Score-Verlauf (SVG vom Server) · „Runden“: pro Periode Score, Veränderung, Ups/Downs, Netto, bei nicht anonymen Perioden erhaltene Begründungen und abgegebene Votes (A23) |
 | `/g/<id>/settings` | `einstellungen.html` | Ausstehend-Block · Mitglieder (⋯-Menü) · Einladen + Liste · Name, Rhythmus, Anonymität · K und d mit Erklärung, Grenzen, „↺ Standard wiederherstellen“, Vorschau · Speichern · Gruppe verlassen / löschen |
 
 Nicht entworfen, aus diesem System ableiten: Login, Einladung annehmen, Konto, Gruppenauswahl, Fehlerseiten, E-Mails. Gleiche Kopfzeile, h1, Mono-Labels, primärer Button.
@@ -126,4 +127,5 @@ Labels in der Rangliste (aus A12 und Verlauf abgeleitet): „Bester Score bisher
 - GRA-02, GRA-06: siehe Abschnitt 4.
 - Zeitzone wird in der Oberfläche nicht mehr angeboten, bleibt `Europe/Berlin` (Feld in DB bleibt).
 - Das Änderungsprotokoll (SET-03) wird nicht mehr angezeigt. Gespeichert und für Graph-Marker genutzt wird es weiter.
+- Voting-Übersicht (M7, A23): Netto-Spalte bzw. -Fußzeile zusätzlich zum Entwurf (OVW-02); Score Δ ohne Vorzeichen wie überall („▲0,5“).
 - Neu: Button „Standard wiederherstellen“ für K und d (setzt die Standardwerte des aktuellen Takts ins Formular, gespeichert wird erst mit „Speichern“).

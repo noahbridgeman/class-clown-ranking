@@ -1,0 +1,63 @@
+{# OVW-03, OVW-04: who voted whom, and the reasons. Rows vote, columns are rated. #}
+{% import "macros/ui.html" as ui %}
+{% set reasoned = page.reasoned %}
+<div class="matrix-scroll">
+  <table class="matrix">
+    <caption class="matrix-caption">{{ t("overview.matrix_caption") }}</caption>
+    <thead>
+      <tr>
+        <td class="matrix-corner"><span class="visually-hidden">{{ t("overview.matrix_corner") }}</span></td>
+        {% for entry in page.entries %}
+          {% set name = member_name(entry.user) %}
+          <th scope="col" class="matrix-col{% if entry.user.id == current_user.id %} matrix-col-me{% endif %}">
+            <a href="{{ url_for('overview.member', group_id=group.id, user_id=entry.user.id) }}"><abbr title="{{ name }}">{{ name[:3]|upper }}</abbr></a>
+          </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in page.entries %}
+        {% set is_me = row.user.id == current_user.id %}
+        {% set name = member_name(row.user) %}
+        <tr class="matrix-row{% if is_me %} matrix-row-me{% endif %}">
+          <th scope="row" class="matrix-name"><a href="{{ url_for('overview.member', group_id=group.id, user_id=row.user.id) }}">{{ t("overview.you_suffix", name=name) if is_me else name }}</a></th>
+          {% for col in page.entries %}
+            {% if col.user.id == row.user.id %}
+              <td class="matrix-self"><span aria-hidden="true">—</span><span class="visually-hidden">{{ t("overview.self") }}</span></td>
+            {% else %}
+              {% set key = (row.user.id, col.user.id) %}
+              <td>{{ ui.vote_mark(page.matrix.get(key), vote_texts, href="#reason-%d-%d"|format(*key) if key in reasoned else none) }}</td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th scope="row" class="matrix-foot">{{ t("overview.up_down") }}</th>
+        {% for entry in page.entries %}<td class="matrix-figure{% if entry.user.id == current_user.id %} matrix-figure-me{% endif %}">{{ entry.ups }}/{{ entry.downs }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th scope="row" class="matrix-foot">{{ t("overview.net") }}</th>
+        {% for entry in page.entries %}<td class="matrix-figure">{{ entry.net|net }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th scope="row" class="matrix-foot">{{ t("overview.score_delta") }}</th>
+        {% for entry in page.entries %}<td class="matrix-figure matrix-delta{% if entry.delta > 0 %} trend-text-up{% elif entry.delta < 0 %} trend-text-down{% endif %}">{{ entry.delta|change(true) }}</td>{% endfor %}
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% if page.reasons %}
+  {% set users = page.users %}
+  {% call ui.section(t("overview.reasons"), count=page.reasons|length) %}
+    <ul class="reasons">
+      {% for vote in page.reasons %}
+        <li class="reason-item" id="reason-{{ vote.voter_id }}-{{ vote.target_id }}">
+          <span class="reason-who">{{ t("overview.reason_who", voter=member_name(users[vote.voter_id]), target=member_name(users[vote.target_id])) }} {{ ui.vote_mark(vote.value, vote_texts) }}</span>
+          <span class="reason-text">{{ t("overview.quoted", text=vote.reason) }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endcall %}
+{% endif %}

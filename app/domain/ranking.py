@@ -51,12 +51,13 @@ def deltas(
 ) -> dict[UserId, float | None]:
     """RNK-02: change of the displayed score; None for members without a previous score."""
     return {
-        user_id: _displayed_change(prev[user_id], value) if user_id in prev else None
+        user_id: displayed_change(prev[user_id], value) if user_id in prev else None
         for user_id, value in curr.items()
     }
 
 
-def _displayed_change(before: float, after: float) -> float:
+def displayed_change(before: float, after: float) -> float:
+    """A12, A13: the difference of the two rounded scores people see."""
     return float(round_half_up(after) - round_half_up(before))
 
 

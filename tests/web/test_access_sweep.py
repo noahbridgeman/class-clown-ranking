@@ -16,7 +16,7 @@ from app.extensions import db
 from app.models import Group, User
 from app.services import groups, invitations, membership
 from app.web.access import Access, access_of
-from tests.factories import add_member, make_group, make_user
+from tests.factories import IN_WEEK_WINDOW, add_member, make_group, make_user, tick
 
 METHODS_SKIPPED = {"HEAD", "OPTIONS"}
 # Routes without a group. Each one is reviewed by hand when added here.
@@ -53,18 +53,26 @@ def group_rules(app: Flask) -> list[Rule]:
 
 
 @pytest.fixture
-def world(app: Flask) -> World:
-    """A group with an admin, a member, an open invitation, and an outsider."""
+def world(app: Flask, clock) -> World:
+    """A group with an admin, a member, an open invitation, a running period (seq 1),
+    and an outsider."""
     admin = make_user("admin@example.org")
     group = make_group(admin, "Runde")
     member = add_member(group, make_user("member@example.org"))
     invitation = invitations.invite(group, admin, "neu@example.org").invitation
+    clock.set(IN_WEEK_WINDOW)
+    tick()
     return World(
         group=group,
         admin=admin,
         member=member,
         outsider=make_user("outsider@example.org"),
-        values={"group_id": group.id, "user_id": member.id, "invitation_id": invitation.id},
+        values={
+            "group_id": group.id,
+            "user_id": member.id,
+            "invitation_id": invitation.id,
+            "seq": 1,
+        },
     )
 
 

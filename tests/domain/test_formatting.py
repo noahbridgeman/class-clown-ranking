@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from app.domain.formatting import format_change, format_delta, format_score
+from app.domain.formatting import format_change, format_delta, format_net, format_score
 
 
 @pytest.mark.parametrize(
@@ -70,3 +70,20 @@ def test_non_finite_values_are_rejected(value):
 def test_format_change(value, compact, text):
     """Kursblatt style (docs/design.md): arrow and amount, no sign."""
     assert format_change(value, compact) == text
+
+
+@pytest.mark.parametrize(
+    ("value", "text"),
+    [
+        (0.6, "+0,60"),
+        (-1.0, "−1,00"),
+        (1 / 3, "+0,33"),
+        (-1 / 3, "−0,33"),
+        (0.0, "0,00"),
+        (-0.001, "0,00"),
+        (0.125, "+0,13"),
+    ],
+)
+def test_format_net(value, text):
+    """A23: the net of a period with sign and two decimals."""
+    assert format_net(value) == text

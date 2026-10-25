@@ -1,0 +1,31 @@
+{# OVW-02: per member only the counts, the net and the score change. #}
+{% import "macros/ui.html" as ui %}
+<p class="overview-hint">{{ t("overview.anonymous_hint") }}</p>
+<table class="volume">
+  <thead>
+    <tr>
+      <th scope="col" class="volume-name">{{ t("overview.col_name") }}</th>
+      <th scope="col" class="volume-bars"><span class="volume-head-down">{{ t("overview.col_down") }}</span><span class="volume-head-up">{{ t("overview.col_up") }}</span></th>
+      <th scope="col" class="volume-figure">{{ t("overview.col_up_down") }}</th>
+      <th scope="col" class="volume-figure">{{ t("overview.col_net") }}</th>
+      <th scope="col" class="volume-figure">{{ t("overview.col_delta") }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in page.entries %}
+      {% set is_me = entry.user.id == current_user.id %}
+      {% set name = member_name(entry.user) %}
+      <tr class="volume-row{% if is_me %} volume-row-me{% endif %}">
+        <th scope="row" class="volume-name"><a href="{{ url_for('overview.member', group_id=group.id, user_id=entry.user.id) }}">{{ t("overview.you_suffix", name=name) if is_me else name }}</a></th>
+        <td class="volume-bars">{{ ui.volume_bar(entry.downs, entry.ups, max_volume, t("overview.volume_label", ups=entry.ups, downs=entry.downs)) }}</td>
+        <td class="volume-figure">{{ entry.ups }}/{{ entry.downs }}</td>
+        <td class="volume-figure">{{ entry.net|net }}</td>
+        <td class="volume-figure volume-delta{% if entry.delta > 0 %} trend-text-up{% elif entry.delta < 0 %} trend-text-down{% endif %}">{{ entry.delta|change(true) }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if page.shows_own_votes %}
+  {% set note = t("overview.only_you") %}
+  {% include "overview/_own_votes.html" %}
+{% endif %}

@@ -1,0 +1,10 @@
+{# The viewer's own votes, shown to nobody else (OVW-07). note: the visibility line. #}
+{% import "macros/ui.html" as ui %}
+<section class="own-votes">
+  <h2 class="own-votes-head"><span>{{ t("overview.your_votes") }}</span><span class="own-votes-note">{{ note }}</span></h2>
+  <ul class="vote-chips">
+    {% for user in page.others %}
+      <li>{{ ui.vote_chip(member_name(user), page.own.get(user.id), vote_texts) }}</li>
+    {% endfor %}
+  </ul>
+</section>

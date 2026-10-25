@@ -51,6 +51,14 @@ class Page:
 # Who gets how many ups, so the order resembles the reference.
 STRENGTH = {"Felix": 0.7, "Lena": 0.64, "Jonas": 0.56, "Sophie": 0.52, "Ali": 0.45, "Tim": 0.36}
 
+# The reasons of KW 43 in uebersicht.html.
+REASONS = (
+    ("Lena", "Felix", "up", "Die Pfandautomat-Story. Legendär."),
+    ("Felix", "Tim", "down", "Wieder der Mensa-Witz. Wir kennen ihn."),
+    ("Ali", "Tim", "up", "Mitleidskauf."),
+)
+ANONYMOUS_WEEK = 4
+
 # Sunday noon in the weekly window (Berlin), six rounds ending Mon 19.10.2026 (KW 43).
 FIRST_SUNDAY = datetime(2026, 9, 13, 10, 0, tzinfo=UTC)
 
@@ -73,9 +81,16 @@ def render() -> list[Page]:
                 add_member(group, user)
         invitations.invite(group, jonas, "paul.w@example.org")  # expires before the shots
         for week in range(6):
+            # KW 42 anonymous, as in uebersicht-anonym.html.
+            group.is_anonymous = week == ANONYMOUS_WEEK
+            db.session.commit()
             clock.set(FIRST_SUNDAY + timedelta(days=7 * week))
             tick()
             _random_votes(group, users, rng)
+            if week == 5:
+                for voter, target, choice, text in REASONS:
+                    vote(group, users[voter], users[target], choice)
+                    voting_service.set_reason(group, users[voter], users[target].id, text)
             clock.set(FIRST_SUNDAY + timedelta(days=7 * week + 1, hours=2))
             tick()
 
@@ -91,6 +106,19 @@ def render() -> list[Page]:
         client = _client(app, jonas)
         pages.append(_page(client, "ranking", "ranking.html", f"/g/{group.id}/", 1000, graph=True))
         pages.append(_page(client, "voting", "voting.html", f"/g/{group.id}/vote", 900))
+        overview = f"/g/{group.id}/overview"
+        pages.append(_page(client, "uebersicht", "uebersicht.html", f"{overview}/6", 900))
+        pages.append(
+            _page(client, "uebersicht-anonym", "uebersicht-anonym.html", f"{overview}/5", 900)
+        )
+        detail = _page(
+            client, "mitglied", "uebersicht.html", f"/g/{group.id}/members/{jonas.id}", 1200
+        )
+        detail.related = True
+        pages.append(detail)
+        running = _page(client, "uebersicht-laufend", "uebersicht-anonym.html", overview, 900)
+        running.related = True
+        pages.append(running)
 
         # Wednesday 28.10., 3 days 14:22 h before the next window.
         clock.set(datetime(2026, 10, 26, 12, 0, tzinfo=UTC))

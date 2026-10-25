@@ -74,15 +74,9 @@ def test_design_check_renders_every_reference():
     spec.loader.exec_module(design_check)
     pages = design_check.render()
     designed = {page.name for page in pages if not page.related}
-    assert designed == {
-        "ranking",
-        "ranking-neue-gruppe",
-        "voting",
-        "voting-geschlossen",
-        "einstellungen",
-    }
+    assert designed == {screen.stem for screen in design_check.SCREENS.glob("*.html")}
     derived = {page.name for page in pages if page.related}
-    assert derived >= {"login", "gruppenauswahl", "fehler-404", "einladung"}
+    assert derived >= {"login", "gruppenauswahl", "fehler-404", "einladung", "mitglied"}
     for page in pages:
         assert (design_check.SCREENS / page.reference).exists()
         assert "<html" in page.html
