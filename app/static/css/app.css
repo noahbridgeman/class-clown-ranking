@@ -74,8 +74,13 @@ p { margin: 0 0 var(--space-md); }
   animation: ticker var(--ticker-duration) linear infinite;
 }
 
+/* Each run is at least as wide as the screen and spreads its items, so the two copies
+   never leave an empty stretch, however few members there are. */
 .ticker-run {
   display: inline-flex;
+  flex: none;
+  justify-content: space-around;
+  min-width: var(--ticker-run-min);
   gap: var(--ticker-gap);
   padding-right: var(--ticker-gap);
 }

@@ -167,6 +167,7 @@
   --ticker-height: 32px;
   --ticker-gap: 26px;
   --ticker-duration: 26s;
+  --ticker-run-min: 100vw;
   --status-height: 52px;
   --status-dot: 8px;
   --vote-button-width: 88px;
