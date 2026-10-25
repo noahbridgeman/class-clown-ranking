@@ -45,8 +45,8 @@ class PeriodPage:
     newer: int | None
 
     @property
-    def is_member(self) -> bool:
-        """Whether the viewer took part, and so has own votes to show."""
+    def shows_own_votes(self) -> bool:
+        """Whether the viewer took part with someone to rate (the matrix shows it otherwise)."""
         return bool(self.others)
 
     @property
@@ -88,7 +88,10 @@ def period_page(group: Group, viewer: User, seq: int | None = None) -> PeriodPag
         matrix={(v.voter_id, v.target_id): v.value for v in votes},
         reasons=_in_matrix_order([v for v in votes if v.reason], entries),
         others=[e.user for e in entries if e.user.id != viewer.id] if taking_part else [],
-        own=vote_queries.own_votes(period, viewer.id) if taking_part else {},
+        # Not anonymous, the matrix shows the own votes already.
+        own=vote_queries.own_votes(period, viewer.id)
+        if taking_part and period.is_anonymous
+        else {},
         older=older,
         newer=newer,
     )

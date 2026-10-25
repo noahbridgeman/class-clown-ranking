@@ -2,7 +2,8 @@
 
 Renders every member page of the group for a third person, once before and once after two
 others voted. Apart from the count of members who voted, the pages must be identical.
-Walks app.url_map, so pages added later (graph, overview) are covered automatically.
+Walks app.url_map with every member and period filled in, so pages added later are
+covered automatically. Further down: closed anonymous periods (OVW-02, OVW-07).
 """
 
 import re
@@ -28,15 +29,6 @@ from tests.factories import (
 VOTER_COUNT = re.compile(r"\d+ von \d+ haben abgestimmt")
 CSRF = re.compile(r'(csrf[-_]token"?\s*(?:content|value)=)"[^"]*"|"X-CSRFToken": "[^"]*"')
 HTMX = {"HX-Request": "true"}
-
-
-def member_pages(app: Flask, group_id: int) -> list[str]:
-    urls = []
-    for rule in app.url_map.iter_rules():
-        if rule.arguments == {"group_id"} and "GET" in rule.methods:
-            urls.append(rule.build({"group_id": group_id}, append_unknown=False)[1])
-    assert urls
-    return sorted(urls)
 
 
 def snapshot(client, urls: list[str]) -> dict[tuple[str, bool], str]:
@@ -69,7 +61,8 @@ def test_open_window_shows_nothing_of_others_votes(app, clock, login_as, anonymo
     clock.set(IN_WEEK_WINDOW)
     tick()
     client = login_as(observer)
-    urls = member_pages(app, group.id)
+    seqs = [1, 2] if with_history else [1]
+    urls = all_member_pages(app, group.id, [a.id, b.id, observer.id], seqs)
 
     before = snapshot(client, urls)
     vote(group, a, b, "up")
@@ -122,7 +115,8 @@ def all_member_pages(app: Flask, group_id: int, user_ids: list[int], seqs: list[
 
 def closed_anonymous_world(app: Flask, clock, swap: bool) -> tuple[dict[str, User], list[str]]:
     """Ada and Bo rate Cleo and Dora, one up and one down each; swap exchanges who gave
-    which, so every count stays the same. Then a newer period opens, not anonymous."""
+    which, so every count stays the same. Then a newer period opens, not anonymous, with
+    swapped votes as well."""
     users = {name: make_user(f"{name.lower()}@example.org", name) for name in NAMES}
     group = make_group(users["Ada"])
     for name in NAMES[1:]:
@@ -139,6 +133,10 @@ def closed_anonymous_world(app: Flask, clock, swap: bool) -> tuple[dict[str, Use
     group.is_anonymous = False
     clock.set(IN_WEEK_WINDOW + timedelta(days=7))
     tick()
+    # The running period gets swapped votes too, with a reason, though not anonymous (VOT-07).
+    vote(group, users["Ada"], users["Cleo"], first)
+    vote(group, users["Bo"], users["Cleo"], second)
+    voting.set_reason(group, users["Ada"], users["Cleo"].id, "Die Ente")
     ids = [user.id for user in users.values()]
     return users, all_member_pages(app, group.id, ids, [1, 2])
 

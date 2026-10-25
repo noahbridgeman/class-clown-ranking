@@ -25,7 +25,7 @@
     {% endfor %}
   </tbody>
 </table>
-{% if page.is_member %}
+{% if page.shows_own_votes %}
   {% set note = t("overview.only_you") %}
   {% include "overview/_own_votes.html" %}
 {% endif %}

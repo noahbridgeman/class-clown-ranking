@@ -139,7 +139,7 @@ class TestPeriodPage:
         close_week(clock)
         late = add_member(group, make_user(display_name="Dora"))
         page = overview.period_page(group, late, 1)
-        assert not page.is_member and page.own == {}
+        assert not page.shows_own_votes and page.own == {}
         assert late.id not in {e.user.id for e in page.entries}
 
 

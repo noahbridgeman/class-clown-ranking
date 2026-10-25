@@ -114,6 +114,14 @@ class TestOverview:
         assert "KW 44" in older and f'href="/g/{group.id}/overview/2"' in older
         assert client.get(f"/g/{group.id}/overview/3").status_code == 404
 
+    def test_skipped_periods_have_no_page(self, trio, clock, login_as):
+        """PER-06, A23."""
+        group, a, b, c = trio
+        membership.leave(group, b)
+        membership.leave(group, c)
+        run_week(clock, group, [])  # only Ada left: skipped
+        assert login_as(a).get(f"/g/{group.id}/overview/1").status_code == 404
+
     def test_names_link_to_the_detail_view(self, trio, clock, login_as):
         group, a, b, _c = trio
         run_week(clock, group, [(a, b, "up")])
