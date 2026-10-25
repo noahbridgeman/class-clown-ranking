@@ -112,6 +112,7 @@ class TestClosedPage:
         assert '<span class="cell-value">1 / 2</span>' in html
         # Cleo rated Ada up, but it is her first result: a score without a change yet.
         assert re.search(r'Dein Score</span>\s*<span class="cell-value">\d,\d</span>', html)
+        assert f'href="/g/{group.id}/overview/1"' in html  # "Zur Übersicht" (A22)
 
     def test_shows_the_scores_next_to_the_names(self, trio, clock, login_as):
         group, a, b, _c = trio
