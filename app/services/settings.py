@@ -23,7 +23,7 @@ from app.domain.types import Cadence
 from app.extensions import db
 from app.models import Group, Period, SettingField, SettingsChange, User
 from app.models.group import GROUP_NAME_MAX_LENGTH
-from app.services import periods
+from app.services import notifications, periods
 from app.services.errors import InvalidInput
 from app.services.locks import lock_group
 from app.services.text import clean_name
@@ -58,6 +58,17 @@ class InvalidSettings(InvalidInput):
         first = next(iter(errors.values()))
         super().__init__(first.message_key, **first.params)
         self.errors = errors
+
+
+# Labels of the fields, for the settings page and the push about changes (A24).
+FIELD_LABELS = {
+    SettingField.NAME: "settings.field_name",
+    SettingField.CADENCE: "settings.field_cadence",
+    SettingField.IS_ANONYMOUS: "settings.field_anonymity",
+    SettingField.TIMEZONE: "settings.field_timezone",
+    SettingField.K: "settings.field_k",
+    SettingField.D: "settings.field_d",
+}
 
 
 def effective(group: Group) -> GroupSettings:
@@ -125,6 +136,7 @@ def change(group: Group, actor: User, wanted: GroupSettings) -> list[SettingsCha
     ]
     db.session.add_all(changes)
     db.session.commit()
+    notifications.settings_changed(group, actor, changes, now)
     return changes
 
 

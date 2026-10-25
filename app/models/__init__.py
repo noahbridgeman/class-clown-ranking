@@ -18,6 +18,7 @@ from app.models.period import (
     PeriodStatus,
     Vote,
 )
+from app.models.push import NotificationKind, NotificationPreference, PushSubscription
 from app.models.user import User
 
 __all__ = [
@@ -30,9 +31,12 @@ __all__ = [
     "Membership",
     "MembershipEvent",
     "MembershipEventKind",
+    "NotificationKind",
+    "NotificationPreference",
     "Period",
     "PeriodResult",
     "PeriodStatus",
+    "PushSubscription",
     "SettingField",
     "SettingsChange",
     "User",

@@ -9,7 +9,12 @@ from app.config import TestConfig
 
 STRONG_KEY = "k" * 32
 MAIL_ENV = {"MAIL_HOST": "smtp.example.org", "MAIL_FROM": "ranking@example.org"}
-BASE_ENV = {"BASE_URL": "https://ranking.example.org", **MAIL_ENV}
+PUSH_ENV = {
+    "VAPID_PRIVATE_KEY": "private",
+    "VAPID_PUBLIC_KEY": "public",
+    "VAPID_SUBJECT": "mailto:betrieb@example.org",
+}
+BASE_ENV = {"BASE_URL": "https://ranking.example.org", **MAIL_ENV, **PUSH_ENV}
 PROD_ENV = {
     "APP_ENV": "production",
     "SECRET_KEY": STRONG_KEY,
@@ -24,6 +29,8 @@ ENV_VARS = (
     "FLASK_DEBUG",
     *(f"MAIL_{name}" for name in ("BACKEND", "HOST", "PORT", "USERNAME", "PASSWORD", "STARTTLS")),
     "MAIL_FROM",
+    "PUSH_BACKEND",
+    *PUSH_ENV,
 )
 
 
@@ -252,6 +259,22 @@ class TestConfigSelection:
         env(**{k: v for k, v in PROD_ENV.items() if k != missing})
         with pytest.raises(RuntimeError, match=missing):
             create_app()
+
+    @pytest.mark.parametrize("missing", list(PUSH_ENV))
+    def test_production_push_requires_vapid_settings(self, env, missing):
+        """A24: production sends real pushes and needs the key pair and a contact."""
+        env(**{k: v for k, v in PROD_ENV.items() if k != missing})
+        with pytest.raises(RuntimeError, match=missing):
+            create_app()
+
+    def test_vapid_subject_must_be_a_contact(self, env):
+        env(**PROD_ENV | {"VAPID_SUBJECT": "betrieb@example.org"})
+        with pytest.raises(RuntimeError, match="VAPID_SUBJECT"):
+            create_app()
+
+    def test_development_prints_pushes(self, env):
+        env(APP_ENV="development", DATABASE_URL="sqlite://")
+        assert create_app().config["PUSH_BACKEND"] == "console"
 
     def test_unknown_mail_backend_fails(self, env):
         env(**PROD_ENV, MAIL_BACKEND="carrier-pigeon")

@@ -53,6 +53,16 @@ class Config:
     MAIL_STARTTLS = True
     MAIL_FROM: str | None = None
 
+    # Push (M8, A24). Keys from `flask --app app push keygen`.
+    PUSH_BACKEND = "webpush"
+    VAPID_PRIVATE_KEY: str | None = None
+    VAPID_PUBLIC_KEY: str | None = None
+    VAPID_SUBJECT: str | None = None  # mailto: or https: address of the operator
+    PUSH_TIMEOUT_SECONDS = 5
+    PUSH_TTL_SECONDS = 12 * 3600  # how long the push service keeps an undelivered message
+    PUSH_SUBSCRIPTIONS_PER_USER = 10
+    REMINDER_BEFORE_CLOSE = timedelta(hours=2)  # NOT-03
+
 
 class DevConfig(Config):
     SECRET_KEY = "dev-insecure-key"
@@ -67,6 +77,7 @@ class DevConfig(Config):
     SESSION_COOKIE_SECURE = False
     REMEMBER_COOKIE_SECURE = False
     MAIL_BACKEND = "console"
+    PUSH_BACKEND = "console"
 
 
 class TestConfig(Config):
@@ -81,6 +92,7 @@ class TestConfig(Config):
     REMEMBER_COOKIE_SECURE = False
     WTF_CSRF_ENABLED = False
     MAIL_BACKEND = "memory"
+    PUSH_BACKEND = "memory"
 
 
 CONFIGS: dict[str, type[Config]] = {"production": Config, "development": DevConfig}
@@ -97,6 +109,10 @@ ENV_OVERRIDES = {
     "MAIL_PASSWORD": "MAIL_PASSWORD",
     "MAIL_STARTTLS": "MAIL_STARTTLS",
     "MAIL_FROM": "MAIL_FROM",
+    "PUSH_BACKEND": "PUSH_BACKEND",
+    "VAPID_PRIVATE_KEY": "VAPID_PRIVATE_KEY",
+    "VAPID_PUBLIC_KEY": "VAPID_PUBLIC_KEY",
+    "VAPID_SUBJECT": "VAPID_SUBJECT",
 }
 
 

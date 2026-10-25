@@ -63,6 +63,10 @@ class Period(db.Model):
     d: Mapped[float]
     status: Mapped[PeriodStatus] = mapped_column(text_enum(PeriodStatus, "status"))
     closed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # when the update ran
+    # Set in the same commit that decides to notify, so each goes out at most once (NOT-03).
+    opened_notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    reminder_sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    results_notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
     @property
     def params(self) -> ScoreParams:

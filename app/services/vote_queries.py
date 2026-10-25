@@ -97,3 +97,14 @@ def _open_votes(*criteria: object) -> list[OpenVote]:
         .order_by(Vote.period_id, Vote.id)
     )
     return [OpenVote(*row) for row in rows]
+
+
+def votes_cast(period: Period) -> dict[int, int]:
+    """Voter id → how many members they rated so far. Only decides who gets the reminder
+    (NOT-03); never shown, not even as a count (VOT-07)."""
+    rows = db.session.execute(
+        select(Vote.voter_user_id, func.count())
+        .where(Vote.period_id == period.id)
+        .group_by(Vote.voter_user_id)
+    )
+    return {voter: count for voter, count in rows}

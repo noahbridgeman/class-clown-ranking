@@ -3,7 +3,7 @@ from flask import Flask
 from flask.cli import AppGroup
 
 from app.i18n import t
-from app.services import auth, periods
+from app.services import auth, periods, push
 
 
 def register(app: Flask) -> None:
@@ -17,6 +17,9 @@ def register(app: Flask) -> None:
     )
     app.cli.add_command(users)
     app.cli.command("tick", help=translate("cli.tick_help"))(_tick)
+    push_group = AppGroup("push", help=translate("cli.push_help"))
+    push_group.command("keygen", help=translate("cli.keygen_help"))(_keygen)
+    app.cli.add_command(push_group)
 
 
 def _allow(email: str) -> None:
@@ -39,8 +42,16 @@ def _tick() -> None:
             closed=report.closed,
             skipped=report.skipped,
             tokens=report.tokens_removed,
+            pushes=report.pushes,
         )
     )
     if report.failed:
         failed = ", ".join(map(str, report.failed))
         raise click.ClickException(t("cli.tick_failed", groups=failed))
+
+
+def _keygen() -> None:
+    """Prints a new VAPID key pair for .env (A24). Changing it invalidates every device."""
+    private, public = push.generate_vapid_keys()
+    click.echo(f"VAPID_PRIVATE_KEY={private}\nVAPID_PUBLIC_KEY={public}")
+    click.echo(t("cli.keygen_note"), err=True)

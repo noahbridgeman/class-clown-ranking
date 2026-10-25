@@ -30,14 +30,7 @@ bp = Blueprint("settings", __name__)
 
 Page = tuple[str, int] | BaseResponse
 
-FIELD_LABELS = {
-    SettingField.NAME: "settings.field_name",
-    SettingField.CADENCE: "settings.field_cadence",
-    SettingField.IS_ANONYMOUS: "settings.field_anonymity",
-    SettingField.TIMEZONE: "settings.field_timezone",
-    SettingField.K: "settings.field_k",
-    SettingField.D: "settings.field_d",
-}
+FIELD_LABELS = settings.FIELD_LABELS
 CADENCE_LABELS = {Cadence.WEEKLY: "settings.weekly", Cadence.DAILY: "settings.daily"}
 # What K and d mean, per cadence (docs/design/screens/einstellungen.html).
 HINTS = {
