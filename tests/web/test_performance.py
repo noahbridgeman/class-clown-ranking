@@ -1,4 +1,5 @@
-"""NFA-12: the group page and the graph of a full group with a year of daily periods.
+"""NFA-12: the group page, the graph and the overview of a full group with a year of
+daily periods.
 
 The budgets are far below the 2 seconds of NFA-12, which also cover network and
 rendering on the phone. The query count must not grow with the number of periods.
@@ -15,7 +16,7 @@ from sqlalchemy import event, insert
 from app.domain import scoring
 from app.domain.types import Cadence
 from app.extensions import db
-from app.models import Group, Period, PeriodResult, PeriodStatus, User
+from app.models import Group, Period, PeriodResult, PeriodStatus, User, Vote
 from tests.factories import add_member, make_daily, make_group, make_user
 
 MEMBERS = 30  # MAX_GROUP_SIZE (A8)
@@ -76,6 +77,26 @@ def full_year(app, clock) -> tuple[Group, User]:
             )
             ratings[user.id] = after
     db.session.execute(insert(PeriodResult), rows)
+    # Everyone rates everyone, with a reason, in the first block of open periods (45 days).
+    db.session.execute(
+        insert(Vote),
+        [
+            {
+                "period_id": period_id,
+                "voter_user_id": voter.id,
+                "target_user_id": target.id,
+                "value": 1 if (voter.id + target.id + day) % 3 else -1,
+                "reason": f"Grund {day}" if (voter.id * target.id) % 5 == 0 else None,
+                "created_at": start + timedelta(days=day),
+                "updated_at": start + timedelta(days=day),
+            }
+            for day, period_id in enumerate(period_ids)
+            if 45 <= day < 90
+            for voter in users
+            for target in users
+            if voter is not target
+        ],
+    )
     db.session.commit()
     return group, users[0]
 
@@ -95,12 +116,21 @@ def count_queries() -> Iterator[list[str]]:
 
 
 @pytest.mark.parametrize(
-    "path", ["/", "/graph.json", "/graph.json?range=1y", "/graph.json?range=all"]
+    "path",
+    [
+        "/",
+        "/graph.json",
+        "/graph.json?range=1y",
+        "/graph.json?range=all",
+        "/overview",  # anonymous
+        "/overview/50",  # not anonymous
+        "/members/{user}",
+    ],
 )
 def test_full_group_loads_fast(full_year, login_as, path):
     group, user = full_year
     client = login_as(user)
-    url = f"/g/{group.id}{path}"
+    url = f"/g/{group.id}{path.format(user=user.id)}"
     client.get(url)  # warm up templates and caches
     with count_queries() as statements:
         started = time.perf_counter()

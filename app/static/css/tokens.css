@@ -103,6 +103,8 @@
   --color-up-tint: #eaf7ef;
   --color-down: #ff4a1c;
   --color-down-text: #b32d0b;
+  --color-skipped: #8a8a82; /* dashed frame of a vote left out */
+  --color-disabled: #a3a39b;
 
   /* Fonts */
   /* Generic fallbacks only: ▲ and ▼ are not in the fonts and come from these. */
@@ -117,6 +119,8 @@
   --font-size-cell: 22px;
   --font-size-figure: 24px;
   --font-size-name: 20px;
+  --font-size-switcher: 21px;
+  --font-size-name-small: 18px;
   --font-size-status: 19px;
   --font-size-score: 18px;
   --font-size-body-large: 17px;
@@ -190,6 +194,20 @@
   --preview-height: 132px;
   --preview-line: 2.5px;
   --menu-width: 260px;
+  --switcher-gap: 8px;
+  --matrix-name-width: 72px;
+  --matrix-row-height: 32px;
+  --matrix-mark-width: 28px;
+  --matrix-mark-height: 26px;
+  --matrix-reason-dot: 5px;
+  --volume-name-width: 78px;
+  --volume-row-height: 40px;
+  --volume-bar-width: 129px; /* 60 down, axis, 8 gap, 60 up */
+  --volume-bar-height: 16px;
+  --chip-padding-y: 6px;
+  --chip-padding-x: 10px;
+  --score-chart-height: 120px;
+  --score-chart-line: 2px;
 
   /* Graph (docs/design.md section 4). graph.js reads these as plain numbers (px, ms). */
   --graph-font-size: 9;

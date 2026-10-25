@@ -52,7 +52,7 @@
 </a>
 {%- endmacro %}
 
-{# Small mono tag. kind: ink (filled, e.g. DU, ADMIN), up, down or none (muted). #}
+{# Small mono tag. kind: ink (filled, e.g. DU, ADMIN), frame (ink border), up, down or none (muted). #}
 {% macro badge(text, kind=none) -%}
 <span class="badge{% if kind %} badge-{{ kind }}{% endif %}">{{ text }}</span>
 {%- endmacro %}
@@ -133,6 +133,54 @@
 <div class="progress" aria-hidden="true">
   {% for i in range(total) %}<span class="progress-segment{% if i < done %} progress-done{% endif %}"></span>{% endfor %}
 </div>
+{%- endmacro %}
+
+{# ‹ period › with the mode tag below (OVW-01). older/newer: links, none at either end. #}
+{% macro period_switcher(label, anonymous, labels, older=none, newer=none) -%}
+<nav class="switcher" aria-label="{{ labels.nav }}">
+  {{ _switcher_step("‹", older, labels.older) }}
+  <div class="switcher-current">
+    <span class="switcher-label">{{ label }}</span>
+    {{ badge(labels.anonymous, "frame") if anonymous else badge(labels.open, "ink") }}
+  </div>
+  {{ _switcher_step("›", newer, labels.newer) }}
+</nav>
+{%- endmacro %}
+
+{% macro _switcher_step(arrow, href, label) -%}
+{%- if href -%}
+<a class="switcher-step" href="{{ href }}" aria-label="{{ label }}">{{ arrow }}</a>
+{%- else -%}
+<span class="switcher-step switcher-step-off" aria-hidden="true">{{ arrow }}</span>
+{%- endif -%}
+{%- endmacro %}
+
+{# A vote as a small square: green ▲, red ▼, dashed frame when left out (value none).
+   texts: up, down, skipped, reason for screen readers. href: links the square to its reason. #}
+{% macro vote_mark(value, texts, href=none) -%}
+{%- set kind = "up" if value == 1 else "down" if value == -1 else "skipped" -%}
+{%- set tag = "a" if href else "span" -%}
+<{{ tag }} class="vote-mark vote-mark-{{ kind }}{% if href %} vote-mark-reason{% endif %}"{% if href %} href="{{ href }}"{% endif %}>
+  {%- if value %}<span aria-hidden="true">{{ "▲" if value == 1 else "▼" }}</span>{% endif -%}
+  <span class="visually-hidden">{{ texts[kind] }}{% if href %}, {{ texts.reason }}{% endif %}</span>
+</{{ tag }}>
+{%- endmacro %}
+
+{# "NAME ▲" on a green or red area, "NAME –" in a dashed frame when left out. #}
+{% macro vote_chip(name, value, texts) -%}
+{%- set kind = "up" if value == 1 else "down" if value == -1 else "skipped" -%}
+<span class="vote-chip vote-chip-{{ kind }}">{{ name }} <span aria-hidden="true">{{ "▲" if value == 1 else "▼" if value == -1 else "–" }}</span><span class="visually-hidden">{{ texts[kind] }}</span></span>
+{%- endmacro %}
+
+{# Downs to the left of a center line (red), ups to the right after a small gap (green).
+   At most 12 units per vote; with many votes they get narrower so the longest bar fits. #}
+{% macro volume_bar(downs, ups, most, label) -%}
+{%- set unit = [12, 60 / most]|min if most else 12 -%}
+<svg class="volume-bar" viewBox="0 0 129 16" role="img" aria-label="{{ label }}">
+  {% if downs %}<rect class="volume-down" x="{{ (60 - unit * downs)|round(2) }}" y="0" width="{{ (unit * downs)|round(2) }}" height="16"/>{% endif %}
+  {% if ups %}<rect class="volume-up" x="69" y="0" width="{{ (unit * ups)|round(2) }}" height="16"/>{% endif %}
+  <line class="volume-axis" x1="60.5" y1="0" x2="60.5" y2="16"/>
+</svg>
 {%- endmacro %}
 
 {# Tiny history line, 44 × 18. points: y values from 0 (bottom) to 1 (top). #}

@@ -1,0 +1,8 @@
+{# OVW-06: nothing about the results while the period runs, only the own votes. #}
+{% import "macros/ui.html" as ui %}
+<p class="overview-hint">{{ t("overview.running", end=period.closes_at|short_datetime(group.timezone)) }}</p>
+{% if page.is_member %}
+  {% set note = t("overview.only_you") if period.is_anonymous else t("overview.only_you_until_end") %}
+  {% include "overview/_own_votes.html" %}
+{% endif %}
+<div class="page-actions">{{ ui.text_link(t("overview.to_voting"), url_for('voting.index', group_id=group.id), kind="row") }}</div>

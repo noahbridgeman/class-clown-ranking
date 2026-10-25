@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
+{# The voting overview (docs/design/screens/uebersicht*.html, A23): one period per page. #}
+{% block title %}{{ t("overview.title") }} – {{ group.name }}{% endblock %}
+{% block content %}
+  {{ ui.page_head(t("overview.title"), kicker=t("overview.kicker", group=group.name)) }}
+  {% if page %}
+    {% set period = page.period %}
+    {% set vote_texts = {"up": t("overview.up"), "down": t("overview.down"), "skipped": t("overview.skipped"), "reason": t("overview.with_reason")} %}
+    {{ ui.period_switcher(period_label, period.is_anonymous,
+         {"nav": t("overview.switcher_label"), "older": t("overview.older"), "newer": t("overview.newer"),
+          "anonymous": t("overview.anonymous"), "open": t("overview.open")},
+         older=url_for('overview.index', group_id=group.id, seq=page.older) if page.older else none,
+         newer=url_for('overview.index', group_id=group.id, seq=page.newer) if page.newer else none) }}
+    {% if page.running %}
+      {% include "overview/_running.html" %}
+    {% elif period.is_anonymous %}
+      {% include "overview/_anonymous.html" %}
+    {% else %}
+      {% include "overview/_open.html" %}
+    {% endif %}
+  {% else %}
+    <p class="page-text">{{ t("overview.empty") }}</p>
+  {% endif %}
+{% endblock %}

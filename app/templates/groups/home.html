@@ -33,6 +33,9 @@
 
   {% include "groups/_graph.html" %}
   {% include "groups/_ranking.html" %}
+  {% if board.as_of %}
+    {{ ui.text_link(t("ranking.overview_link"), url_for('overview.index', group_id=group.id), kind="row") }}
+  {% endif %}
 
   {% if is_admin and not board.as_of %}
     {% call ui.status(kind="dark") %}

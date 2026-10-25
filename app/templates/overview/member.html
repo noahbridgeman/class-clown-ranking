@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
+{# OVW-05 (A23): a member's results over all periods; votes only where not anonymous,
+   the own ones always (OVW-07). #}
+{% set user = history.member.user %}
+{% set name = member_name(user) %}
+{% set latest = history.items[0].entry if history.items else none %}
+{% set vote_texts = {"up": t("overview.up"), "down": t("overview.down"), "skipped": t("overview.skipped"), "reason": t("overview.with_reason")} %}
+{% block title %}{{ name }} – {{ group.name }}{% endblock %}
+{% block content %}
+  {% if not latest %}{% set sub = t("overview.member_sub_new") %}
+  {% elif history.member.is_active %}{% set sub = t("overview.member_sub", score=latest.score|score) %}
+  {% else %}{% set sub = t("overview.member_sub_former", score=latest.score|score) %}{% endif %}
+  {{ ui.page_head(name, kicker=t("overview.kicker", group=group.name), sub=sub,
+                  kicker_href=url_for('overview.index', group_id=group.id)) }}
+  {% if chart %}
+    <svg class="score-chart" viewBox="0 0 320 110" role="img" aria-label="{{ t('overview.chart_label', name=name) }}">
+      {% if chart.start_y is not none %}
+        <line class="score-chart-start" x1="{{ chart.left }}" y1="{{ chart.start_y }}" x2="{{ chart.right }}" y2="{{ chart.start_y }}"/>
+        <text class="score-chart-axis" x="0" y="{{ chart.start_y + 3 }}">{{ 5.0|score }}</text>
+      {% endif %}
+      {% if chart.show_high %}<text class="score-chart-axis" x="0" y="{{ chart.top_y + 6 }}">{{ chart.high }}</text>{% endif %}
+      {% if chart.show_low %}<text class="score-chart-axis" x="0" y="{{ chart.bottom_y }}">{{ chart.low }}</text>{% endif %}
+      <polyline class="score-chart-line" points="{{ chart.points }}"/>
+      <circle class="score-chart-end" cx="{{ chart.end_x }}" cy="{{ chart.end_y }}" r="3"/>
+    </svg>
+  {% endif %}
+  {% call ui.section(t("overview.rounds"), count=history.items|length) %}
+    {% if history.items %}
+      <ol class="history">
+        {% for item in history.items %}
+          {% set entry = item.entry %}
+          <li class="history-item">
+            <div class="history-head">
+              <a class="history-period" href="{{ url_for('overview.index', group_id=group.id, seq=item.period.seq) }}">{{ labels[item.period.id] }}</a>
+              {{ ui.badge(t("overview.anonymous"), "frame") if item.period.is_anonymous else ui.badge(t("overview.open"), "ink") }}
+              <span class="history-score">{{ entry.score|score }}</span>
+              <span class="history-delta{% if entry.delta > 0 %} trend-text-up{% elif entry.delta < 0 %} trend-text-down{% endif %}">{{ entry.delta|change(true) }}</span>
+            </div>
+            <p class="history-figures">{{ t("overview.figures", ups=entry.ups, downs=entry.downs, net=entry.net|net) }}</p>
+            {% if item.received %}
+              <p class="history-label">{{ t("overview.received") }}</p>
+              <ul class="reasons">
+                {% for vote in item.received %}
+                  <li class="reason-item">
+                    <span class="reason-who">{{ member_name(history.names[vote.voter_id]) }} {{ ui.vote_mark(vote.value, vote_texts) }}</span>
+                    <span class="reason-text">{{ t("overview.quoted", text=vote.reason) }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if item.cast %}
+              <p class="history-label">{{ t("overview.your_votes") ~ " · " ~ t("overview.only_you") if item.period.is_anonymous else t("overview.cast") }}</p>
+              <ul class="vote-chips">
+                {% for target_id, value in item.cast.items() %}
+                  <li>{{ ui.vote_chip(member_name(history.names[target_id]), value, vote_texts) }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="hint">{{ t("overview.no_rounds") }}</p>
+    {% endif %}
+  {% endcall %}
+{% endblock %}
