@@ -104,7 +104,8 @@
 {%- endmacro %}
 
 {# Two or more radio labels side by side; the chosen one is an ink area.
-   options: value → label, in display order. #}
+   options: value → label, in display order. hint: one text, or value → text to show the
+   hint of the chosen option (switched by CSS, no script needed). #}
 {% macro segment(name, legend, options, selected, hint=none, error=none) -%}
 <fieldset class="segment-field">
   <legend class="field-label">{{ legend }}</legend>
@@ -114,7 +115,9 @@
         {%- if value == selected %} checked{% endif %}> {{ text }}</label>
     {% endfor %}
   </div>
-  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+  {% if hint is mapping %}
+    {% for value, text in hint.items() %}<p class="hint" data-for="{{ value }}">{{ text }}</p>{% endfor %}
+  {% elif hint %}<p class="hint">{{ hint }}</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 </fieldset>
 {%- endmacro %}

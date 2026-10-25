@@ -211,29 +211,32 @@ def applied_changes(
 
 @dataclass(frozen=True)
 class Preview:
-    """SET-05: an example history for given parameters."""
+    """SET-05: example histories for given parameters (docs/design/screens/einstellungen.html)."""
 
-    weeks: list[float]  # x: weeks since the start
-    scores: list[float]
-    best: float  # score after endless ups, the equilibrium K / (1 − d)
-    worst: float
-    half_life_weeks: float  # how long a rating takes to lose half its distance from 5
+    weeks: list[float]  # x: weeks since the start, from 0
+    up: list[float]  # scores with only ups, then a pause without votes
+    down: list[float]  # the same with only downs
+    pause_week: float  # where the pause begins
 
 
-# Six weeks of only ups, six without votes, six of only downs.
-PREVIEW_PHASES = ((1.0, 6), (0.0, 6), (-1.0, 6))
+# Six weeks of only ups (or only downs), then six without votes.
+PREVIEW_ACTIVE_WEEKS = 6
+PREVIEW_PAUSE_WEEKS = 6
 
 
 def preview(params: scoring.ScoreParams, cadence: Cadence) -> Preview:
     per_week = scoring.DAYS_PER_WEEK if cadence == Cadence.DAILY else 1
-    nets = [net for net, weeks in PREVIEW_PHASES for _ in range(weeks * per_week)]
-    equilibrium = params.k / (1 - params.d)
+    active, pause = PREVIEW_ACTIVE_WEEKS * per_week, PREVIEW_PAUSE_WEEKS * per_week
+    start = scoring.score(0.0)
+
+    def history(net: float) -> list[float]:
+        return [start, *scoring.simulate(params, [net] * active + [0.0] * pause)]
+
     return Preview(
-        weeks=[(i + 1) / per_week for i in range(len(nets))],
-        scores=scoring.simulate(params, nets),
-        best=scoring.score(equilibrium),
-        worst=scoring.score(-equilibrium),
-        half_life_weeks=math.log(0.5) / math.log(params.d) / per_week,
+        weeks=[i / per_week for i in range(active + pause + 1)],
+        up=history(1.0),
+        down=history(-1.0),
+        pause_week=float(PREVIEW_ACTIVE_WEEKS),
     )
 
 
@@ -268,7 +271,7 @@ def read_form(form: Mapping[str, str], current: GroupSettings) -> FormInput:
         is_anonymous=anonymity == "true"
         if anonymity in ("true", "false")
         else current.is_anonymous,
-        timezone=form.get("timezone", "").strip(),
+        timezone=current.timezone,  # not offered in the form (SET-07)
         k=params.k,
         d=params.d,
     )
@@ -330,13 +333,16 @@ def parse_number(text: str | None) -> float:
     return value if math.isfinite(value) else math.nan
 
 
-def format_param(value: float, decimals: int = 6, decimal_separator: str = ",") -> str:
+def format_param(
+    value: float, decimals: int = 6, decimal_separator: str = ",", min_decimals: int = 0
+) -> str:
     """Six decimals for reading. Form inputs use INPUT_DECIMALS, so that a converted value
     at a bound reads back within the tolerance of scoring.validate (A11)."""
     if not math.isfinite(value):
         return ""
-    text = f"{value:.{decimals}f}".rstrip("0").rstrip(".")
-    return text.replace(".", decimal_separator)
+    whole, _, fraction = f"{value:.{decimals}f}".partition(".")
+    fraction = fraction.rstrip("0").ljust(min_decimals, "0")
+    return f"{whole}{decimal_separator}{fraction}" if fraction else whole
 
 
 def format_bounds(low: float, high: float, decimals: int = 6) -> tuple[str, str]:
@@ -345,7 +351,11 @@ def format_bounds(low: float, high: float, decimals: int = 6) -> tuple[str, str]
     # repr() is the shortest exact form, so 0.05 stays 0.05 instead of 0.050001.
     rounded_low = Decimal(repr(low)).quantize(step, rounding=ROUND_CEILING)
     rounded_high = Decimal(repr(high)).quantize(step, rounding=ROUND_FLOOR)
-    return format_param(float(rounded_low), decimals), format_param(float(rounded_high), decimals)
+    # At least two decimals, as in "0,05 – 2,00" (docs/design/screens/einstellungen.html).
+    return (
+        format_param(float(rounded_low), decimals, min_decimals=2),
+        format_param(float(rounded_high), decimals, min_decimals=2),
+    )
 
 
 INPUT_DECIMALS = 10

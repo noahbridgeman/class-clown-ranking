@@ -68,6 +68,7 @@ def init_app(app: Flask) -> None:
     app.jinja_env.filters["short_date"] = short_date
     app.jinja_env.filters["weekday_time"] = weekday_time
     app.jinja_env.filters["window_dates"] = window_dates
+    app.jinja_env.filters["day_month"] = day_month
     app.jinja_env.filters["countdown"] = countdown
     app.jinja_env.filters["countdown_short"] = countdown_short
 
@@ -159,3 +160,8 @@ def window_dates(opens: datetime, closes: datetime, timezone: str) -> str:
     if (start.month, start.year) == (end.month, end.year):
         return f"{start:%d}./{end:%d.%m.}"
     return f"{start:%d.%m.}/{end:%d.%m.}"
+
+
+def day_month(value: datetime, timezone: str) -> str:
+    """ "31.10." """
+    return _local(value, timezone).strftime("%d.%m.")

@@ -1,36 +1,51 @@
-{# K and d for the chosen cadence with bounds and preview (SET-04, SET-05).
-   A cadence change swaps this whole block, so K and d show the converted values.
+{# K and d for the chosen cadence with bounds, "restore defaults" and preview (SET-04, SET-05).
+   A cadence change or "restore" swaps this whole block, so K and d show the new values.
    Typing in K or d swaps only #params-info, so the inputs keep what is being typed. #}
 {% import "macros/ui.html" as ui %}
 {% set params_url = url_for('settings.params', group_id=group.id) %}
 <div id="params" class="params"
-     hx-get="{{ params_url }}" hx-trigger="change from:#cadence"
+     hx-get="{{ params_url }}" hx-trigger="change from:input[name=cadence]"
      hx-include="closest form" hx-swap="outerHTML">
   {# The cadence K and d below belong to; a different cadence on submit converts them. #}
   <input type="hidden" name="params_cadence" value="{{ values.cadence.value }}">
-  {{ ui.text_field("k", t("settings.field_k"), k_text, none if live else errors.get("k"),
-       attrs={"inputmode": "decimal", "autocomplete": "off"}) }}
-  {{ ui.text_field("d", t("settings.field_d"), d_text, none if live else errors.get("d"),
-       attrs={"inputmode": "decimal", "autocomplete": "off"}) }}
+  <div class="param-grid">
+    <div class="param">
+      {{ ui.text_field("k", t("settings.field_k"), k_text, none if live else errors.get("k"),
+           attrs={"inputmode": "decimal", "autocomplete": "off"},
+           hint=t(k_hint, min=k_bounds[0], max=k_bounds[1])) }}
+    </div>
+    <div class="param">
+      {{ ui.text_field("d", t("settings.field_d"), d_text, none if live else errors.get("d"),
+           attrs={"inputmode": "decimal", "autocomplete": "off"},
+           hint=t(d_hint, min=d_bounds[0], max=d_bounds[1])) }}
+    </div>
+  </div>
+  {# Without JavaScript the button posts the form, which only fills in the defaults. #}
+  {{ ui.button(t("settings.restore"), "secondary", attrs={
+       "name": "action", "value": "restore", "hx-get": params_url ~ "?restore=1",
+       "hx-include": "closest form", "hx-target": "#params", "hx-swap": "outerHTML"}) }}
   <div id="params-info" class="params-info" aria-live="polite"
        hx-get="{{ params_url }}" hx-trigger="input changed delay:500ms from:#k, input changed delay:500ms from:#d"
        hx-include="closest form" hx-select="#params-info" hx-swap="outerHTML">
     {% if live %}
       {% for message in errors.values() %}<p class="error">{{ message }}</p>{% endfor %}
     {% endif %}
-    <p class="muted hint">{{ t("settings.k_hint", min=k_bounds[0], max=k_bounds[1]) }}</p>
-    <p class="muted hint">{{ t("settings.d_hint", min=d_bounds[0], max=d_bounds[1]) }}</p>
     {% if preview %}
-      <div class="preview">
-        <p class="preview-title">{{ t("settings.preview_title") }}</p>
-        <div id="preview-chart" class="preview-chart" data-preview='{{ preview_data|tojson }}'
-             data-texts='{{ {"weeks": t("settings.preview_axis")}|tojson }}'></div>
-        <ul class="list muted">
-          <li>{{ t("settings.preview_best", score=preview.best|score) }}</li>
-          <li>{{ t("settings.preview_worst", score=preview.worst|score) }}</li>
-          <li>{{ t("settings.preview_half_life", weeks=preview.half_life_weeks|param(1)) }}</li>
-        </ul>
-      </div>
+      <figure class="preview">
+        <figcaption class="field-label">{{ t("settings.preview_title") }}</figcaption>
+        <svg class="preview-chart" viewBox="0 0 320 124" role="img" aria-label="{{ t('settings.preview_label') }}">
+          <line class="preview-start" x1="10" y1="{{ preview.start_y }}" x2="310" y2="{{ preview.start_y }}"/>
+          <line class="preview-pause" x1="{{ preview.pause_x }}" y1="{{ preview.top_y }}" x2="{{ preview.pause_x }}" y2="{{ preview.bottom_y }}"/>
+          <text class="preview-axis" x="12" y="{{ preview.top_y + 8 }}">10</text>
+          <text class="preview-axis" x="12" y="{{ preview.start_y - 4 }}">{{ 5.0|score }}</text>
+          <text class="preview-axis" x="12" y="{{ preview.bottom_y - 4 }}">0</text>
+          <text class="preview-axis" x="{{ preview.pause_x + 4 }}" y="{{ preview.top_y + 8 }}">{{ t("settings.preview_pause") }}</text>
+          <polyline class="preview-up" points="{{ preview.up }}"/>
+          <polyline class="preview-down" points="{{ preview.down }}"/>
+          <text class="preview-axis" x="10" y="122">{{ t("settings.preview_week", week=0) }}</text>
+          <text class="preview-axis preview-axis-end" x="310" y="122">{{ t("settings.preview_week", week=preview.weeks) }}</text>
+        </svg>
+      </figure>
     {% endif %}
   </div>
 </div>

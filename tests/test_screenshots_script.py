@@ -37,7 +37,7 @@ def test_states_are_visible(pages):
     assert "Du hast 1 von 2 bewertet" in pages["vote_open"]
     assert "Nächstes Voting in" in pages["vote_closed"]
     assert "<details open " in pages["settings_admin_open"]
-    assert "zurückgezogen" in pages["invitations"]
+    assert "ZURÜCKGEZOGEN" in pages["invitations"]
 
 
 def test_localize_points_to_the_working_copy(script):

@@ -16,6 +16,7 @@ from app.i18n import t
 from app.models.user import EMAIL_MAX_LENGTH
 from app.services import invitations
 from app.services.errors import InvalidInput
+from app.web import settings as settings_page
 from app.web.access import admin_required
 from app.web.forms import ConfirmForm, EmailForm, LogoutForm
 
@@ -27,7 +28,8 @@ Page = tuple[str, int] | BaseResponse | str
 @bp.get("/g/<int:group_id>/invitations")
 @admin_required
 def index(group_id: int) -> str:
-    return _render_list(EmailForm())
+    """Invitations are a section of the settings page (docs/design.md)."""
+    return settings_page.render_page()
 
 
 @bp.post("/g/<int:group_id>/invitations")
@@ -128,20 +130,19 @@ def _respond(form: EmailForm, error: str | None = None, status: int = 200) -> Pa
     if request.headers.get("HX-Request"):
         return _render_list(form, error, partial=True), status
     if error:
-        return _render_list(form, error), status
-    return redirect(url_for("invitations.index", group_id=g.group.id))
+        return settings_page.render_page(invite_form=form, invite_error=error), status
+    return redirect(url_for("settings.index", group_id=g.group.id, _anchor="einladen"))
 
 
 def _render_list(form: EmailForm, error: str | None = None, partial: bool = False) -> str:
-    template = "invitations/_list.html" if partial else "invitations/index.html"
     return render_template(
-        template,
+        "invitations/_list.html",
         group=g.group,
         invitations=invitations.invitations_of(g.group),
         now=get_clock().now(),
-        form=form,
-        error=error,
-        max_length=EMAIL_MAX_LENGTH,
-        action_form=ConfirmForm(),
+        invite_form=form,
+        invite_error=error,
+        email_max_length=EMAIL_MAX_LENGTH,
+        form=ConfirmForm(),
         partial=partial,
     )

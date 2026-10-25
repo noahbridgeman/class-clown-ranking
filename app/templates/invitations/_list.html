@@ -1,49 +1,54 @@
-{# Swapped in by HTMX after every action; without JavaScript the forms reload the page. #}
+{# The invitation section of the settings page (INV-01…05). Swapped in by HTMX after every
+   action; without JavaScript the forms reload the settings page. #}
 {% import "macros/ui.html" as ui %}
-<div id="invitations">
+<div id="invitations" class="invite">
   {# A full page shows flashes at the top already; HTMX swaps only this block. #}
   {% if partial %}{% include "partials/flashes.html" %}{% endif %}
-  <form method="post" action="{{ url_for('invitations.create', group_id=group.id) }}" class="form"
-        hx-post="{{ url_for('invitations.create', group_id=group.id) }}"
-        hx-target="#invitations" hx-swap="outerHTML">
-    {{ form.csrf_token }}
-    {{ ui.text_field("email", t("invitations.email_label"), form.email.data or "", error, type="email",
-                     attrs={"required": true, "autocomplete": "off", "inputmode": "email", "autocapitalize": "off",
-                            "spellcheck": "false", "maxlength": max_length}) }}
-    {{ ui.button(t("invitations.invite")) }}
+  {% set create_url = url_for('invitations.create', group_id=group.id) %}
+  <form method="post" action="{{ create_url }}" class="invite-form"
+        hx-post="{{ create_url }}" hx-target="#invitations" hx-swap="outerHTML">
+    {{ invite_form.csrf_token }}
+    <div class="invite-field form">
+      {{ ui.text_field("email", t("invitations.email_label"), invite_form.email.data or "", invite_error, type="email",
+                       attrs={"required": true, "autocomplete": "off", "inputmode": "email", "autocapitalize": "off",
+                              "spellcheck": "false", "maxlength": email_max_length, "placeholder": t("invitations.email_placeholder")}) }}
+    </div>
+    {{ ui.button(t("invitations.invite"), "up") }}
   </form>
 
   {% if invitations %}
     <ul class="invitations">
       {% for invitation in invitations %}
-        {% set status = invitation.status(now).value %}
-        <li class="invitation invitation-{{ status }}">
+        {% set state = invitation.status(now).value %}
+        <li class="invitation invitation-{{ state }}">
           <span class="invitation-email">{{ invitation.email }}</span>
-          {% if status == "open" %}
-            {% set label = t("invitations.status_open", date=invitation.expires_at|local_date(group.timezone)) %}
-          {% elif status == "expired" %}
-            {% set label = t("invitations.status_expired") %}
-          {% elif status == "accepted" %}
-            {% set label = t("invitations.status_accepted") %}
-          {% else %}
-            {% set label = t("invitations.status_revoked") %}
-          {% endif %}
-          {{ ui.badge(label, status) }}
-          {% if status in ("open", "expired") %}
-            <span class="invitation-actions">
-              {% for endpoint, label in (("invitations.resend", t("invitations.resend")), ("invitations.revoke", t("invitations.revoke"))) %}
-                {% set url = url_for(endpoint, group_id=group.id, invitation_id=invitation.id) %}
-                <form method="post" action="{{ url }}" hx-post="{{ url }}" hx-target="#invitations" hx-swap="outerHTML">
-                  {{ action_form.csrf_token }}
-                  {{ ui.link_button(label) }}
-                </form>
-              {% endfor %}
-            </span>
-          {% endif %}
+          <span class="invitation-meta">
+            {% if state == "open" %}
+              {% set label = t("invitations.status_open", date=invitation.expires_at|day_month(group.timezone)) %}
+            {% elif state == "expired" %}
+              {% set label = t("invitations.status_expired", date=invitation.expires_at|day_month(group.timezone)) %}
+            {% elif state == "accepted" %}
+              {% set label = t("invitations.status_accepted") %}
+            {% else %}
+              {% set label = t("invitations.status_revoked") %}
+            {% endif %}
+            <span class="invitation-state">{{ label }}</span>
+            {% if state in ("open", "expired") %}
+              <span class="invitation-actions">
+                {% set actions = [("invitations.resend", t("invitations.resend"), none)] %}
+                {% if state == "open" %}{% set actions = actions + [("invitations.revoke", t("invitations.revoke"), "danger")] %}{% endif %}
+                {% for endpoint, text, kind in actions %}
+                  {% set url = url_for(endpoint, group_id=group.id, invitation_id=invitation.id) %}
+                  <form method="post" action="{{ url }}" hx-post="{{ url }}" hx-target="#invitations" hx-swap="outerHTML">
+                    {{ form.csrf_token }}
+                    {{ ui.link_button(text, kind) }}
+                  </form>
+                {% endfor %}
+              </span>
+            {% endif %}
+          </span>
         </li>
       {% endfor %}
     </ul>
-  {% else %}
-    <p class="muted">{{ t("invitations.empty") }}</p>
   {% endif %}
 </div>

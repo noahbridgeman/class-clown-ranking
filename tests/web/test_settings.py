@@ -1,6 +1,7 @@
 """Settings page (SET-01…05) and the HTMX preview."""
 
 import re
+from dataclasses import replace
 
 import pytest
 from sqlalchemy import select
@@ -43,18 +44,19 @@ class TestReading:
         """SET-02: the score parameters too."""
         group, _admin, member = world
         html = login_as(member).get(f"/g/{group.id}/settings").get_data(as_text=True)
-        assert '<form class="form"' not in html
-        for text in ("Runde", "wöchentlich", "anonym", "Europe/Berlin", "0,5", "0,95"):
+        assert '<form class="form' not in html
+        for text in ("Runde", "Wöchentlich", "Anonym", "0,5", "0,95"):
             assert text in html
+        assert "Europe/Berlin" not in html  # not offered any more (SET-07)
         assert "Nur der Admin" in html
 
     def test_admin_sees_the_form_with_preview(self, world, login_as):
         group, admin, _member = world
         html = login_as(admin).get(f"/g/{group.id}/settings").get_data(as_text=True)
-        assert 'name="k"' in html and 'value="0,5"' in html
-        assert "Höchster erreichbarer Score" in html
-        assert "data-preview=" in html
-        assert "/static/js/preview.js" in html
+        assert 'name="k"' in html and 'value="0,50"' in html
+        assert '<polyline class="preview-up"' in html and '<polyline class="preview-down"' in html
+        assert "Runde · Du bist Admin" in html
+        assert 'name="timezone"' not in html
 
     def test_link_from_the_group_page(self, world, login_as):
         group, _admin, member = world
@@ -72,10 +74,9 @@ class TestSaving:
         assert response.status_code == 302
         assert group.name == "Runde"
         html = login_as(member).get(f"/g/{group.id}/settings").get_data(as_text=True)
-        assert "Ausstehend ab So. 25.10.2026 um 00:00 Uhr" in html
-        assert "Gruppenname: Runde → Neu" in html
-        assert "Anonymität: anonym → offen" in html
-        assert "ausstehend" in html
+        assert "Ausstehend · gilt ab So 25.10., 00:00" in html
+        assert "Name der Gruppe: Runde → Neu" in html
+        assert "Anonymität: an → aus" in html
 
     def test_applied_changes_show_since_when(self, world, clock, login_as):
         group, admin, member = world
@@ -83,8 +84,9 @@ class TestSaving:
         clock.set(WEEK_OPENS)
         tick()
         html = login_as(member).get(f"/g/{group.id}/settings").get_data(as_text=True)
-        assert "gilt seit 25.10.2026" in html
         assert "Ausstehend" not in html
+        # The log is kept for the graph markers (SET-03), but not shown.
+        assert "Runde → Neu" not in html
 
     def test_nothing_changed(self, world, login_as):
         group, admin, _member = world
@@ -98,7 +100,6 @@ class TestSaving:
         [
             ("k", "9", "K muss zwischen 0,05 und 2 liegen."),
             ("d", "eins", "d muss zwischen 0,5 und 0,99 liegen."),
-            ("timezone", "Mars/Olympus", "Unbekannte Zeitzone."),
             ("name", " ", "Bitte gib einen Namen ein."),
             ("cadence", "monthly", "Ungültige Auswahl."),
         ],
@@ -114,11 +115,11 @@ class TestSaving:
     def test_invalid_input_keeps_the_rest(self, world, login_as):
         group, admin, _member = world
         response = login_as(admin).post(
-            f"/g/{group.id}/settings", data=form(name="Neu", timezone="Mars/Olympus", k="abc")
+            f"/g/{group.id}/settings", data=form(name="Neu", is_anonymous="false", k="abc")
         )
         html = response.get_data(as_text=True)
         assert 'value="Neu"' in html and 'value="abc"' in html
-        assert '<option value="Mars/Olympus" selected>' in html
+        assert 'name="is_anonymous" value="false" checked' in html
         assert 'value="nan"' not in html
 
     def test_cadence_change_converts_k_and_d_without_javascript(self, world, login_as):
@@ -140,16 +141,46 @@ class TestPendingNotice:
         clock.set(WEEK_OPENS)
         login_as(admin).post(f"/g/{group.id}/settings", data=form(name="Neu"))
         html = login_as(member).get(f"/g/{group.id}/settings").get_data(as_text=True)
-        assert "in Kürze öffnet" in html
+        assert "gilt mit dem Voting, das in Kürze startet" in html
 
     def test_timezone_change_names_the_new_zone(self, world, login_as):
+        """SET-07: no longer offered, but a stored change still shows in its zone."""
         group, admin, member = world
-        login_as(admin).post(f"/g/{group.id}/settings", data=form(timezone="America/New_York"))
-        html = login_as(member).get(f"/g/{group.id}/settings").get_data(as_text=True)
-        assert "Ausstehend ab So. 25.10.2026 um 00:00 Uhr (America/New_York)" in html
+        wanted = replace(settings.upcoming(group), timezone="America/New_York")
+        settings.change(group, admin, wanted)
         vote_page = login_as(member).get(f"/g/{group.id}/vote").get_data(as_text=True)
         assert "Nächstes Voting in (America/New_York)" in vote_page
         assert "So 25.10., 00:00 – Mo 26.10., 13:00" in vote_page
+
+    def test_form_keeps_the_timezone(self, world, login_as):
+        group, admin, _member = world
+        group.timezone = "Europe/Vienna"
+        db.session.commit()
+        login_as(admin).post(
+            f"/g/{group.id}/settings", data=form(name="Neu", timezone="Asia/Tokyo")
+        )
+        assert settings.upcoming(group).timezone == "Europe/Vienna"
+
+
+class TestRestore:
+    def test_htmx_fills_in_the_defaults_of_the_chosen_cadence(self, world, login_as):
+        """SET-05: "restore defaults" fills K and d in, nothing is saved yet."""
+        group, admin, _member = world
+        url = f"/g/{group.id}/settings/params"
+        query = {**form(cadence="daily", params_cadence="daily", k="0,1", d="0,99"), "restore": "1"}
+        html = login_as(admin).get(url, query_string=query).get_data(as_text=True)
+        daily = scoring.default_params(Cadence.DAILY)
+        k = re.search(r'name="k"[^>]*value="([^"]+)"', html).group(1)
+        assert settings.parse_number(k) == pytest.approx(daily.k, rel=1e-9)
+        assert changes() == []
+
+    def test_without_javascript_the_button_only_fills_in(self, world, login_as):
+        group, admin, _member = world
+        data = {**form(k="1,5", d="0,6"), "action": "restore"}
+        response = login_as(admin).post(f"/g/{group.id}/settings", data=data)
+        assert response.status_code == 200
+        assert 'value="0,50"' in response.get_data(as_text=True)
+        assert changes() == []
 
 
 class TestParams:
@@ -163,7 +194,7 @@ class TestParams:
         k = re.search(r'name="k"[^>]*value="([^"]+)"', html).group(1)
         assert settings.parse_number(k) == pytest.approx(daily.k, rel=1e-9)
         assert 'name="params_cadence" value="daily"' in html
-        assert "Höchster erreichbarer Score" in html
+        assert '<polyline class="preview-up"' in html
 
     @pytest.mark.parametrize(("k", "d"), [(0.05, 0.5), (2.0, 0.5), (0.05, 0.99), (2.0, 0.99)])
     @pytest.mark.parametrize(

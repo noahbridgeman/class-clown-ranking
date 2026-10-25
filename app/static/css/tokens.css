@@ -186,6 +186,8 @@
   --graph-empty-height: 180px;
   --graph-note-inset: 40px;
   --preview-height: 132px;
+  --preview-line: 2.5px;
+  --menu-width: 260px;
 
   /* Graph (docs/design.md section 4). graph.js reads these as plain numbers (px, ms). */
   --graph-font-size: 9;

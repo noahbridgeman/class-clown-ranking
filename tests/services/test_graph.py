@@ -213,4 +213,4 @@ def test_markers_for_settings_changes(daily, clock):
     settings.change(group, ada, wanted)
     next_day(clock)
     texts = [m["text"] for m in data(group, ada, clock)["markers"] if m["kind"] != "member"]
-    assert texts == ["Ab hier nicht anonym", "Einstellungen geändert: Gruppenname"]
+    assert texts == ["Ab hier nicht anonym", "Einstellungen geändert: Name der Gruppe"]

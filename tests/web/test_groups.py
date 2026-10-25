@@ -54,16 +54,16 @@ class TestMembersInSettings:
         assert "Mitglieder · 2 / 30" in html
         assert "Ada" in html and "Bo (du)" in html
         assert '<span class="badge badge-ink">Admin</span>' in html
-        assert "Verwalten" not in html
-        assert "Einladungen" not in html
+        assert "Optionen für" not in html
+        assert 'id="invitations"' not in html
 
     def test_admin_sees_management(self, login_as):
         admin = make_user()
         group = make_group(admin)
         add_member(group)
         html = login_as(admin).get(f"/g/{group.id}/settings").get_data(as_text=True)
-        assert html.count("Verwalten") == 1  # not for the admin's own row
-        assert f"/g/{group.id}/invitations" in html
+        assert html.count("Optionen für") == 1  # not for the admin's own row
+        assert 'id="invitations"' in html
         assert f"/g/{group.id}/delete" in html
 
     def test_former_members_are_not_listed(self, login_as):
@@ -79,7 +79,7 @@ class TestMembersInSettings:
         group = make_group(admin)
         add_member(group)
         html = login_as(admin).get(f"/g/{group.id}/").get_data(as_text=True)
-        assert "Verwalten" not in html
+        assert "Optionen für" not in html
         assert f'href="/g/{group.id}/settings"' in html  # the kicker leads there
 
 
