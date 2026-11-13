@@ -21,3 +21,6 @@ instance/
 
 # Design-Check (scripts/screenshots.py design-check)
 design-check/
+
+# macOS
+.DS_Store
